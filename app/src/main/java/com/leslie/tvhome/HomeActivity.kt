@@ -18,6 +18,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.TransitionDrawable
 import android.graphics.Rect
+import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
@@ -83,6 +84,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private lateinit var prefs: Prefs
     private lateinit var control: ControlCenter
     private val tv by lazy { TvControls(this) }
+    private val audio by lazy { getSystemService(Context.AUDIO_SERVICE) as AudioManager }
 
     private val main = Handler(Looper.getMainLooper())
     private val io = Executors.newSingleThreadExecutor()
@@ -974,11 +976,30 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         focusAt(focusedPos)
     }
 
+    // tvOS-style click feedback. Uses the platform UI sounds, so the tone matches the rest of the
+    // TV and the system "touch sounds" switch still silences it when the user turns that off.
+    private fun playKeySound(code: Int) {
+        val fx = when (code) {
+            KeyEvent.KEYCODE_DPAD_LEFT -> AudioManager.FX_FOCUS_NAVIGATION_LEFT
+            KeyEvent.KEYCODE_DPAD_RIGHT -> AudioManager.FX_FOCUS_NAVIGATION_RIGHT
+            KeyEvent.KEYCODE_DPAD_UP -> AudioManager.FX_FOCUS_NAVIGATION_UP
+            KeyEvent.KEYCODE_DPAD_DOWN -> AudioManager.FX_FOCUS_NAVIGATION_DOWN
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> AudioManager.FX_KEY_CLICK
+            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_MENU -> AudioManager.FX_KEY_CLICK
+            else -> return
+        }
+        // Full scale rather than the default: playSoundEffect(fx) alone plays at the music stream
+        // volume minus 3 dB, which is too quiet to hear over a show on most TVs.
+        runCatching { audio.playSoundEffect(fx, 1f) }
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         restartIdle()
         // Any key skips the intro to its closing zoom; nothing behind it reacts meanwhile.
         intro?.let { if (event.action == KeyEvent.ACTION_UP) it.skip(); return true }
         val code = event.keyCode
+        // Repeats stay silent: holding a direction would otherwise machine-gun the sound.
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && prefs.keySound) playKeySound(code)
         if (event.action == KeyEvent.ACTION_DOWN && code == KeyEvent.KEYCODE_DPAD_RIGHT &&
             sheets.isEmpty() && control.isOpen && avatar.isShown && control.atRightEdge()) {
             control.close()

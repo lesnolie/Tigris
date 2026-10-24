@@ -257,6 +257,7 @@ class SettingsActivity : Activity() {
             prefs.wakeDelay = opts.firstOrNull { it > prefs.wakeDelay } ?: 0
         }
         row("开机动画声音", "播放动画视频里的声音。", { onOff(prefs.introSound) }) { prefs.introSound = !prefs.introSound }
+        row("按键音", "移动焦点和确认时播放系统提示音。跟随系统设置里的提示音开关。", { onOff(prefs.keySound) }) { prefs.keySound = !prefs.keySound }
         row("预览开机动画", "现在回到主屏幕播放一次。", { "" }, chevron = true) {
             startActivity(Intent(this, HomeActivity::class.java)
                 .putExtra(Intro.EXTRA_PREVIEW, true)
