@@ -18,7 +18,7 @@ import android.widget.Toast
 import java.util.concurrent.Executors
 
 /**
- * The 壁纸 app: every background as a picture to pick with one press, and beside it the QR code
+ * The Wallpaper app: every background as a picture to pick with one press, and beside it the QR code
  * for the phone page ([PhoneServer]), which runs while this is open and for five minutes after so
  * photos still on their way arrive. Changes made on the phone show up here as they happen.
  */
@@ -91,8 +91,8 @@ class WallpaperActivity : Activity() {
         val left = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             clipChildren = false
-            addView(text(30f, bold = true).apply { text = "壁纸" })
-            addView(text(15f, Color.argb(160, 255, 255, 255)).apply { text = "选一个作为主屏幕背景，相框屏保也跟着用这个图源。" },
+            addView(text(30f, bold = true).apply { text = "Wallpaper" })
+            addView(text(15f, Color.argb(160, 255, 255, 255)).apply { text = "Pick one as the home screen background; the photo frame screensaver uses the same source." },
                 LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(8); bottomMargin = dp(22) })
             addView(grid)
         }
@@ -104,9 +104,9 @@ class WallpaperActivity : Activity() {
         address = text(13f, Color.argb(130, 255, 255, 255))
         val right = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            addView(text(20f, bold = true).apply { text = "用手机设置" })
+            addView(text(20f, bold = true).apply { text = "Set up with your phone" })
             addView(text(15f, Color.argb(190, 255, 255, 255)).apply {
-                text = "手机连同一个 Wi-Fi，用相机或微信扫码：上传照片，或者填图片链接（一张图、随机图接口、列出图片的网页或 JSON），电视每天自动去取。"
+                text = "Connect your phone to the same Wi-Fi and scan the code with the camera or WeChat: upload photos, or enter an image link (a single image, a random-image endpoint, a page listing images, or JSON). The TV fetches them daily."
                 setLineSpacing(0f, 1.25f)
             }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10); bottomMargin = dp(18) })
             addView(qr, LinearLayout.LayoutParams(dp(220), dp(220)))
@@ -128,12 +128,12 @@ class WallpaperActivity : Activity() {
     override fun onStart() {
         super.onStart()
         stopLater.removeCallbacks(stop)
-        address.text = "正在启动…"
+        address.text = "Starting…"
         io.execute {
             val url = PhoneServer.start(this)?.let { if (intent.getBooleanExtra("upload_avatar", false)) it + "#avatar" else it }
             val bmp = url?.let { PhoneServer.qr(it) }
             main.post {
-                address.text = url ?: "电视没有连上网络，连上后再打开这里。"
+                address.text = url ?: "The TV isn't online. Connect it and open this again."
                 qr.setImageBitmap(bmp)
             }
         }
@@ -172,9 +172,9 @@ class WallpaperActivity : Activity() {
             val label = Wallpapers.label(s) + if (s == Wallpapers.MINE && files.isNotEmpty()) " · ${files.size}" else ""
             val empty = when {
                 files.isNotEmpty() -> null
-                s == Wallpapers.MINE -> "扫码上传照片"
-                s == Wallpapers.CUSTOM -> "扫码填写图片链接"
-                else -> "选中后开始下载"
+                s == Wallpapers.MINE -> "Scan to upload photos"
+                s == Wallpapers.CUSTOM -> "Scan to enter an image link"
+                else -> "Download starts once selected"
             }
             main.post { cards[s]?.apply { image.setImageBitmap(bmp); this.label.text = label; emptyText(empty) } }
         }
@@ -187,7 +187,7 @@ class WallpaperActivity : Activity() {
     private fun pick(key: String) {
         if (key == Wallpapers.MINE || key == Wallpapers.CUSTOM) {
             if (Wallpapers(this, key).files().isEmpty()) {
-                Toast.makeText(this, if (key == Wallpapers.MINE) "还没有照片，先用手机扫右边的二维码上传" else "还没有链接，先用手机扫右边的二维码填写", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, if (key == Wallpapers.MINE) "No photos yet — scan the QR code on the right with your phone to upload" else "No link yet — scan the QR code on the right with your phone", Toast.LENGTH_LONG).show()
                 return
             }
         }

@@ -21,11 +21,11 @@ import java.net.Inet4Address
 import java.security.SecureRandom
 
 /**
- * The page a phone opens after scanning the QR code in the 壁纸 app: choose the background and the
+ * The page a phone opens after scanning the QR code in the Wallpaper app: choose the background and the
  * screensaver, send photos, paste picture links, and upload the boot animation. Typing a link or picking photos with a remote
  * is slow; with a phone it is not. After Aerial's phone page (github.com/pengchujin/aerial-tv, MIT).
  *
- * It listens on the local network only while [WallpaperActivity] (the 壁纸 app) is open (and a few minutes after, so
+ * It listens on the local network only while [WallpaperActivity] (the Wallpaper app) is open (and a few minutes after, so
  * an upload can finish), and every address carries a random token shown only in the QR code, so
  * another device on the network cannot use it by guessing.
  */

@@ -59,7 +59,7 @@ class PhotoFrameView(ctx: Context) : FrameLayout(ctx) {
         override fun run() {
             val now = Date()
             clock.text = SimpleDateFormat("HH:mm", Locale.CHINA).format(now)
-            date.text = SimpleDateFormat("M月d日 EEEE", Locale.CHINA).format(now)
+            date.text = SimpleDateFormat("EEEE, MMM d", Locale.CHINA).format(now)
             // Drift a few pixels each minute so nothing sits still on the panel.
             corner.animate().translationX(((Math.random() - 0.5) * dp(24)).toFloat())
                 .translationY(((Math.random() - 0.5) * dp(16)).toFloat()).setDuration(3000).start()

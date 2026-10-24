@@ -61,7 +61,7 @@ class AppRepo(private val ctx: Context) {
             for (ri in list) {
                 val ai = ri.activityInfo ?: continue
                 if (ai.packageName == ctx.packageName && (!leanback || ai.name == HomeActivity::class.java.name)) continue
-                // Tigris lists two screens of its own (settings, 壁纸); each gets a key of its own.
+                // Tigris lists two screens of its own (settings, Wallpaper); each gets a key of its own.
                 val key = if (ai.packageName == ctx.packageName && ai.name != SettingsActivity::class.java.name) ownKey(ai.name) else ai.packageName
                 if (byPkg[key]?.leanback == true) continue
                 byPkg[key] = AppEntry(

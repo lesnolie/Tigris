@@ -186,17 +186,17 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
     init {
         // tvOS layout: a square power tile beside two capsules, then a row of round buttons.
         val top = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; clipChildren = false }
-        val power = GlassButton("关机", R.drawable.ic_power, Shape.TILE) {
-            confirm("关机", "电视会彻底断电关闭，用遥控器电源键开机。") { Cleaner.shutdown(ctx) }
+        val power = GlassButton("Power off", R.drawable.ic_power, Shape.TILE) {
+            confirm("Power off", "The TV will fully power down. Turn it back on with the power button on the remote.") { Cleaner.shutdown(ctx) }
         }
         top.addView(power, LinearLayout.LayoutParams(0, cell * 2 + gap, 1f).apply { marginEnd = gap })
         val right = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
-        networkModule = GlassButton("网络", R.drawable.ic_wifi, Shape.CAPSULE, accent = Color.rgb(48, 222, 239)) {
+        networkModule = GlassButton("Network", R.drawable.ic_wifi, Shape.CAPSULE, accent = Color.rgb(48, 222, 239)) {
             close()
             runCatching { ctx.startActivity(tv.wifiIntent()) }
         }
         right.addView(networkModule, LinearLayout.LayoutParams(-1, cell))
-        right.addView(GlassButton("待机", R.drawable.ic_moon, Shape.CAPSULE) { needAdb { close(); Cleaner.sleep(ctx) } },
+        right.addView(GlassButton("Standby", R.drawable.ic_moon, Shape.CAPSULE) { needAdb { close(); Cleaner.sleep(ctx) } },
             LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
         top.addView(right, LinearLayout.LayoutParams(0, -2, 1f))
         panel.addView(top)
@@ -208,25 +208,25 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
                     if (utilities.childCount > 0) marginStart = (this@ControlCenter.width - cell * 4) / 3
                 })
             }
-        memButton = utility("清理内存", R.drawable.ic_memory) { cleanNow() }
-        utility("相框", R.drawable.ic_photo) {
+        memButton = utility("Clear memory", R.drawable.ic_memory) { cleanNow() }
+        utility("Frame", R.drawable.ic_photo) {
             close()
             ctx.openFrame()
         }
-        utility("重启", R.drawable.ic_restart) {
-            confirm("重启", "电视会重新启动，大约需要一分钟。") { Cleaner.reboot(ctx) }
+        utility("Restart", R.drawable.ic_restart) {
+            confirm("Restart", "The TV will restart. This takes about a minute.") { Cleaner.reboot(ctx) }
         }
-        utility("设置", R.drawable.ic_gear) {
+        utility("Settings", R.drawable.ic_gear) {
             close()
             ctx.startActivity(Intent(ctx, SettingsActivity::class.java))
         }
         panel.addView(utilities, LinearLayout.LayoutParams(-1, -2).apply { topMargin = gap })
 
-        brightness = Slider(R.drawable.ic_sun, "亮度") { v -> tv.setBrightness(v) }.also { focusables += it }
+        brightness = Slider(R.drawable.ic_sun, "Brightness") { v -> tv.setBrightness(v) }.also { focusables += it }
         panel.addView(brightness, LinearLayout.LayoutParams(-1, ctx.dp(38)).apply { topMargin = gap })
-        volume = Slider(R.drawable.ic_volume, "音量", steps = 50) { v -> tv.setVolume(volumeTarget, v) }.also { focusables += it }
+        volume = Slider(R.drawable.ic_volume, "Volume", steps = 50) { v -> tv.setVolume(volumeTarget, v) }.also { focusables += it }
         panel.addView(volume, LinearLayout.LayoutParams(-1, ctx.dp(38)).apply { topMargin = gap })
-        inputModule = GlassButton("输入源", R.drawable.ic_input, Shape.CAPSULE) { pickInput() }
+        inputModule = GlassButton("Input", R.drawable.ic_input, Shape.CAPSULE) { pickInput() }
         panel.addView(inputModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
         panel.addView(status, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ctx.dp(10) })
         // The host clips the panel to its bounds; the padding is room for focused controls to grow into.
@@ -734,7 +734,7 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
     fun atRightEdge(): Boolean {
         val current = panel.findFocus() ?: return false
         // Right on a slider must continue to adjust its value.
-        if (current.contentDescription == "亮度" || current.contentDescription == "音量") return false
+        if (current.contentDescription == "Brightness" || current.contentDescription == "Volume") return false
         val next = current.focusSearch(View.FOCUS_RIGHT)
         var parent: android.view.ViewParent? = next?.parent
         while (parent != null) {
@@ -780,13 +780,13 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
 
     fun refresh() {
         if (destroyed) return
-        status.text = if (prefs.adbAuthorized) "" else "本机调试未授权：关机、待机、彻底清理不可用"
+        status.text = if (prefs.adbAuthorized) "" else "Local debugging not authorized: power off, standby and deep clean unavailable"
         status.visibility = if (status.text.isEmpty()) View.GONE else View.VISIBLE
         val cm = ctx.getSystemService(android.net.ConnectivityManager::class.java)
         val caps = runCatching { cm.getNetworkCapabilities(cm.activeNetwork) }.getOrNull()
         val wired = caps?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET) == true
-        networkModule.title.text = if (wired) "有线网络" else "Wi-Fi"
-        networkModule.sub.text = if (caps == null) "未连接" else "已连接"
+        networkModule.title.text = if (wired) "Wired network" else "Wi-Fi"
+        networkModule.sub.text = if (caps == null) "Not connected" else "Connected"
         networkModule.sub.visibility = View.VISIBLE
         if (refreshing) return
         refreshing = true
@@ -814,29 +814,29 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         if (inputs.isEmpty()) return
         // The list replaces the panel instead of stacking on top of it.
         close()
-        val sheet = Sheet(host).title("输入源").message(null)
+        val sheet = Sheet(host).title("Input").message(null)
         for (i in inputs) sheet.button(i.name, R.drawable.ic_input) {
             io.execute { tv.setInput(i) }
         }
-        sheet.button("在主屏幕上显示…") { pinInputs() }
-        sheet.button("取消") {}
+        sheet.button("Show on Home Screen…") { pinInputs() }
+        sheet.button("Cancel") {}
         home.showSheet(sheet)
     }
 
     /** Inputs shown as tiles on the home grid; one press there switches to them. */
     private fun pinInputs() {
-        val sheet = Sheet(host).title("在主屏幕上显示")
-            .message("选中的输入源会成为主屏幕上的一个图标，按一下就切换过去。")
+        val sheet = Sheet(host).title("Show on Home Screen")
+            .message("The selected input becomes an icon on the home screen. Press it to switch.")
         for (i in inputs) {
             val on = home.isPinned(i)
             sheet.button(if (on) "✓  ${i.name}" else i.name, R.drawable.ic_input) { home.pinInput(i, !on) }
         }
-        sheet.button("完成") {}
+        sheet.button("Done") {}
         home.showSheet(sheet)
     }
 
     private fun cleanNow() {
-        status.text = "正在释放内存…"
+        status.text = "Freeing memory…"
         status.visibility = View.VISIBLE
         Thread {
             val r = Cleaner.clean(ctx.applicationContext)
@@ -847,15 +847,15 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
     }
 
     private fun needAdb(action: () -> Unit) {
-        if (prefs.adbAuthorized) action() else home.showSheet(Sheet(host).title("需要先授权本机调试")
-            .message("点“开始”后，电视会弹出“允许调试吗？”，请勾选“始终允许”，再点“允许”。")
-            .button("开始") { home.authorizeAdb() }
-            .button("取消") {})
+        if (prefs.adbAuthorized) action() else home.showSheet(Sheet(host).title("Local debugging must be authorized first")
+            .message("After you tap Start, the TV will ask “Allow debugging?”. Check “Always allow”, then tap Allow.")
+            .button("Start") { home.authorizeAdb() }
+            .button("Cancel") {})
     }
 
     private fun confirm(title: String, msg: String, action: () -> Unit) = needAdb {
         home.showSheet(Sheet(host).title("$title？").message(msg)
             .button(title) { action() }
-            .button("取消") {})
+            .button("Cancel") {})
     }
 }

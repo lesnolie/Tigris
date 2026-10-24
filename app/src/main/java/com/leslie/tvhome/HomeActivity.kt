@@ -328,8 +328,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             runCatching { startActivity(tv.wifiIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         }
         ccButton = IconButton(this, R.drawable.ic_toggles) { control.open() }
-        netButton.contentDescription = "网络设置"
-        ccButton.contentDescription = "控制中心"
+        netButton.contentDescription = "Network settings"
+        ccButton.contentDescription = "Control Center"
         icons.addView(clockText, LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(10) })
         icons.addView(netButton, LinearLayout.LayoutParams(dp(28), dp(28)).apply { marginEnd = dp(6) })
         icons.addView(ccButton, LinearLayout.LayoutParams(dp(28), dp(28)))
@@ -337,7 +337,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }.apply {
             id = View.generateViewId()
-            contentDescription = "主屏幕设置"
+            contentDescription = "Home Screen Settings"
             visibility = if (prefs.showAvatar) View.VISIBLE else View.GONE
         }
         icons.addView(avatar, LinearLayout.LayoutParams(dp(28), dp(28)).apply { marginStart = dp(6) })
@@ -612,7 +612,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private fun updateClock() {
         val now = Date()
         clockText.text = SimpleDateFormat(if (prefs.clock24) "HH:mm" else "h:mm a", Locale.US).format(now)
-        bigDate.text = SimpleDateFormat("M月d日EEEE", Locale.CHINA).format(now)
+        bigDate.text = SimpleDateFormat("EEEE, MMM d", Locale.CHINA).format(now)
         // The large clock leaves out AM/PM, as tvOS did; at that size it reads as the time of day.
         bigTime.text = SimpleDateFormat(if (prefs.clock24) "HH:mm" else "h:mm", Locale.US).format(now)
     }
@@ -726,7 +726,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             startActivity(intent, opts.toBundle())
             rememberOpened(app.pkg)
         } catch (e: Exception) {
-            Toast.makeText(this, "无法打开 ${app.label}", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Can't open ${app.label}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -744,28 +744,28 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         app.folder?.let { manageFolder(it, pos); return }
         app.input?.let { i ->
             showSheet(Sheet(root).title(app.label).message(null)
-                .button("编辑主屏幕") { startMove(pos) }
-                .button("从主屏幕移除") { pinInput(i, false) }
-                .button("取消") {}, restoreFocusTo = pos)
+                .button("Edit Home Screen") { startMove(pos) }
+                .button("Remove from Home Screen") { pinInput(i, false) }
+                .button("Cancel") {}, restoreFocusTo = pos)
             return
         }
         val s = Sheet(root).title(app.label).message(null)
-            .button("编辑主屏幕") { startMove(pos) }
-            .button("移入文件夹") { chooseFolder(app) }
-            .button("隐藏") {
+            .button("Edit Home Screen") { startMove(pos) }
+            .button("Move into folder") { chooseFolder(app) }
+            .button("Hide") {
                 prefs.hidden = prefs.hidden + app.pkg
                 reload()
             }
         if (repo.isOwn(app.pkg)) {
-            showSheet(s.button("取消") {}, restoreFocusTo = pos)
+            showSheet(s.button("Cancel") {}, restoreFocusTo = pos)
             return
         }
-        s.button("应用信息") {
+        s.button("App info") {
                 startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${app.pkg}"))
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
-        if (!repo.isEssential(app.pkg)) s.button("删除 App") { confirmDelete(app, pos) }
-        s.button("取消") {}
+        if (!repo.isEssential(app.pkg)) s.button("Uninstall app") { confirmDelete(app, pos) }
+        s.button("Cancel") {}
         showSheet(s, restoreFocusTo = pos)
     }
 
@@ -781,13 +781,13 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             setSingleLine(); setText(initial); selectAll()
             filters = arrayOf(android.text.InputFilter.LengthFilter(30))
         }
-        val dialog = android.app.AlertDialog.Builder(this).setTitle("文件夹名称").setView(input)
-            .setPositiveButton("保存", null).setNegativeButton("取消", null).create()
+        val dialog = android.app.AlertDialog.Builder(this).setTitle("Folder name").setView(input)
+            .setPositiveButton("Save", null).setNegativeButton("Cancel", null).create()
         dialog.setOnShowListener {
             input.requestFocus()
             dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val name = input.text.toString().trim()
-                if (name.isEmpty()) input.error = "请输入名称"
+                if (name.isEmpty()) input.error = "Enter a name"
                 else { save(name); dialog.dismiss() }
             }
         }
@@ -797,15 +797,15 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private fun chooseFolder(app: AppEntry) {
         val store = Folders(this)
         val folders = store.read()
-        android.app.AlertDialog.Builder(this).setTitle("移入文件夹")
-            .setItems((listOf("新建文件夹…") + folders.map { it.name }).toTypedArray()) { _, index ->
-                if (index == 0) folderName("新文件夹") { name ->
+        android.app.AlertDialog.Builder(this).setTitle("Move into folder")
+            .setItems((listOf("New folder…") + folders.map { it.name }).toTypedArray()) { _, index ->
+                if (index == 0) folderName("New folder") { name ->
                     val folder = store.create(name, app.pkg)
                     val order = adapter.apps.map { if (it.pkg == app.pkg) folder.id else it.pkg }
                     prefs.order = (order + prefs.order).distinct()
                     foldersChanged()
                 } else { store.move(app.pkg, folders[index - 1].id); foldersChanged() }
-            }.setNegativeButton("取消", null).show()
+            }.setNegativeButton("Cancel", null).show()
     }
 
     private fun openFolder(folder: AppFolder) {
@@ -818,17 +818,17 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                     val intent = repo.launchIntent(app) ?: return@setItems
                     if (!HomeGuardService.isStockHome(app.pkg) || !HomeGuardService.openStockLauncher()) startActivity(intent)
                     rememberOpened(folder.id)
-                } catch (_: Exception) { Toast.makeText(this, "无法打开 ${app.label}", Toast.LENGTH_SHORT).show() }
-            }.setNeutralButton("管理") { _, _ -> manageFolder(folder, focusedPos) }
-            .setNegativeButton("返回", null).create()
-        if (apps.isEmpty()) dialog.setMessage("文件夹为空，可长按桌面应用移入。")
+                } catch (_: Exception) { Toast.makeText(this, "Can't open ${app.label}", Toast.LENGTH_SHORT).show() }
+            }.setNeutralButton("Manage") { _, _ -> manageFolder(folder, focusedPos) }
+            .setNegativeButton("Back", null).create()
+        if (apps.isEmpty()) dialog.setMessage("This folder is empty. Long-press an app on the home screen to move it in.")
         dialog.show()
     }
 
     private fun manageFolder(folder: AppFolder, pos: Int) {
         val store = Folders(this)
         android.app.AlertDialog.Builder(this).setTitle(folder.name)
-            .setItems(arrayOf("重命名", "移出应用", "编辑主屏幕", "解散文件夹")) { _, index ->
+            .setItems(arrayOf("Rename", "Move app out", "Edit Home Screen", "Delete folder")) { _, index ->
                 when (index) {
                     0 -> folderName(folder.name) { name ->
                         store.save(store.read().map { if (it.id == folder.id) it.copy(name = name) else it })
@@ -837,19 +837,19 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                     1 -> {
                         val all = repo.allApps().associateBy { it.pkg }
                         val members = store.read().find { it.id == folder.id }?.members.orEmpty()
-                        android.app.AlertDialog.Builder(this).setTitle("移回桌面")
+                        android.app.AlertDialog.Builder(this).setTitle("Move back to Home Screen")
                             .setItems(members.map { all[it]?.label ?: it }.toTypedArray()) { _, i ->
                                 store.move(members[i], null); foldersChanged()
-                            }.setNegativeButton("取消", null).show()
+                            }.setNegativeButton("Cancel", null).show()
                     }
                     2 -> startMove(pos)
-                    3 -> android.app.AlertDialog.Builder(this).setTitle("解散 ${folder.name}？")
-                        .setMessage("应用图标将回到桌面，不会卸载应用。")
-                        .setPositiveButton("解散") { _, _ ->
+                    3 -> android.app.AlertDialog.Builder(this).setTitle("Delete ${folder.name}?")
+                        .setMessage("The app icons return to the home screen. Apps are not uninstalled.")
+                        .setPositiveButton("Delete") { _, _ ->
                             store.save(store.read().filter { it.id != folder.id }); foldersChanged()
-                        }.setNegativeButton("取消", null).show()
+                        }.setNegativeButton("Cancel", null).show()
                 }
-            }.setNegativeButton("取消", null).show()
+            }.setNegativeButton("Cancel", null).show()
     }
 
     private fun confirmDelete(app: AppEntry, pos: Int) {
@@ -859,19 +859,19 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                 startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:${app.pkg}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 return
             }
-            showSheet(Sheet(root).title("需要先授权本机调试")
-                .message("删除电视预装的 App 要用到本机调试。点“开始”后，电视会弹出“允许调试吗？”，请勾选“始终允许”，再点“允许”。")
-                .button("开始") { authorizeAdb() }
-                .button("取消") {}, restoreFocusTo = pos)
+            showSheet(Sheet(root).title("Local debugging must be authorized first")
+                .message("Removing a preinstalled app requires local debugging. After you tap Start, the TV will ask “Allow debugging?”. Check “Always allow”, then tap Allow.")
+                .button("Start") { authorizeAdb() }
+                .button("Cancel") {}, restoreFocusTo = pos)
             return
         }
         val msg = when {
-            system -> "这是电视预装的 App。删除后它不会再出现在主屏幕上，也不会在后台运行。需要时可以在“主屏幕设置 → 已删除的预装 App”里恢复。"
-            repo.isLauncher(app.pkg) -> "这是一个桌面 App，可以在本桌面出问题时顶上。删除后，万一本桌面无法启动，电视就没有备用桌面了。App 和它的数据都会被删除。"
-            else -> "App 和它的数据都会被删除。"
+            system -> "This is a preinstalled app. Once removed it won't appear on the home screen and won't run in the background. You can restore it in Home Screen Settings → Removed preinstalled apps."
+            repo.isLauncher(app.pkg) -> "This is a home screen app that can step in if the current one fails. If you remove it and this launcher stops working, the TV will have no backup home screen. The app and its data will be deleted."
+            else -> "The app and its data will be deleted."
         }
-        showSheet(Sheet(root).title("删除“${app.label}”？").message(msg)
-            .button("删除") {
+        showSheet(Sheet(root).title("Uninstall “${app.label}”?").message(msg)
+            .button("Uninstall") {
                 io.execute {
                     val out = LocalAdb.shell(this, if (system) "pm uninstall -k --user 0 ${app.pkg}" else "pm uninstall ${app.pkg}", 15_000)
                     val ok = out?.contains("Success") == true
@@ -879,11 +879,11 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                         if (ok) {
                             if (system) prefs.removed = prefs.removed + app.pkg
                             reload()
-                        } else Toast.makeText(this, "没有删除成功：${out?.trim()?.take(80) ?: "本机调试不可用"}", Toast.LENGTH_LONG).show()
+                        } else Toast.makeText(this, "Uninstall failed: ${out?.trim()?.take(80) ?: "Local debugging unavailable"}", Toast.LENGTH_LONG).show()
                     }
                 }
             }
-            .button("取消") {}, restoreFocusTo = pos)
+            .button("Cancel") {}, restoreFocusTo = pos)
     }
 
     override fun onTileKey(pos: Int, cell: TileCell, keyCode: Int): Boolean {
@@ -934,7 +934,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         adapter.movingPkg = adapter.apps[pos].pkg
         adapter.notifyItemChanged(pos)
         grid.post { focusAt(pos) }
-        Toast.makeText(this, "用方向键移动，按确认键完成", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Use the arrow keys to move, press OK when done", Toast.LENGTH_SHORT).show()
     }
 
     private fun endMove() {
@@ -1054,18 +1054,18 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     private fun askAdbAuthorization() {
         if (prefs.adbAuthorized || isFinishing) return
-        showSheet(Sheet(root).title("开启关机和释放内存")
-            .message("需要允许本机调试一次。点“开始”后，电视会弹出“允许调试吗？”，请勾选“始终允许”，再点“允许”。")
-            .button("开始") { authorizeAdb() }
-            .button("以后再说") {})
+        showSheet(Sheet(root).title("Enable power off and memory freeing")
+            .message("Local debugging must be allowed once. After you tap Start, the TV will ask “Allow debugging?”. Check “Always allow”, then tap Allow.")
+            .button("Start") { authorizeAdb() }
+            .button("Not now") {})
     }
 
     fun authorizeAdb() {
-        Toast.makeText(this, "请在弹出的窗口中勾选“始终允许”并点“允许”", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, "In the dialog, check “Always allow” and tap Allow", Toast.LENGTH_LONG).show()
         io.execute {
             val ok = LocalAdb.shell(this, "echo ok", 60_000) != null
             main.post {
-                Toast.makeText(this, if (ok) "已开启，关机和释放内存可以用了" else "没有授权成功，可以在主屏幕设置里重试", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, if (ok) "Enabled. Power off and memory freeing are ready." else "Authorization failed. You can retry in Home Screen Settings.", Toast.LENGTH_LONG).show()
                 control.refresh()
             }
         }

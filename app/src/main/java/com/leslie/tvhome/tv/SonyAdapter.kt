@@ -40,7 +40,7 @@ class SonyAdapter(ctx: Context) : AndroidAdapter(ctx) {
 
     /** Sony reports the input being shown, so with Sony's inputs listed and none current, the TV is on the home screen. */
     override fun inputSummary(list: List<Input>) =
-        if (list.firstOrNull()?.uri?.startsWith(URI_PREFIX) == true) "当前：主屏幕" else super.inputSummary(list)
+        if (list.firstOrNull()?.uri?.startsWith(URI_PREFIX) == true) "Current: Home screen" else super.inputSummary(list)
 
     private companion object {
         const val URI_PREFIX = "extInput:"

@@ -22,8 +22,8 @@ object Shelf {
     private const val TTL = 15 * 60_000L
 
     private val sources = mapOf(
-        "com.xiaodianshi.tv.yst" to Source("哔哩哔哩 · 热门", ::bilibili),
-        "com.douyu.xl.douyutv" to Source("斗鱼 · 正在直播", ::douyu),
+        "com.xiaodianshi.tv.yst" to Source("Bilibili · Trending", ::bilibili),
+        "com.douyu.xl.douyutv" to Source("Douyu · Live now", ::douyu),
     )
     private val cache = HashMap<String, Pair<Long, List<Item>>>()
 
@@ -97,7 +97,7 @@ object Shelf {
         return (0 until list.length()).map { list.getJSONObject(it) }.map { v ->
             Item(
                 v.optString("title"),
-                "${v.getJSONObject("owner").optString("name")} · ${count(v.getJSONObject("stat").optLong("view"))}播放",
+                "${v.getJSONObject("owner").optString("name")} · ${count(v.getJSONObject("stat").optLong("view"))} views",
                 v.optString("pic").replace("http://", "https://") + "@1280w_720h_1c.jpg",
             )
         }
@@ -112,7 +112,7 @@ object Shelf {
             .map { r ->
                 Item(
                     r.optString("rn"),
-                    "${r.optString("nn")} · ${r.optString("c2name")} · ${count(r.optLong("ol"))}热度",
+                    "${r.optString("nn")} · ${r.optString("c2name")} · ${count(r.optLong("ol"))} hot",
                     // "/dy4" is the 1280×720 JPEG rendition of the AVIF cover.
                     r.optString("rs16").substringBeforeLast('/') + "/dy4",
                 )
@@ -120,8 +120,8 @@ object Shelf {
     }
 
     private fun count(n: Long) = when {
-        n >= 100_000_000 -> "%.1f亿".format(n / 100_000_000.0)
-        n >= 10_000 -> "%.1f万".format(n / 10_000.0)
+        n >= 100_000_000 -> "%.1f×100M".format(n / 100_000_000.0)
+        n >= 10_000 -> "%.1f×10K".format(n / 10_000.0)
         else -> n.toString()
     }
 

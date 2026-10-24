@@ -5,7 +5,7 @@ import android.content.SharedPreferences
 
 /**
  * What the TV can afford. Low-end TVs (little memory, or Android 9/10, which ship on older chips)
- * get the cheaper look by default; every such default can be changed in 主屏幕设置.
+ * get the cheaper look by default; every such default can be changed in Home Screen Settings.
  */
 object Device {
     @Volatile private var lowEnd: Boolean? = null

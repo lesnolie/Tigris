@@ -134,10 +134,10 @@ class SettingsActivity : Activity() {
         list.removeAllViews()
         when (p) {
             Page.MAIN -> main()
-            Page.KEEP -> appPicker("释放内存时保留", prefs.keep) { pkg, on ->
+            Page.KEEP -> appPicker("Keep when freeing memory", prefs.keep) { pkg, on ->
                 prefs.keep = if (on) prefs.keep + pkg else prefs.keep - pkg
             }
-            Page.HIDDEN -> appPicker("隐藏的 App", prefs.hidden, includeHidden = true) { pkg, on ->
+            Page.HIDDEN -> appPicker("Hidden apps", prefs.hidden, includeHidden = true) { pkg, on ->
                 prefs.hidden = if (on) prefs.hidden + pkg else prefs.hidden - pkg
             }
             Page.REMOVED -> removedApps()
@@ -188,102 +188,102 @@ class SettingsActivity : Activity() {
     }
 
     private fun main() {
-        heading.text = "主屏幕设置"
+        heading.text = "Home Screen Settings"
         about.text = ""
 
-        section("软件")
-        row("软件更新与投屏", "检查 Tigris 和 MiracastReceiver 的新版本，安装投屏组件或开启自动更新。", { "打开" }) {
+        section("Software")
+        row("Software updates & casting", "Check for new Tigris and MiracastReceiver versions, install the casting component, or turn on automatic updates.", { "Open" }) {
             startActivity(Intent(this, UpdateActivity::class.java))
         }
-        section("外观")
-        row("时间格式", "主屏幕和控制中心里的时间用 12 小时制（11:49 AM）还是 24 小时制（23:49）。",
-            { if (prefs.clock24) "24 小时" else "12 小时" }) { prefs.clock24 = !prefs.clock24 }
-        row("时钟位置", "右上角的小时钟，或者左上角带日期的大时钟（之前的样式），也可以不显示。", {
-            when (prefs.clockStyle) { Prefs.CLOCK_LARGE -> "左上角大时钟"; Prefs.CLOCK_OFF -> "不显示"; else -> "右上角" }
+        section("Appearance")
+        row("Time format", "Whether the clock on the home screen and in Control Center uses 12-hour (11:49 AM) or 24-hour (23:49) time.",
+            { if (prefs.clock24) "24-hour" else "12-hour" }) { prefs.clock24 = !prefs.clock24 }
+        row("Clock position", "A small clock in the top-right corner, a large clock with the date in the top-left (the earlier style), or no clock at all.", {
+            when (prefs.clockStyle) { Prefs.CLOCK_LARGE -> "Large clock, top left"; Prefs.CLOCK_OFF -> "Don't show"; else -> "Top right" }
         }) {
             val opts = listOf(Prefs.CLOCK_CORNER, Prefs.CLOCK_LARGE, Prefs.CLOCK_OFF)
             prefs.clockStyle = opts[(opts.indexOf(prefs.clockStyle) + 1) % opts.size]
         }
-        if (backdropFile(this) != null) row("设置页背景", "设置页用上传的背景图，或者普通的深色背景。", {
-            if (prefs.settingsBg) "图片" else "普通"
+        if (backdropFile(this) != null) row("Settings background", "Use your uploaded image as the settings background, or a plain dark background.", {
+            if (prefs.settingsBg) "Image" else "Plain"
         }) {
             prefs.settingsBg = !prefs.settingsBg
             showBackdrop()
         }
-        if (iconFile(this) != null) row("设置图标", "这个设置的图标：自己上传的图片，或者自带的齿轮。", {
-            if (prefs.ownIcon) "上传的图片" else "齿轮"
+        if (iconFile(this) != null) row("Settings icon", "The icon for this entry: your own uploaded image, or the built-in gear.", {
+            if (prefs.ownIcon) "Uploaded image" else "Gear"
         }) {
             prefs.ownIcon = !prefs.ownIcon
             showIcon(icon)
         }
-        row("上传头像", "手机扫描二维码，在网页的「头像」中上传照片，返回桌面后显示。", { "手机上传" }) {
+        row("Upload avatar", "Scan the QR code with your phone, upload a photo under “Avatar” on the web page, then return to the home screen.", { "Upload from phone" }) {
             startActivity(Intent(this, WallpaperActivity::class.java).putExtra("upload_avatar", true))
         }
-        row("显示右上角头像", "右上角的头像，按它可以打开主屏幕设置。", { onOff(prefs.showAvatar) }) { prefs.showAvatar = !prefs.showAvatar }
-        row("聚焦动画", "tvOS：选中的 App 放大、跟着方向倾斜，表面有一道光。简洁：只放大。" +
-            "\n“自动”在配置较低的电视上用简洁。", {
-            auto(prefs.focusStyle, prefs.focusTvos(this), "tvOS", "简洁")
+        row("Show avatar in the top-right corner", "Press the avatar in the top-right corner to open Home Screen Settings.", { onOff(prefs.showAvatar) }) { prefs.showAvatar = !prefs.showAvatar }
+        row("Focus animation", "tvOS: the selected app grows, tilts with the direction and catches a highlight. Simple: it only grows." +
+            "\n“Auto” uses Simple on lower-end TVs.", {
+            auto(prefs.focusStyle, prefs.focusTvos(this), "tvOS", "Simple")
         }) {
             prefs.focusStyle = next(prefs.focusStyle, Prefs.FOCUS_TVOS, Prefs.FOCUS_SIMPLE)
         }
-        row("控制中心样式", "玻璃：透出背后画面的毛玻璃，选中的按钮会照亮旁边的按钮。面板：之前的深色面板，更省性能。" +
-            "\n“自动”在配置较低的电视上用面板。", {
-            auto(prefs.ccStyle, prefs.ccGlass(this), "玻璃", "面板")
+        row("Control Center style", "Glass: frosted glass that shows the image behind, and the selected button lights up its neighbours. Panel: the earlier dark panel, easier on performance." +
+            "\n“Auto” uses Panel on lower-end TVs.", {
+            auto(prefs.ccStyle, prefs.ccGlass(this), "Glass", "Panel")
         }) {
             prefs.ccStyle = next(prefs.ccStyle, Prefs.CC_GLASS, Prefs.CC_PANEL)
         }
 
-        section("开机动画")
+        section("Boot animation")
         val video = Intro.videoFile(this) != null
-        row("开机动画", "开机后第一次显示主屏幕时播放，最后标志放大进入桌面。按任意键可以跳过。" +
-            if (video) "" else "\n默认播放内置开机视频，也可上传自己的视频。", {
-            when (prefs.intro) { Prefs.INTRO_BOOT -> "开机时"; Prefs.INTRO_WAKE -> "开机和唤醒时"; else -> "关" }
+        row("Boot animation", "Plays the first time the home screen appears after boot; the logo zooms into the desktop at the end. Press any key to skip." +
+            if (video) "" else "\nPlays the built-in boot video by default; you can also upload your own.", {
+            when (prefs.intro) { Prefs.INTRO_BOOT -> "On boot"; Prefs.INTRO_WAKE -> "On boot and wake"; else -> "Off" }
         }) {
             val opts = listOf(Prefs.INTRO_OFF, Prefs.INTRO_BOOT, Prefs.INTRO_WAKE)
             prefs.intro = opts[(opts.indexOf(prefs.intro) + 1) % opts.size]
             // This boot counts as played: turning it on doesn't start it on the next return home.
             prefs.introBoot = Intro.bootStamp(this)
         }
-        row("动画内容", "上传的视频：比如 Apple TV 的开机动画，结尾的标志放大进入桌面。Tigris 字样：Tigris 字样淡入后放大。" +
-            if (video) "" else "\n没有上传视频时，视频模式使用内置动画。", {
-            if (prefs.introSource == Prefs.INTRO_WORDMARK) "Tigris 字样" else if (video) "上传的视频" else "内置视频"
+        row("Animation content", "Uploaded video: for example Apple TV's boot animation, with the logo zooming in at the end. Tigris wordmark: the wordmark fades in and then zooms." +
+            if (video) "" else "\nWithout an uploaded video, video mode uses the built-in animation.", {
+            if (prefs.introSource == Prefs.INTRO_WORDMARK) "Tigris wordmark" else if (video) "Uploaded video" else "Built-in video"
         }) {
             prefs.introSource = if (prefs.introSource == Prefs.INTRO_WORDMARK) Prefs.INTRO_VIDEO else Prefs.INTRO_WORDMARK
         }
-        row("唤醒后等待", "从待机唤醒时，先黑屏这么久再播放动画。不少电视（尤其是 OLED）在系统亮屏后过几秒画面才真正亮起；看不到动画开头就调长，黑屏太久就调短。", {
-            if (prefs.wakeDelay == 0) "不等待" else "${prefs.wakeDelay / 1000.0} 秒".replace(".0 ", " ")
+        row("Wait after wake", "When waking from standby, stay black for this long before playing the animation. Many TVs (especially OLED) take a few seconds to actually light up; increase it if you miss the start of the animation, decrease it if the black screen lasts too long.", {
+            if (prefs.wakeDelay == 0) "No wait" else "${prefs.wakeDelay / 1000.0} s".replace(".0 ", " ")
         }) {
             val opts = listOf(0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 10_000)
             prefs.wakeDelay = opts.firstOrNull { it > prefs.wakeDelay } ?: 0
         }
-        row("开机动画声音", "播放动画视频里的声音。", { onOff(prefs.introSound) }) { prefs.introSound = !prefs.introSound }
-        row("预览开机动画", "现在回到主屏幕播放一次。", { "" }, chevron = true) {
+        row("Boot animation sound", "Play the audio from the animation video.", { onOff(prefs.introSound) }) { prefs.introSound = !prefs.introSound }
+        row("Preview boot animation", "Play it once now, back on the home screen.", { "" }, chevron = true) {
             startActivity(Intent(this, HomeActivity::class.java)
                 .putExtra(Intro.EXTRA_PREVIEW, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
 
-        section("背景与相框")
-        row("背景", "主屏幕的背景：主题、壁纸来源或者自己的照片。", {
+        section("Background & frame")
+        row("Background", "Home screen background: a theme, a wallpaper source, or your own photos.", {
             Backgrounds.THEMES[prefs.background]?.first ?: Wallpapers.label(Wallpapers.sourceFor(prefs.background)).let {
-                if (prefs.background == Wallpapers.MINE) it else "$it（自动更换）"
+                if (prefs.background == Wallpapers.MINE) it else "$it (rotates automatically)"
             }
         }, chevron = true) { startActivity(Intent(this, WallpaperActivity::class.java)) }
-        row("照片更换频率", "自动更换的背景多久换一张。", { minutesLabel(prefs.wallMinutes) }) {
+        row("Photo rotation interval", "How often the rotating background changes.", { minutesLabel(prefs.wallMinutes) }) {
             val opts = listOf(15, 30, 60, 180, 1440)
             prefs.wallMinutes = opts[(opts.indexOf(prefs.wallMinutes) + 1) % opts.size]
         }
-        row("立即换一张", "现在从壁纸来源取一张新照片。照片要显示时才下载，旧的过几天自动清理。",
-            { "已有 ${Wallpapers(this, Wallpapers.sourceFor(prefs.background)).files().size} 张" }) { v ->
-            v.text = "正在下载…"
+        row("Change now", "Fetch a new photo from the wallpaper source now. Photos are downloaded when shown, and old ones are cleaned up after a few days.",
+            { "Have ${Wallpapers(this, Wallpapers.sourceFor(prefs.background)).files().size}" }) { v ->
+            v.text = "Downloading…"
             Thread {
                 val w = Wallpapers(applicationContext, Wallpapers.sourceFor(prefs.background))
                 w.refresh()
                 w.advance(prefs.wallMinutes, force = true)
-                runOnUiThread { v.text = "已有 ${w.files().size} 张" }
+                runOnUiThread { v.text = "Have ${w.files().size}" }
             }.start()
         }
-        row("电视空闲时显示相框", "电视空闲一段时间后全屏轮播照片或航拍视频，代替电视自带的屏保。",
+        row("Show frame when the TV is idle", "After the TV has been idle for a while, loop photos or aerial videos full screen instead of the built-in screensaver.",
             { onOff(prefs.frameScreensaver) }) { v ->
             val on = !prefs.frameScreensaver
             val current = Settings.Secure.getString(contentResolver, "screensaver_components").orEmpty()
@@ -291,107 +291,107 @@ class SettingsActivity : Activity() {
             // Whatever the TV had before goes back when the frame is turned off (Sony's own if unknown).
             if (on && !current.startsWith(packageName)) prefs.prevScreensaver = current
             val comp = if (on) mine else prefs.prevScreensaver.ifEmpty { SONY_DREAM }
-            v.text = "正在设置…"
+            v.text = "Setting up…"
             Thread {
                 val ok = putSecure("screensaver_components", comp) && putSecure("screensaver_enabled", "1")
                 if (ok) prefs.frameScreensaver = on
-                runOnUiThread { v.text = if (ok) onOff(prefs.frameScreensaver) else "需要先授权本机调试" }
+                runOnUiThread { v.text = if (ok) onOff(prefs.frameScreensaver) else "Local debugging must be authorized first" }
             }.start()
         }
-        row("屏保内容", "相框里放背景照片，还是 Apple TV 的航拍视频。",
-            { if (prefs.saverMode == Prefs.SAVER_AERIAL) "Apple TV 航拍视频" else "照片" }) {
+        row("Screensaver content", "Whether the frame shows background photos or Apple TV aerial videos.",
+            { if (prefs.saverMode == Prefs.SAVER_AERIAL) "Apple TV aerial videos" else "Photos" }) {
             prefs.saverMode = if (prefs.saverMode == Prefs.SAVER_AERIAL) Prefs.SAVER_PHOTOS else Prefs.SAVER_AERIAL
         }
-        row("空闲多久显示相框", "多久没有操作后显示相框。", { minutesLabel(idleMinutes()) }) { v ->
+        row("Idle time before the frame appears", "How long without input before the frame appears.", { minutesLabel(idleMinutes()) }) { v ->
             val opts = listOf(1, 3, 5, 10, 15, 30)
             val next = opts[(opts.indexOf(idleMinutes()) + 1) % opts.size]
-            v.text = "正在设置…"
+            v.text = "Setting up…"
             Thread {
                 val ok = LocalAdb.shell(applicationContext, "settings put system screen_off_timeout ${next * 60_000}") != null
-                runOnUiThread { v.text = if (ok) minutesLabel(next) else "需要先授权本机调试" }
+                runOnUiThread { v.text = if (ok) minutesLabel(next) else "Local debugging must be authorized first" }
             }.start()
         }
-        row("相框每张照片停留", "相框里每张照片显示多久。", { "${prefs.frameSeconds} 秒" }) {
+        row("Time per photo in the frame", "How long each photo is shown in the frame.", { "${prefs.frameSeconds} s" }) {
             val opts = listOf(15, 30, 60, 120)
             prefs.frameSeconds = opts[(opts.indexOf(prefs.frameSeconds) + 1) % opts.size]
         }
 
-        section("内存与电源")
-        row("待机时自动释放内存", "待机时仅清理缓存进程，不强制停止应用；无法确认前台时跳过。", { onOff(prefs.cleanOnStandby) }) {
+        section("Memory & power")
+        row("Free memory automatically in standby", "In standby, only cached processes are cleaned; apps are not force-stopped. Skipped when the foreground app can't be confirmed.", { onOff(prefs.cleanOnStandby) }) {
             prefs.cleanOnStandby = !prefs.cleanOnStandby
         }
-        row("定时释放内存", "定时清理缓存进程，不强制停止应用。新安装默认关闭。", {
-            if (prefs.cleanIntervalHours == 0) "关闭" else "每 ${prefs.cleanIntervalHours} 小时"
+        row("Scheduled memory freeing", "Periodically clean cached processes without force-stopping apps. Off by default on new installs.", {
+            if (prefs.cleanIntervalHours == 0) "Off" else "Every ${prefs.cleanIntervalHours} h"
         }) {
             val opts = listOf(0, 2, 4, 8)
             prefs.cleanIntervalHours = opts[(opts.indexOf(prefs.cleanIntervalHours) + 1) % opts.size]
             KeeperService.start(this, KeeperService.ACTION_RESCHEDULE)
         }
-        row("立即释放内存", "现在关掉后台的 App。", { "可用 ${Cleaner.availMb(this)} MB" }) { v ->
-            v.text = "正在释放…"
+        row("Free memory now", "Close background apps now.", { "${Cleaner.availMb(this)} MB available" }) { v ->
+            v.text = "Freeing…"
             Thread {
                 val r = Cleaner.clean(applicationContext)
                 runOnUiThread { v.text = r.description() }
             }.start()
         }
-        row("释放内存时保留的 App", "释放内存时不会被关掉的 App，比如投屏和音乐。", { "${prefs.keep.size} 个" }, chevron = true) {
+        row("Apps kept when freeing memory", "Apps that won't be closed when freeing memory, such as casting and music.", { "${prefs.keep.size}" }, chevron = true) {
             show(Page.KEEP)
         }
-        row("按遥控器电源键时", "待机：和平时一样。彻底关机：省电，但开机要等更久。", {
-            if (prefs.shutdownOnPowerKey) "彻底关机" else "待机"
+        row("When you press power on the remote", "Standby: as usual. Full power off: saves power, but boot takes longer.", {
+            if (prefs.shutdownOnPowerKey) "Full power off" else "Standby"
         }) {
             prefs.shutdownOnPowerKey = !prefs.shutdownOnPowerKey
             if (prefs.shutdownOnPowerKey && !prefs.adbAuthorized)
-                Toast.makeText(this, "需要先授权本机调试才会生效", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Requires local debugging authorization to take effect", Toast.LENGTH_LONG).show()
         }
 
         section("App")
-        row("最近打开的 App 自动置顶", "开启时，成功打开的应用或文件夹会移动到最前面；关闭后保持当前排列，只通过长按「编辑主屏幕」手动调整，重新启动应用也不会打乱顺序。",
+        row("Move recently opened apps to the front", "When on, an app or folder that opens successfully moves to the front. When off, the current order is kept and only long-press “Edit Home Screen” changes it; launching apps won't reshuffle.",
             { onOff(prefs.recentFirst) }) { prefs.recentFirst = !prefs.recentFirst }
-        row("隐藏的 App", "不在主屏幕上显示的 App。", { "${prefs.hidden.size} 个" }, chevron = true) { show(Page.HIDDEN) }
-        row("已删除的预装 App", "从长按菜单里删除的预装 App，可以在这里恢复。", { "${prefs.removed.size} 个" }, chevron = true) {
+        row("Hidden apps", "Apps that don't appear on the home screen.", { "${prefs.hidden.size}" }, chevron = true) { show(Page.HIDDEN) }
+        row("Removed preinstalled apps", "Preinstalled apps removed from the long-press menu can be restored here.", { "${prefs.removed.size}" }, chevron = true) {
             show(Page.REMOVED)
         }
 
-        section("系统")
-        row("本机调试授权", "允许主屏幕通过本机调试完成关机、释放内存等系统操作。授权时在弹窗中选择“始终允许”。",
-            { if (prefs.adbAuthorized) "已授权" else "未授权，按确认键授权" }) { v ->
-            v.text = "请在弹窗中选择“始终允许”"
+        section("System")
+        row("Local debugging authorization", "Let the home screen use local debugging for actions like power off and freeing memory. Choose “Always allow” in the dialog.",
+            { if (prefs.adbAuthorized) "Authorized" else "Not authorized — press OK to authorize" }) { v ->
+            v.text = "Choose “Always allow” in the dialog"
             Thread {
                 val ok = LocalAdb.shell(applicationContext, "echo ok", 60_000) != null
-                runOnUiThread { v.text = if (ok) "已授权" else "未授权，按确认键重试" }
+                runOnUiThread { v.text = if (ok) "Authorized" else "Not authorized — press OK to retry" }
             }.start()
         }
         // Only where the TV keeps Home for its own launcher; on Sony or stock Android TV Tigris is the real home.
-        if (Guard.needed(this)) row("桌面守护", "按主页键回到原厂桌面时，自动回到这里。",
-            { if (!prefs.guard) "关" else if (HomeGuardService.isRunning) "开" else "开（未运行）" }) { v ->
+        if (Guard.needed(this)) row("Home screen guardian", "When the Home key takes you to the stock launcher, come back here automatically.",
+            { if (!prefs.guard) "Off" else if (HomeGuardService.isRunning) "On" else "On (not running)" }) { v ->
             val on = !prefs.guard
-            v.text = "正在设置…"
+            v.text = "Setting up…"
             Thread {
                 val ok = (Guard.hasSecureSettings(this) || Guard.grantViaLocalAdb(applicationContext)) && Guard.setEnabled(applicationContext, on)
                 runOnUiThread {
-                    v.text = if (!ok) "需要先授权本机调试" else if (on) "开" else "关"
-                    if (ok && on) Toast.makeText(this, "按主页键回到原厂桌面时会自动回到这里", Toast.LENGTH_LONG).show()
+                    v.text = if (!ok) "Local debugging must be authorized first" else if (on) "On" else "Off"
+                    if (ok && on) Toast.makeText(this, "The Home key will bring you back here", Toast.LENGTH_LONG).show()
                 }
             }.start()
         }
-        if (Guard.isXiaomi() || prefs.keepAdb) row("保持 ADB 调试开启", "防止系统自动关掉 ADB 调试。", { onOff(prefs.keepAdb) }) { v ->
+        if (Guard.isXiaomi() || prefs.keepAdb) row("Keep ADB debugging on", "Prevent the system from turning ADB debugging off.", { onOff(prefs.keepAdb) }) { v ->
             val on = !prefs.keepAdb
-            v.text = "正在设置…"
+            v.text = "Setting up…"
             Thread {
                 val ok = !on || Guard.hasSecureSettings(this) || Guard.grantViaLocalAdb(applicationContext)
                 if (ok) { prefs.keepAdb = on; Guard.ensureAdb(applicationContext) }
-                runOnUiThread { v.text = if (ok) onOff(prefs.keepAdb) else "需要先授权本机调试" }
+                runOnUiThread { v.text = if (ok) onOff(prefs.keepAdb) else "Local debugging must be authorized first" }
             }.start()
         }
-        row("系统设置", "打开电视自带的设置。", { "" }, chevron = true) { runCatching { startActivity(TvControls(this).settingsIntent()) } }
-        row("关于", "Tigris 主屏幕，仿 tvOS 的 Android TV 桌面。",
-            { "版本 " + packageManager.getPackageInfo(packageName, 0).versionName }) {}
+        row("System settings", "Open the TV's built-in settings.", { "" }, chevron = true) { runCatching { startActivity(TvControls(this).settingsIntent()) } }
+        row("About", "Tigris home screen, a tvOS-inspired Android TV launcher.",
+            { "Version " + packageManager.getPackageInfo(packageName, 0).versionName }) {}
     }
 
     private fun appPicker(title: String, selected: Set<String>, includeHidden: Boolean = false, toggle: (String, Boolean) -> Unit) {
         heading.text = title
-        about.text = if (page == Page.KEEP) "选中的 App 在释放内存时不会被关掉。" else "选中的 App 不会出现在主屏幕上。"
+        about.text = if (page == Page.KEEP) "The selected apps won't be closed when memory is freed." else "The selected apps won't appear on the home screen."
         val apps = if (includeHidden) repo.allApps().sortedBy { it.label } else repo.allApps().filter { !repo.isSystem(it.pkg) }.sortedBy { it.label }
         val sel = selected.toMutableSet()
         for (a in apps) {
@@ -406,19 +406,19 @@ class SettingsActivity : Activity() {
 
     /** Preinstalled apps deleted from the long-press menu; selecting one reinstalls it from the system partition. */
     private fun removedApps() {
-        heading.text = "已删除的预装 App"
-        about.text = "选择一个 App，从系统分区重新安装它。"
-        if (prefs.removed.isEmpty()) row("没有已删除的 App", null, { "" }) {}
+        heading.text = "Removed preinstalled apps"
+        about.text = "Pick an app to reinstall it from the system partition."
+        if (prefs.removed.isEmpty()) row("No removed apps", null, { "" }) {}
         for (pkg in prefs.removed.sorted()) {
             val label = try {
                 packageManager.getApplicationInfo(pkg, PackageManager.MATCH_UNINSTALLED_PACKAGES).loadLabel(packageManager).toString()
             } catch (e: Exception) { pkg }
-            row(label, null, { "恢复" }) { v ->
-                v.text = "正在恢复…"
+            row(label, null, { "Restore" }) { v ->
+                v.text = "Restoring…"
                 Thread {
                     val ok = LocalAdb.shell(applicationContext, "cmd package install-existing $pkg")?.contains("installed") == true
                     if (ok) prefs.removed = prefs.removed - pkg
-                    runOnUiThread { v.text = if (ok) "已恢复" else "恢复失败" }
+                    runOnUiThread { v.text = if (ok) "Restored" else "Restore failed" }
                 }.start()
             }
         }
@@ -469,16 +469,16 @@ class SettingsActivity : Activity() {
         r.setOnClickListener {
             if (page == Page.MAIN) opener = list.indexOfChild(r)
             onClick(v)
-            if (page == Page.MAIN && !v.text.startsWith("正在") && !v.text.startsWith("请在")) v.text = value()
+            if (page == Page.MAIN && !v.text.startsWith("In progress") && !v.text.startsWith("Please check")) v.text = value()
         }
         list.addView(r, LinearLayout.LayoutParams(-1, dp(52)).apply { bottomMargin = dp(6) })
     }
 
-    private fun onOff(b: Boolean) = if (b) "开" else "关"
+    private fun onOff(b: Boolean) = if (b) "On" else "Off"
 
-    /** "自动（…）" with what auto picks on this TV, or the forced choice. */
+    /** "Auto (…)" with what auto picks on this TV, or the forced choice. */
     private fun auto(pref: String, on: Boolean, yes: String, no: String) =
-        if (pref == Prefs.AUTO) "自动（${if (on) yes else no}）" else if (on) yes else no
+        if (pref == Prefs.AUTO) "Auto (${if (on) yes else no})" else if (on) yes else no
 
     /** The next of 自动 → [a] → [b]. */
     private fun next(pref: String, a: String, b: String) = when (pref) { Prefs.AUTO -> a; a -> b; else -> Prefs.AUTO }
@@ -489,9 +489,9 @@ class SettingsActivity : Activity() {
         else LocalAdb.shell(applicationContext, "settings put secure $key $value") != null
 
     private fun minutesLabel(m: Int) = when {
-        m >= 1440 -> "每天"
-        m >= 60 -> "${m / 60} 小时"
-        else -> "$m 分钟"
+        m >= 1440 -> "Daily"
+        m >= 60 -> "${m / 60} h"
+        else -> "$m min"
     }
 
     /** On Android TV the screensaver starts after the "screen off" timeout. */

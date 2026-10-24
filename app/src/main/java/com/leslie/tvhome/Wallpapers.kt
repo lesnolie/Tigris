@@ -363,8 +363,8 @@ class Wallpapers(private val ctx: Context, private val source: String = BING) {
         val SOURCES = listOf(BING, SCENERY, FRESH, ANIME, ART, MINE, CUSTOM)
 
         /** Hosts to the captions the photo frame shows under their pictures. */
-        private val CAPTIONS = mapOf("360.cn" to "360 壁纸", "wallhaven.cc" to "Wallhaven", "alcy.cc" to "栗次元",
-            "clevelandart.org" to "克利夫兰艺术博物馆 · 公有领域", "picsum.photos" to "Lorem Picsum · Unsplash")
+        private val CAPTIONS = mapOf("360.cn" to "360 Wallpapers", "wallhaven.cc" to "Wallhaven", "alcy.cc" to "Liziyuan",
+            "clevelandart.org" to "Cleveland Museum of Art · Public domain", "picsum.photos" to "Lorem Picsum · Unsplash")
 
         /**
          * The links of a feed source, with the page for [day] (so a new set each day), in a
@@ -401,13 +401,13 @@ class Wallpapers(private val ctx: Context, private val source: String = BING) {
         private val IMAGE_URL = Regex("""https?://[^\s"'<>()\\]+?\.(?:jpe?g|png|webp)(?:\?[^\s"'<>()\\]*)?""", RegexOption.IGNORE_CASE)
 
         fun label(source: String) = when (source) {
-            ANIME -> "二次元壁纸"
-            SCENERY -> "风景大片"
-            FRESH -> "清新萌宠"
-            ART -> "名画"
-            MINE -> "我的照片"
-            CUSTOM -> "自定义链接"
-            else -> "风景照片"
+            ANIME -> "Anime wallpapers"
+            SCENERY -> "Landscapes"
+            FRESH -> "Cute pets"
+            ART -> "Fine art"
+            MINE -> "My photos"
+            CUSTOM -> "Custom link"
+            else -> "Landscape photos"
         }
 
         /** The picture source behind a [Prefs.background] value; gradient themes fall back to Bing. */
@@ -473,31 +473,31 @@ class Wallpapers(private val ctx: Context, private val source: String = BING) {
 object Backgrounds {
     /** key -> (label, colour blobs as x, y, radius (fractions of width), colour). */
     val THEMES: LinkedHashMap<String, Pair<String, List<Blob>>> = linkedMapOf(
-        "green" to ("绿色" to listOf(
+        "green" to ("Green" to listOf(
             Blob(0.10f, 0.35f, 0.75f, 0xFF0B7A2E.toInt()),
             Blob(0.48f, -0.05f, 0.70f, 0xFF02B43C.toInt()),
             Blob(1.00f, 0.20f, 0.55f, 0xFF0F7F8A.toInt()),
             Blob(1.05f, 0.80f, 0.45f, 0xFF3C2B8F.toInt()),
         )),
-        "blue" to ("蓝色" to listOf(
+        "blue" to ("Blue" to listOf(
             Blob(0.10f, 0.30f, 0.75f, 0xFF0B3C8C.toInt()),
             Blob(0.50f, -0.05f, 0.70f, 0xFF1E6FE0.toInt()),
             Blob(1.00f, 0.20f, 0.55f, 0xFF16A3C4.toInt()),
             Blob(1.05f, 0.85f, 0.45f, 0xFF5B2EA6.toInt()),
         )),
-        "purple" to ("紫色" to listOf(
+        "purple" to ("Purple" to listOf(
             Blob(0.10f, 0.30f, 0.75f, 0xFF4A1C8C.toInt()),
             Blob(0.50f, -0.05f, 0.70f, 0xFF8E3BE0.toInt()),
             Blob(1.00f, 0.20f, 0.55f, 0xFFD24C9A.toInt()),
             Blob(1.05f, 0.85f, 0.45f, 0xFF2D3FA8.toInt()),
         )),
-        "orange" to ("橙色" to listOf(
+        "orange" to ("Orange" to listOf(
             Blob(0.10f, 0.30f, 0.75f, 0xFF9A3412.toInt()),
             Blob(0.50f, -0.05f, 0.70f, 0xFFF0802A.toInt()),
             Blob(1.00f, 0.20f, 0.55f, 0xFFE0466A.toInt()),
             Blob(1.05f, 0.85f, 0.45f, 0xFF6B2FA0.toInt()),
         )),
-        "graphite" to ("深灰" to listOf(
+        "graphite" to ("Dark gray" to listOf(
             Blob(0.10f, 0.30f, 0.75f, 0xFF2A2D34.toInt()),
             Blob(0.50f, -0.05f, 0.70f, 0xFF4A505C.toInt()),
             Blob(1.00f, 0.20f, 0.55f, 0xFF36404F.toInt()),

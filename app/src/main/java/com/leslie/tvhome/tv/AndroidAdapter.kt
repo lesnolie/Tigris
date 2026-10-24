@@ -110,7 +110,7 @@ open class AndroidAdapter(protected val ctx: Context) : TvAdapter {
     }
 
     override fun inputSummary(list: List<Input>) =
-        if (list.isEmpty()) "无法读取电视的输入源" else "${list.size} 个 HDMI 输入"
+        if (list.isEmpty()) "Can't read the TV's inputs" else "${list.size} HDMI inputs"
 
     override fun settingsIntent() = Intent(Settings.ACTION_SETTINGS)
 

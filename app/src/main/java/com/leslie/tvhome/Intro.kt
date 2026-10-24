@@ -31,7 +31,7 @@ import kotlin.math.sin
  * flies into its home screen. The logo is taken from the video's last frame (whatever is bright on
  * black), so any clip that ends on a logo works. Without a video, the name "Tigris" stands in.
  *
- * A default video is bundled; the phone page (壁纸 → QR code) can upload an override, or adb
+ * A default video is bundled; the phone page (Wallpaper → QR code) can upload an override, or adb
  * can push one to Android/data/com.leslie.tvhome/files/intro.mp4.
  */
 class Intro(

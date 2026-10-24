@@ -7,7 +7,7 @@ import android.os.Build
 import android.util.Log
 
 /**
- * Skyworth / Coocaa (酷开) firmware. Only inputs are adapted so far, and not yet on a real TV.
+ * Skyworth / Coocaa (酷On) firmware. Only inputs are adapted so far, and not yet on a real TV.
  *
  * - Inputs: some firmwares register no TvInputService, so when the standard list is empty this
  *   opens the launcher's own source picker instead of pretending single HDMI ports are reachable
@@ -19,7 +19,7 @@ class CoocaaAdapter(ctx: Context) : AndroidAdapter(ctx) {
     override fun matches() = isCoocaa() || pickerAvailable()
 
     override fun inputs() = super.inputs().ifEmpty {
-        if (pickerAvailable()) listOf(Input(URI_PREFIX, "酷开信号源", "", false)) else emptyList()
+        if (pickerAvailable()) listOf(Input(URI_PREFIX, "Coocaa input", "", false)) else emptyList()
     }
 
     override fun setInput(i: Input) {
@@ -29,7 +29,7 @@ class CoocaaAdapter(ctx: Context) : AndroidAdapter(ctx) {
     }
 
     override fun inputSummary(list: List<Input>) =
-        if (list.firstOrNull()?.uri == URI_PREFIX) "酷开信号源选择器" else super.inputSummary(list)
+        if (list.firstOrNull()?.uri == URI_PREFIX) "Coocaa input picker" else super.inputSummary(list)
 
     /**
      * The launcher package alone isn't enough: an older firmware may lack the picker activity,

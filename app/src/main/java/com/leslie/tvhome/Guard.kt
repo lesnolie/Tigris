@@ -370,7 +370,7 @@ class ConfigReceiver : BroadcastReceiver() {
         val prefs = Prefs(c)
         if (i.hasExtra("keep_adb")) prefs.keepAdb = i.getBooleanExtra("keep_adb", false)
         if (i.hasExtra("guard")) Guard.setEnabled(c, i.getBooleanExtra("guard", false))
-        // Looks (主屏幕设置 → 外观 / 开机动画), mostly for agents setting a TV up.
+        // Looks (Home Screen Settings → Appearance / Boot animation), mostly for agents setting a TV up.
         i.getStringExtra("cc_style")?.let { prefs.ccStyle = it }
         i.getStringExtra("focus_style")?.let { prefs.focusStyle = it }
         i.getStringExtra("clock_style")?.let { prefs.clockStyle = it }

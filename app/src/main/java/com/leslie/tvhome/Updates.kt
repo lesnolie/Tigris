@@ -17,8 +17,8 @@ import java.util.concurrent.Executors
 /** Checks official stable releases; APK identity and signature are verified before installation. */
 object Updates {
     data class Product(val name: String, val repo: String, val pkg: String)
-    val products = listOf(Product("Tigris 桌面", "lesnolie/Tigris", "com.leslie.tvhome"),
-        Product("MiracastReceiver 投屏", "weekdayjast/MiracastReceiver", "com.weekd.miracastreceiver"))
+    val products = listOf(Product("Tigris home screen", "lesnolie/Tigris", "com.leslie.tvhome"),
+        Product("MiracastReceiver casting", "weekdayjast/MiracastReceiver", "com.weekd.miracastreceiver"))
     private const val MIRACAST_CERT = "ea7f4568203d294bd37acac966d6d707f79147549d24c2244f58a6fbc27a6291"
     val executor = Executors.newSingleThreadExecutor()
     private const val CHANNEL = "software_updates"
@@ -55,10 +55,10 @@ object Updates {
                 items.firstOrNull { it.getString("name") == preferred }
             } else {
                 items.firstOrNull { it.getString("name").endsWith("-universal.apk") }
-            } ?: error("发布中没有适用安装包")
+            } ?: error("No compatible package in this release")
             val url = asset.getString("browser_download_url")
             check(url.startsWith("https://github.com/${p.repo}/releases/download/"))
-            val status = when { current == null -> "未安装 · 可安装 $version"; update -> "$current → $version"; else -> "$current · 无需更新（正式版 $version）" }
+            val status = when { current == null -> "Not installed · $version available"; update -> "$current → $version"; else -> "$current · up to date (stable $version)" }
             prefs(c).edit().putString(p.pkg + ".status", status).putBoolean(p.pkg + ".available", update)
                 .putString(p.pkg + ".url", url).putString(p.pkg + ".version", version)
                 .putString(p.pkg + ".digest", asset.optString("digest"))
@@ -66,38 +66,38 @@ object Updates {
             if (update && current != null) {
                 val key = p.pkg + ".notified"
                 if (prefs(c).getString(key, "") != version) {
-                    notify(c, p, "有新版本 $version，打开更新中心查看")
+                    notify(c, p, "New version $version available — open the update center")
                     prefs(c).edit().putString(key, version).apply()
                 }
             }
             "${p.name}：$status"
         } catch (e: Exception) {
-            val status = "检查失败：${e.message ?: "网络不可用"}，稍后重试"
+            val status = "Check failed: ${e.message ?: "Network unavailable"}, try again later"
             prefs(c).edit().putString(p.pkg + ".status", status).putBoolean(p.pkg + ".available", false).apply()
             "${p.name}：$status"
         }
     }
     private fun hex(bytes: ByteArray) = bytes.joinToString("") { "%02x".format(it) }
     fun install(c: Context, p: Product) {
-        check(c.packageManager.canRequestPackageInstalls()) { "请先允许 Tigris 安装未知应用" }
+        check(c.packageManager.canRequestPackageInstalls()) { "Allow Tigris to install unknown apps first" }
         val sp = prefs(c)
         val existing = sp.getInt(p.pkg + ".session", -1)
         if (existing >= 0 && c.packageManager.packageInstaller.getSessionInfo(existing) != null)
-            error("已有安装等待完成，请查看软件更新通知并确认")
-        check(sp.getBoolean(p.pkg + ".available", false)) { "请先检查更新" }
+            error("An install is already pending; check the software update notification and confirm")
+        check(sp.getBoolean(p.pkg + ".available", false)) { "Check for updates first" }
         val file = File(c.cacheDir, p.pkg + "-update.apk")
         try {
             val url = sp.getString(p.pkg + ".url", "")!!
             check(url.startsWith("https://github.com/${p.repo}/releases/download/"))
             val size = sp.getLong(p.pkg + ".size", 0)
-            check(size in 1..250_000_000L) { "安装包大小异常" }
+            check(size in 1..250_000_000L) { "Unexpected package size" }
             val con = connection(url)
             try {
                 con.inputStream.use { input -> file.outputStream().use { out ->
                     val buffer = ByteArray(65536); var total = 0L
                     while (true) { val n = input.read(buffer); if (n < 0) break; total += n
-                        check(total <= size) { "下载大小超出发布信息" }; out.write(buffer, 0, n) }
-                    check(total == size) { "下载不完整" }
+                        check(total <= size) { "Download is larger than the release metadata" }; out.write(buffer, 0, n) }
+                    check(total == size) { "Download incomplete" }
                 } }
             } finally { con.disconnect() }
             val digest = sp.getString(p.pkg + ".digest", "").orEmpty()
@@ -105,19 +105,19 @@ object Updates {
                 val md = MessageDigest.getInstance("SHA-256")
                 file.inputStream().use { input -> val bytes = ByteArray(65536)
                     while (true) { val n = input.read(bytes); if (n < 0) break; md.update(bytes, 0, n) } }
-                check(hex(md.digest()) == digest.removePrefix("sha256:")) { "安装包校验失败" }
+                check(hex(md.digest()) == digest.removePrefix("sha256:")) { "Package verification failed" }
             }
             val pm = c.packageManager
-            val archive = pm.getPackageArchiveInfo(file.path, PackageManager.GET_SIGNING_CERTIFICATES) ?: error("无法读取安装包")
-            check(archive.packageName == p.pkg) { "安装包身份不符" }
-            check((archive.applicationInfo?.minSdkVersion ?: Int.MAX_VALUE) <= Build.VERSION.SDK_INT) { "电视系统版本不支持" }
+            val archive = pm.getPackageArchiveInfo(file.path, PackageManager.GET_SIGNING_CERTIFICATES) ?: error("Can't read the package")
+            check(archive.packageName == p.pkg) { "Package identity mismatch" }
+            check((archive.applicationInfo?.minSdkVersion ?: Int.MAX_VALUE) <= Build.VERSION.SDK_INT) { "Unsupported TV system version" }
             val old = runCatching { pm.getPackageInfo(p.pkg, PackageManager.GET_SIGNING_CERTIFICATES) }.getOrNull()
-            if (old != null) check(archive.longVersionCode > old.longVersionCode) { "没有更高版本，无需安装" }
+            if (old != null) check(archive.longVersionCode > old.longVersionCode) { "No newer version, nothing to install" }
             fun certs(info: android.content.pm.PackageInfo) = info.signingInfo?.apkContentsSigners?.map { hex(MessageDigest.getInstance("SHA-256").digest(it.toByteArray())) }?.toSet().orEmpty()
             val signatures = certs(archive)
-            check(signatures.isNotEmpty()) { "缺少安装包签名" }
-            if (old != null) check(signatures == certs(old)) { "签名不同，无法保留配置升级；未卸载旧版" }
-            else check(p.pkg == products[1].pkg && signatures == setOf(MIRACAST_CERT)) { "不受信任的投屏签名" }
+            check(signatures.isNotEmpty()) { "Package signature missing" }
+            if (old != null) check(signatures == certs(old)) { "Different signature: can't upgrade keeping settings; the old version was not uninstalled" }
+            else check(p.pkg == products[1].pkg && signatures == setOf(MIRACAST_CERT)) { "Untrusted casting signature" }
             val installer = pm.packageInstaller
             val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
                 setAppPackageName(p.pkg)
@@ -133,13 +133,13 @@ object Updates {
                     val pending = PendingIntent.getBroadcast(c, id, intent, flags)
                     session.commit(pending.intentSender)
                 }
-                sp.edit().putString(p.pkg + ".status", "安装已提交，可能需要在电视上确认").apply()
+                sp.edit().putString(p.pkg + ".status", "Install submitted; you may need to confirm on the TV").apply()
             } catch (e: Exception) { installer.abandonSession(id); sp.edit().remove(p.pkg + ".session").apply(); throw e }
         } finally { file.delete() }
     }
     fun notify(c: Context, p: Product, message: String, action: Intent? = null) {
         val nm = c.getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CHANNEL, "软件更新", NotificationManager.IMPORTANCE_DEFAULT))
+        nm.createNotificationChannel(NotificationChannel(CHANNEL, "Software update", NotificationManager.IMPORTANCE_DEFAULT))
         val intent = action ?: Intent(c, UpdateActivity::class.java)
         val pending = PendingIntent.getActivity(c, p.pkg.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         nm.notify(p.pkg.hashCode(), Notification.Builder(c, CHANNEL).setSmallIcon(R.drawable.ic_toggles)
@@ -154,7 +154,7 @@ class UpdateJob : JobService() {
                 Updates.check(this)
                 if (Updates.prefs(this).getBoolean("auto", false)) for (p in Updates.products) {
                     if (Updates.installed(this, p) != null && Updates.prefs(this).getBoolean(p.pkg + ".available", false)) {
-                        runCatching { Updates.install(this, p) }.onFailure { Updates.notify(this, p, it.message ?: "更新失败") }
+                        runCatching { Updates.install(this, p) }.onFailure { Updates.notify(this, p, it.message ?: "Update failed") }
                     }
                 }
             } finally { jobFinished(params, false) }
@@ -171,10 +171,10 @@ class UpdateResult : BroadcastReceiver() {
         if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
             val confirmation = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT) ?: return
             confirmation.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            Updates.notify(context, p, "请确认安装更新", confirmation)
+            Updates.notify(context, p, "Please confirm the update install", confirmation)
             if (UpdateActivity.visible) runCatching { context.startActivity(confirmation) }
         } else {
-            val message = if (status == PackageInstaller.STATUS_SUCCESS) "安装成功" else "安装未完成：${intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)}"
+            val message = if (status == PackageInstaller.STATUS_SUCCESS) "Installed successfully" else "Install incomplete: ${intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)}"
             Updates.prefs(context).edit().remove(p.pkg + ".session").putString(p.pkg + ".status", message).putBoolean(p.pkg + ".available", false).apply()
             Updates.notify(context, p, message)
         }

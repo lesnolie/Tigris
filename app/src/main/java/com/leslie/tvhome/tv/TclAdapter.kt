@@ -26,7 +26,7 @@ class TclAdapter(ctx: Context) : AndroidAdapter(ctx) {
      * (TV / HDMI1(ARC/eARC) / HDMI2-4 / AV / 投屏) for the user to choose from.
      */
     override fun inputs() = super.inputs().ifEmpty {
-        if (installed(LIVE_TV)) listOf(Input(URI_PREFIX, "TCL 信号源", "", false)) else emptyList()
+        if (installed(LIVE_TV)) listOf(Input(URI_PREFIX, "TCL input", "", false)) else emptyList()
     }
 
     override fun setInput(i: Input) {
@@ -35,7 +35,7 @@ class TclAdapter(ctx: Context) : AndroidAdapter(ctx) {
     }
 
     override fun inputSummary(list: List<Input>) =
-        if (list.firstOrNull()?.uri == URI_PREFIX) "TCL 信号源选择器" else super.inputSummary(list)
+        if (list.firstOrNull()?.uri == URI_PREFIX) "TCL input picker" else super.inputSummary(list)
 
     override fun settingsIntent() =
         if (installed(SETTINGS_PKG)) Intent(Intent.ACTION_MAIN).setComponent(ComponentName(SETTINGS_PKG, "$SETTINGS_PKG.ui.MainActivity"))
