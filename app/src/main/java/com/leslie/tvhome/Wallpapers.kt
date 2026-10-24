@@ -113,6 +113,7 @@ class Wallpapers(private val ctx: Context, private val source: String = BING) {
     private fun item(url: String, caption: String) = JSONObject().put("url", url).put("caption", caption)
 
     private fun listBing(items: JSONArray) {
+        val uhd = MediaQuality.uhdWallpapers(ctx)
         for (idx in listOf(0, 7)) {
             val json = get("https://cn.bing.com/HPImageArchive.aspx?format=js&idx=$idx&n=8&mkt=zh-CN").decodeToString()
             val imgs = JSONObject(json).getJSONArray("images")
@@ -120,9 +121,12 @@ class Wallpapers(private val ctx: Context, private val source: String = BING) {
                 val o = imgs.getJSONObject(i)
                 val title = o.optString("title")
                 val copy = o.optString("copyright")
-                items.put(item("https://cn.bing.com" + o.getString("urlbase") + "_1920x1080.jpg",
-                    if (title.isNotEmpty() && !copy.startsWith(title)) "$title — $copy" else copy)
-                    .put("name", o.getString("startdate") + ".jpg"))
+                val base = "https://cn.bing.com" + o.getString("urlbase")
+                val caption = if (title.isNotEmpty() && !copy.startsWith(title)) "$title — $copy" else copy
+                val standard = base + "_1920x1080.jpg"
+                items.put(item(if (uhd) base + "_UHD.jpg" else standard, caption)
+                    .apply { if (uhd) put("fallback", standard) }
+                    .put("name", o.getString("startdate") + (if (uhd) "-uhd.jpg" else ".jpg")))
             }
         }
     }
@@ -190,7 +194,13 @@ class Wallpapers(private val ctx: Context, private val source: String = BING) {
         if (id != null && (0 until ids.length()).any { ids.getString(it) == id }) return null
         val given = o.optString("name").ifEmpty { null }
         if (given != null && File(dir, given).exists()) return null
-        val bytes = fetch(o.getString("url")).first
+        // Bing does not provide UHD for every date. A missing UHD falls back to the existing
+        // 1080p file; no stale failed download is cached.
+        val bytes = runCatching { fetch(o.getString("url")).first }.getOrElse { error ->
+            val fallback = o.optString("fallback")
+            if (fallback.isEmpty()) throw error
+            fetch(fallback).first
+        }
         if (o.optBoolean("page")) {
             val look = look(bytes, minWidth = 1280) ?: return null
             val looks = q.optJSONArray("looks") ?: JSONArray().also { q.put("looks", it) }
@@ -299,23 +309,41 @@ class Wallpapers(private val ctx: Context, private val source: String = BING) {
         return bits
     }
 
-    /** Decodes a large picture straight down to 1920x1080, cropping to 16:9 rather than stretching. */
+    /** Do not silently reduce an actual UHD photo to 1080p. Avoid upscaling smaller sources. */
     private fun fitScreen(bytes: ByteArray): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        val hasUhdSource = bounds.outWidth >= 3840 && bounds.outHeight >= 2160
+        val prefer4k = hasUhdSource && MediaQuality.uhdWallpapers(ctx)
+        // A 4K RGB_565 bitmap takes ~16 MiB instead of ~32 MiB in ARGB_8888.
+        if (prefer4k) runCatching { decodeToSize(bytes, 3840, 2160) }
+            .onFailure { Log.w("Wallpapers", "UHD decode failed; using 1080p", it) }
+            .getOrNull()?.let { return it }
+        return runCatching { decodeToSize(bytes, 1920, 1080) }
+            .onFailure { Log.w("Wallpapers", "image decode failed", it) }.getOrNull()
+    }
+
+    private fun decodeToSize(bytes: ByteArray, targetW: Int, targetH: Int): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
         var sample = 1
-        while (bounds.outWidth / (sample * 2) >= 1920 && bounds.outHeight / (sample * 2) >= 1080) sample *= 2
-        val b = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
-            ?: return null
-        if (b.width == 1920 && b.height == 1080) return b
-        // The middle 16:9 of it: portrait paintings and phone-shaped art keep their proportions.
-        val w = minOf(b.width, b.height * 16 / 9)
-        val h = minOf(b.height, b.width * 9 / 16)
-        val src = Rect((b.width - w) / 2, (b.height - h) / 2, (b.width + w) / 2, (b.height + h) / 2)
-        val out = Bitmap.createBitmap(1920, 1080, Bitmap.Config.ARGB_8888)
-        Canvas(out).drawBitmap(b, src, Rect(0, 0, 1920, 1080), Paint(Paint.FILTER_BITMAP_FLAG))
-        b.recycle()
-        return out
+        while (bounds.outWidth / (sample * 2) >= targetW && bounds.outHeight / (sample * 2) >= targetH) sample *= 2
+        val b = BitmapFactory.decodeByteArray(bytes, 0, bytes.size,
+            BitmapFactory.Options().apply { inSampleSize = sample; inPreferredConfig = Bitmap.Config.RGB_565 }) ?: return null
+        if (b.width == targetW && b.height == targetH) return b
+        val cropW = minOf(b.width, b.height * 16 / 9)
+        val cropH = minOf(b.height, b.width * 9 / 16)
+        val outW = minOf(targetW, cropW)
+        val outH = minOf(targetH, cropH)
+        if (outW <= 0 || outH <= 0) { b.recycle(); return null }
+        val src = Rect((b.width - cropW) / 2, (b.height - cropH) / 2,
+            (b.width + cropW) / 2, (b.height + cropH) / 2)
+        return try {
+            Bitmap.createBitmap(outW, outH, Bitmap.Config.RGB_565).also {
+                Canvas(it).drawBitmap(b, src, Rect(0, 0, outW, outH), Paint(Paint.FILTER_BITMAP_FLAG))
+            }
+        } finally { b.recycle() }
     }
 
     private fun get(url: String): ByteArray {

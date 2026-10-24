@@ -461,6 +461,11 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                     fade.isCrossFadeEnabled = true
                     bg.setImageDrawable(fade)
                     fade.startTransition(1200)
+                    // Drop the old UHD bitmap reference after the fade. Otherwise the
+                    // TransitionDrawable retains two full-size photos until the next rotation.
+                    root.postDelayed({
+                        if (!isDestroyed && bg.drawable === fade) bg.setImageDrawable(next)
+                    }, 1250)
                 }
                 bgPhoto = next
                 root.postDelayed({ if (!isDestroyed) control.refreshGlass() }, 1250)

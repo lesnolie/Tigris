@@ -77,6 +77,16 @@ class Prefs(ctx: Context) {
         get() = sp.getInt("wall_minutes", 30)
         set(v) = sp.edit().putInt("wall_minutes", v).apply()
 
+    /** Image processing resolution: auto (safe), 1080p, or force UHD on capable TVs. */
+    var wallQuality: String
+        get() = sp.getString("wall_quality", MediaQuality.AUTO)!!
+        set(v) = sp.edit().putString("wall_quality", v).apply()
+
+    /** Aerial stream preference; never bypass the hardware decoder capability check. */
+    var aerialQuality: String
+        get() = sp.getString("aerial_quality", MediaQuality.AUTO)!!
+        set(v) = sp.edit().putString("aerial_quality", v).apply()
+
     /** Seconds each photo stays up in the photo frame. */
     var frameSeconds: Int
         get() = sp.getInt("frame_seconds", 30)

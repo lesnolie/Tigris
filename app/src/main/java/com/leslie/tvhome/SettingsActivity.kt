@@ -269,6 +269,23 @@ class SettingsActivity : Activity() {
                 if (prefs.background == Wallpapers.MINE) it else "$it（自动更换）"
             }
         }, chevron = true) { startActivity(Intent(this, WallpaperActivity::class.java)) }
+        row("壁纸画质", "自动：仅在高内存的 4K 设备使用 UHD；1080p：兼容模式；4K：强制尝试高分辨率，旧电视可能变慢。Bing UHD 不存在时自动回退。", {
+            when (prefs.wallQuality) {
+                MediaQuality.UHD -> "优先 4K"
+                MediaQuality.COMPAT -> "1080p"
+                else -> "自动"
+            }
+        }) {
+            prefs.wallQuality = when (prefs.wallQuality) {
+                MediaQuality.AUTO -> MediaQuality.UHD
+                MediaQuality.UHD -> MediaQuality.COMPAT
+                else -> MediaQuality.AUTO
+            }
+            Thread {
+                // Refresh the queue because Bing URLs and file names depend on the requested size.
+                runCatching { Wallpapers(applicationContext, Wallpapers.sourceFor(prefs.background)).refresh(force = true) }
+            }.start()
+        }
         row("照片更换频率", "自动更换的背景多久换一张。", { minutesLabel(prefs.wallMinutes) }) {
             val opts = listOf(15, 30, 60, 180, 1440)
             prefs.wallMinutes = opts[(opts.indexOf(prefs.wallMinutes) + 1) % opts.size]
@@ -301,6 +318,19 @@ class SettingsActivity : Activity() {
         row("屏保内容", "相框里放背景照片，还是 Apple TV 的航拍视频。",
             { if (prefs.saverMode == Prefs.SAVER_AERIAL) "Apple TV 航拍视频" else "照片" }) {
             prefs.saverMode = if (prefs.saverMode == Prefs.SAVER_AERIAL) Prefs.SAVER_PHOTOS else Prefs.SAVER_AERIAL
+        }
+        row("航拍画质", "自动：仅在高内存且具备 4K HEVC 硬解的 4K 电视尝试高清；4K：有硬解时优先尝试；兼容：使用可用的 2K 视频。播放失败会回退。", {
+            when (prefs.aerialQuality) {
+                MediaQuality.UHD -> "优先 4K"
+                MediaQuality.COMPAT -> "兼容"
+                else -> "自动"
+            }
+        }) {
+            prefs.aerialQuality = when (prefs.aerialQuality) {
+                MediaQuality.AUTO -> MediaQuality.UHD
+                MediaQuality.UHD -> MediaQuality.COMPAT
+                else -> MediaQuality.AUTO
+            }
         }
         row("空闲多久显示相框", "多久没有操作后显示相框。", { minutesLabel(idleMinutes()) }) { v ->
             val opts = listOf(1, 3, 5, 10, 15, 30)

@@ -29,9 +29,11 @@ import java.util.Locale
 /**
  * Apple TV's aerial films. Only the catalogue ships (assets/aerials.json, from Aerial's repo,
  * built from Apple's public resources-16.tar: addresses and place names); the films stream from
- * Apple's servers (1080p H.264, about 15–20 Mbps) while the screensaver runs.
+ * Apple's servers while the screensaver runs. 4K HEVC is attempted only on compatible TVs;
+ * a missing 4K asset or decoding failure falls back to 2K HEVC then 2K AVC.
  */
-class Aerial(val id: String, val url: String, private val captions: List<Pair<Int, String>>) {
+class Aerial(val id: String, val url: String, private val captions: List<Pair<Int, String>>,
+             val hevc: String? = null) {
     /** tvOS changes the place name as the camera moves on. */
     fun captionAt(seconds: Int): String = captions.lastOrNull { it.first <= seconds }?.second ?: ""
 }
@@ -50,7 +52,7 @@ object Aerials {
             val caps = o.getJSONArray("captions")
             Aerial(o.getString("id"), o.getString("url"), (0 until caps.length()).map { j ->
                 caps.getJSONArray(j).let { it.getInt(0) to it.getString(1) }
-            })
+            }, o.optString("hevc").takeIf { it.startsWith("https://") })
         }
     }
 }
@@ -88,6 +90,8 @@ class AerialSaver(private val ctx: Context, private val onFail: () -> Unit) : Sa
     }
     private var player: ExoPlayer? = null
     private var films: List<Aerial> = emptyList()
+    private var sources: Map<String, List<String>> = emptyMap()
+    private val selectedVariant = mutableMapOf<String, Int>()
     private var failures = 0
 
     private fun android.widget.TextView.shadow() =
@@ -110,6 +114,12 @@ class AerialSaver(private val ctx: Context, private val onFail: () -> Unit) : Sa
     override fun start() {
         if (player != null) return
         films = Aerials.all(ctx).shuffled()
+        val hevc = MediaQuality.hevcDecoderPresent()
+        val uhd = hevc && MediaQuality.uhdAerial(ctx)
+        selectedVariant.clear()
+        sources = films.associate { film ->
+            film.id to MediaQuality.aerialCandidates(film.url, film.hevc, uhd, hevc)
+        }
         val http = DefaultHttpDataSource.Factory().setConnectTimeoutMs(5_000).setReadTimeoutMs(8_000)
         // ExoPlayer's default video buffer is sized for phones; 24 MB is 10–13 s of film.
         val load = DefaultLoadControl.Builder()
@@ -127,7 +137,21 @@ class AerialSaver(private val ctx: Context, private val onFail: () -> Unit) : Sa
         p.setVideoSurfaceView(surface)
         p.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
-                Log.w("AerialSaver", "film failed", error)
+                val idx = p.currentMediaItemIndex
+                val film = films.getOrNull(idx)
+                val alternatives = film?.let { sources[it.id] }.orEmpty()
+                val attempt = if (film == null) 0 else selectedVariant[film.id] ?: 0
+                if (film != null && attempt + 1 < alternatives.size) {
+                    val next = attempt + 1
+                    selectedVariant[film.id] = next
+                    Log.w("AerialSaver", "video variant $attempt failed; trying $next for ${film.id}", error)
+                    p.replaceMediaItem(idx, MediaItem.Builder().setUri(alternatives[next])
+                        .setMediaId(film.id).build())
+                    p.prepare()
+                    p.play()
+                    return
+                }
+                Log.w("AerialSaver", "all variants failed; skipping film", error)
                 if (++failures >= 3) { onFail(); return }
                 p.seekToNextMediaItem()
                 p.prepare()
@@ -138,7 +162,9 @@ class AerialSaver(private val ctx: Context, private val onFail: () -> Unit) : Sa
                 if (isPlaying) failures = 0
             }
         })
-        p.setMediaItems(films.map { MediaItem.Builder().setUri(it.url).setMediaId(it.id).build() })
+        p.setMediaItems(films.map {
+            MediaItem.Builder().setUri(sources.getValue(it.id).first()).setMediaId(it.id).build()
+        })
         p.prepare()
         p.play()
         player = p
@@ -149,6 +175,8 @@ class AerialSaver(private val ctx: Context, private val onFail: () -> Unit) : Sa
         main.removeCallbacks(tick)
         player?.release()
         player = null
+        sources = emptyMap()
+        selectedVariant.clear()
     }
 
     override fun skip(dir: Int): Boolean {
