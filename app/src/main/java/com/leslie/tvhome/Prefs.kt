@@ -224,6 +224,10 @@ class Prefs(ctx: Context) {
         get() = sp.getBoolean("intro_sound", true)
         set(v) = sp.edit().putBoolean("intro_sound", v).apply()
 
+    var keySound: Boolean
+        get() = sp.getBoolean("key_sound", false)
+        set(v) = sp.edit().putBoolean("key_sound", v).apply()
+
     /** When the boot animation last played after a boot ([Intro.bootStamp]), so it plays once per boot. */
     var introBoot: Long
         get() = sp.getLong("intro_boot", 0L)

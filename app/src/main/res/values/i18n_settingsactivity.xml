@@ -158,4 +158,6 @@
     <string name="i18n_settingsactivity_156" formatted="false">Daily</string>
     <string name="i18n_settingsactivity_157">%1$s h</string>
     <string name="i18n_settingsactivity_158">%1$s min</string>
+    <string name="i18n_settingsactivity_159" formatted="false">Key sound</string>
+    <string name="i18n_settingsactivity_160" formatted="false">Play the system click when focus moves or you select. Off by default; TVs with their own key sound would otherwise click twice.</string>
 </resources>

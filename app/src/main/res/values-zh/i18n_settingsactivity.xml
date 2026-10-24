@@ -158,4 +158,6 @@
     <string name="i18n_settingsactivity_156" formatted="false">每天</string>
     <string name="i18n_settingsactivity_157">%1$s 小时</string>
     <string name="i18n_settingsactivity_158">%1$s 分钟</string>
+    <string name="i18n_settingsactivity_159" formatted="false">按键音</string>
+    <string name="i18n_settingsactivity_160" formatted="false">移动焦点和确认时播放系统提示音。默认关闭；电视自带按键音时开启会响两次。</string>
 </resources>

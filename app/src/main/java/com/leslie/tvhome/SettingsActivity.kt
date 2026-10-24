@@ -276,6 +276,7 @@ class SettingsActivity : Activity() {
             prefs.wakeDelay = opts.firstOrNull { it > prefs.wakeDelay } ?: 0
         }
         row(I18n.text(R.string.i18n_settingsactivity_057), I18n.text(R.string.i18n_settingsactivity_058), { onOff(prefs.introSound) }) { prefs.introSound = !prefs.introSound }
+        row(I18n.text(R.string.i18n_settingsactivity_159), I18n.text(R.string.i18n_settingsactivity_160), { onOff(prefs.keySound) }) { prefs.keySound = !prefs.keySound }
         row(I18n.text(R.string.i18n_settingsactivity_059), I18n.text(R.string.i18n_settingsactivity_060), { "" }, chevron = true) {
             startActivity(Intent(this, HomeActivity::class.java)
                 .putExtra(Intro.EXTRA_PREVIEW, true)

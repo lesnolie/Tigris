@@ -18,6 +18,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.TransitionDrawable
 import android.graphics.Rect
+import android.media.AudioManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
@@ -86,6 +87,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private lateinit var prefs: Prefs
     private lateinit var control: ControlCenter
     private val tv by lazy { TvControls(this) }
+    private val audio by lazy { getSystemService(Context.AUDIO_SERVICE) as AudioManager }
 
     private val main = Handler(Looper.getMainLooper())
     private val io = Executors.newSingleThreadExecutor()
@@ -1058,6 +1060,18 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         focusAt(focusedPos)
     }
 
+    /** Off by default, silent when the system's own touch sounds are off. See [KeySound]. */
+    private fun playKeySound(code: Int, focusMoved: Boolean, handled: Boolean, repeatCount: Int) {
+        if (!KeySound.shouldPlay(prefs.keySound, systemSoundsOn(), code, repeatCount, focusMoved, handled)) return
+        val fx = KeySound.effectFor(code) ?: return
+        // Full scale rather than the default: playSoundEffect(fx) alone drops to the music volume
+        // minus 3 dB, too quiet to hear over a show. The check above keeps the system switch honoured.
+        runCatching { audio.playSoundEffect(fx, 1f) }
+    }
+
+    private fun systemSoundsOn(): Boolean =
+        Settings.System.getInt(contentResolver, Settings.System.SOUND_EFFECTS_ENABLED, 0) != 0
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         restartIdle()
         // Any key skips the intro to its closing zoom; nothing behind it reacts meanwhile.
@@ -1067,6 +1081,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             sheets.isEmpty() && control.isOpen && avatar.isShown && control.atRightEdge()) {
             control.close()
             avatar.requestFocus()
+            playKeySound(code, focusMoved = true, handled = true, repeatCount = event.repeatCount)
             return true
         }
         if (event.action == KeyEvent.ACTION_UP && (code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_MENU)) {
@@ -1077,10 +1092,19 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                 header.hasFocus() -> focusAt(focusedPos)
                 else -> control.open()
             }
+            // Back and Menu act on the up event, so the click marks the action, not the press.
+            playKeySound(code, focusMoved = false, handled = true, repeatCount = event.repeatCount)
             return true
         }
         if (code == KeyEvent.KEYCODE_BACK || code == KeyEvent.KEYCODE_MENU) return true
-        return super.dispatchKeyEvent(event)
+        // Compare focus across the dispatch: a direction that hit the edge of the grid moved
+        // nothing, and a press some other view swallowed never reached the shelf.
+        val focusBefore = currentFocus
+        val handled = super.dispatchKeyEvent(event)
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            playKeySound(code, currentFocus !== focusBefore, handled, event.repeatCount)
+        }
+        return handled
     }
 
     override fun onNewIntent(intent: Intent) {
