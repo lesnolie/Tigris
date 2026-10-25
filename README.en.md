@@ -5,6 +5,8 @@
 > **Shared installation checks:** [Brand troubleshooting, USB installation and verification](docs/installation-compatibility.md). AI and manual installation use `tools/check-install.py`. Test Home before applying firmware workarounds; report untested remote Home, wake and boot as unverified.
 
 
+> **v2.0.8 released:** Fixes the Android 9 / 10 false “missing APK signature” error when installing MiracastReceiver through Software Updates. Existing strict certificate SHA-256, package ID and version checks remain in place. Standard and Guard APKs retain the stable signing certificate for in-place updates. Physical Sony VH1 update-install verification is still requested. See [v2.0.8 release notes](docs/releases/v2.0.8.md).
+
 > **v2.0.7 (October 25, 2026): this release has not been tested on physical TVs.** Shared installation checks plus code fixes for the Tigris home flash before the wake animation and an unbound guard after process recovery. Redmi X50 / MIUI and Xiaomi / Redmi users with these symptoms are invited to test. Firmware force-stop restrictions and stock-launcher flashes are not guaranteed to be resolved. See the [release notes](docs/releases/v2.0.7.md).
 
 Please test physical Home from another app, the home flash and animation on standby wake, guard recovery after long-press Home memory cleanup, and persistence after a reboot when convenient. Report your model, firmware / MIUI version, Standard or Guard build, animation mode and delay, and pass / fail / untested for each item in [Issues](https://github.com/lesnolie/Tigris/issues). Identify whether a flash shows Tigris or the stock launcher; a short video helps.
@@ -21,9 +23,9 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 > The third project in the open-source Chinese Zodiac series: Tiger. *Tigris* means “tiger” in Latin and Greek.
 
-Earlier versions were tested by the maintainer on Sony BRAVIA XR-55A80J (Android TV 12). This does not constitute physical-device validation of v2.0.7. Other devices and firmware variants may require adjustments.
+Earlier versions were tested by the maintainer on Sony BRAVIA XR-55A80J (Android TV 12). This does not constitute physical-device validation of v2.0.8. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.7 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.7)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.7/Tigris-v2.0.7.apk) · [Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.7/Tigris-guard-v2.0.7.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.7/SHA256SUMS-v2.0.7.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.8 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.8)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.8/Tigris-v2.0.8.apk) · [Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.8/Tigris-guard-v2.0.8.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.8/SHA256SUMS-v2.0.8.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
