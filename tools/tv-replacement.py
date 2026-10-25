@@ -18,6 +18,7 @@ import sys
 from datetime import datetime, timezone
 
 from replacement_profiles import CORE_DENY, detect
+from xiaomi_home import inspect_route, probe_home, restore_home
 
 HOME_INTENT = ("-a", "android.intent.action.MAIN", "-c", "android.intent.category.HOME")
 SERIAL_RE = re.compile(r"^[a-zA-Z0-9._:-]+$")
@@ -86,12 +87,14 @@ class Tv:
             if "com.android.tv.settings" in installed:
                 details = self.adb("dumpsys", "package", "com.android.tv.settings")
                 diagnostics["fallbackhome_named_in_manifest_dump"] = "FallbackHome" in details
+            diagnostics["enabled_accessibility_services"] = self.adb(
+                "settings", "get", "secure", "enabled_accessibility_services")
             diagnostics["home_allowlist"] = "unverified"
             diagnostics["home_collision"] = "unverified"
             diagnostics["system_ads"] = "unverified"
         ads = [{"package": p, "installed": p in installed, "disabled": p in disabled,
                 "prevalidated_on_this_firmware": False} for p in profile.ad_candidates]
-        return {
+        inspection = {
             "schema": 1, "device": device, "profile": profile.name,
             "goal": {"home": "Tigris replaces stock Home", "ads": "remove firmware ads where safe",
                      "essential_tv_functions": "preserved", "rollback": "required"},
@@ -104,6 +107,8 @@ class Tv:
             "read_only": True,
             "evidence": self.evidence,
         }
+        inspection["home_route"] = inspect_route(inspection)
+        return inspection
 
 
 def state_path(directory, serial):
@@ -225,7 +230,8 @@ def restore_ads(tv, path, firmware_change=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("inspect", "plan", "apply-ads", "restore-ads"))
+    parser.add_argument("mode", choices=("inspect", "plan", "apply-ads", "restore-ads",
+                                          "home-inspect", "home-probe", "home-activate", "home-restore"))
     parser.add_argument("--serial", required=True, help="ADB device serial, typically 192.168.x.x:5555")
     parser.add_argument("--state-dir", help="Per-device recovery state directory")
     parser.add_argument("--package", action="append", default=[], help="One individually approved ad package (repeat)")
@@ -240,19 +246,36 @@ def main():
         if args.mode == "restore-ads":
             report(restore_ads(tv, path, args.allow_firmware_change))
             return 0
+        home_path = path.with_name("home-probe.json")
+        if args.mode == "home-restore":
+            report(restore_home(tv, home_path, save_state,
+                                allow_firmware_change=args.allow_firmware_change))
+            return 0
         inspected = tv.inspect()
-        if args.mode == "inspect":
+        if args.mode == "home-inspect":
+            report({"device": inspected["device"], "profile": inspected["profile"],
+                    "routing": inspected["home_route"], "home": inspected["home"],
+                    "read_only": True, "system_components_changed": False})
+        elif args.mode in ("home-probe", "home-activate"):
+            report(probe_home(tv, inspected, args.confirm_fingerprint,
+                              args.acknowledge_recovery, home_path, save_state,
+                              keep_if_passed=args.mode == "home-activate"))
+        elif args.mode == "inspect":
             report(inspected)
         elif args.mode == "plan":
             inspected["mode"] = "plan"
             inspected["recommended_order"] = [
                 "Install official signed Tigris via install.sh",
+                "Read home_route classification and use home-inspect for Xiaomi native HOME diagnostics",
+                "Optional home-probe changes only HOME preference and ALWAYS restores the original",
                 "Verify real HOME resolution with check-install.py and physical remote",
                 "Review device-specific ad candidates, preserve system settings and original HOME",
                 "Obtain explicit per-package approval and test recoverability before disabling",
                 "Recheck system functions, reboot, wake and physical HOME; report unverified separately",
             ]
             inspected["commands_are_not_executed"] = True
+            inspected["native_home_trial"] = "opt_in_not_run"
+            inspected["disable_stock_home"] = "blocked_without_verified_firmware_profile"
             report(inspected)
         else:
             report(apply_ads(tv, inspected, args.package, args.confirm_fingerprint,

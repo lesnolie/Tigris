@@ -9,12 +9,14 @@ UNINSTALL=0
 AD_PACKAGES=()
 AD_FINGERPRINT=
 ACK_RECOVERY=0
+ALLOW_FIRMWARE_CHANGE=0
 while (($#)); do
   case "$1" in
-    install|restore|inspect|verify|full-inspect|full-plan|full-apply-ads|full-restore-ads) MODE=$1 ;;
+    install|restore|inspect|verify|full-inspect|full-plan|full-apply-ads|full-restore-ads|full-home-inspect|full-home-probe|full-home-activate|full-home-restore) MODE=$1 ;;
     --ad-package) shift; AD_PACKAGES+=("${1:?Missing ad package}") ;;
     --confirm-fingerprint) shift; AD_FINGERPRINT=${1:?Missing fingerprint} ;;
     --acknowledge-recovery) ACK_RECOVERY=1 ;;
+    --allow-firmware-change) ALLOW_FIRMWARE_CHANGE=1 ;;
     --uninstall) UNINSTALL=1 ;;
     -s|--flavor) shift; FLAVOR=${1:?Missing standard or guard} ;;
     *) echo "Unknown argument: $1" >&2; exit 2 ;;
@@ -56,11 +58,16 @@ if [[ "$MODE" == full-* ]]; then
     full-plan) R_MODE=plan ;;
     full-apply-ads) R_MODE=apply-ads ;;
     full-restore-ads) R_MODE=restore-ads ;;
+    full-home-inspect) R_MODE=home-inspect ;;
+    full-home-probe) R_MODE=home-probe ;;
+    full-home-activate) R_MODE=home-activate ;;
+    full-home-restore) R_MODE=home-restore ;;
   esac
   R_ARGS=("$R_MODE" --serial "$SERIAL" --state-dir "$STATE")
   for p in "${AD_PACKAGES[@]}"; do R_ARGS+=(--package "$p"); done
   [[ -z "$AD_FINGERPRINT" ]] || R_ARGS+=(--confirm-fingerprint "$AD_FINGERPRINT")
   (( ACK_RECOVERY == 0 )) || R_ARGS+=(--acknowledge-recovery)
+  (( ALLOW_FIRMWARE_CHANGE == 0 )) || R_ARGS+=(--allow-firmware-change)
   python3 "$REPLACEMENT" "${R_ARGS[@]}"
   exit $?
 fi

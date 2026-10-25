@@ -41,6 +41,8 @@ class FakeTv:
             text = "com.mitv.tvhome/.MainActivity"
         elif command[:2] == ("dumpsys", "package"):
             text = "com.android.tv.settings.system.FallbackHome"
+        elif command == ("settings", "get", "secure", "enabled_accessibility_services"):
+            text = "com.other/.Service"
         elif command[:3] == ("pm", "disable-user", "--user"):
             pkg = command[-1]
             if pkg == self.fail_disable:
