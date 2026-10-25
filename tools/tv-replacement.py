@@ -231,7 +231,7 @@ def restore_ads(tv, path, firmware_change=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("inspect", "plan", "apply-ads", "restore-ads",
-                                          "home-inspect", "home-probe", "home-restore"))
+                                          "home-inspect", "home-probe", "home-activate", "home-restore"))
     parser.add_argument("--serial", required=True, help="ADB device serial, typically 192.168.x.x:5555")
     parser.add_argument("--state-dir", help="Per-device recovery state directory")
     parser.add_argument("--package", action="append", default=[], help="One individually approved ad package (repeat)")
@@ -256,9 +256,10 @@ def main():
             report({"device": inspected["device"], "profile": inspected["profile"],
                     "routing": inspected["home_route"], "home": inspected["home"],
                     "read_only": True, "system_components_changed": False})
-        elif args.mode == "home-probe":
+        elif args.mode in ("home-probe", "home-activate"):
             report(probe_home(tv, inspected, args.confirm_fingerprint,
-                              args.acknowledge_recovery, home_path, save_state))
+                              args.acknowledge_recovery, home_path, save_state,
+                              keep_if_passed=args.mode == "home-activate"))
         elif args.mode == "inspect":
             report(inspected)
         elif args.mode == "plan":
