@@ -5,6 +5,8 @@
 > **Shared installation checks:** [Brand troubleshooting, USB installation and verification](docs/installation-compatibility.md). AI and manual installation use `tools/check-install.py`. Test Home before applying firmware workarounds; report untested remote Home, wake and boot as unverified.
 
 
+> **Full replacement work in progress:** All Android brands share the goal of replacing the vendor Home, minimizing firmware advertising and keeping rollback possible. See [full replacement guide](docs/full-replacement.md) for the new computer-side diagnostics and opt-in Xiaomi ad candidate workflow. These source changes are **not a new APK release and have not completed physical-TV validation**. Other brand behavior is unchanged.
+
 > **v2.0.8 released:** Fixes the Android 9 / 10 false “missing APK signature” error when installing MiracastReceiver through Software Updates. Existing strict certificate SHA-256, package ID and version checks remain in place. Standard and Guard APKs retain the stable signing certificate for in-place updates. Physical Sony VH1 update-install verification is still requested. See [v2.0.8 release notes](docs/releases/v2.0.8.md).
 
 > **v2.0.7 (October 25, 2026): this release has not been tested on physical TVs.** Shared installation checks plus code fixes for the Tigris home flash before the wake animation and an unbound guard after process recovery. Redmi X50 / MIUI and Xiaomi / Redmi users with these symptoms are invited to test. Firmware force-stop restrictions and stock-launcher flashes are not guaranteed to be resolved. See the [release notes](docs/releases/v2.0.7.md).
