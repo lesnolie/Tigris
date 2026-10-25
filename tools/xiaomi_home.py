@@ -124,7 +124,8 @@ def test_adb_home(tv, pause=time.sleep):
     return {"result": "unverified", "observations": observations}
 
 
-def probe_home(tv, snapshot, fingerprint, acknowledged, path, save_state, pause=time.sleep):
+def probe_home(tv, snapshot, fingerprint, acknowledged, path, save_state,
+               pause=time.sleep, keep_if_passed=False):
     """Trial a standard HOME preference, then restore in finally.
 
     No OEM package disable. Even a trial that appears successful *always*
@@ -164,6 +165,7 @@ def probe_home(tv, snapshot, fingerprint, acknowledged, path, save_state, pause=
     save_state(path, payload, initial=True)
     outcome = {"result": "unverified"}
     issue = None
+    retained = False
     try:
         tv.adb("cmd", "package", "set-home-activity", TIGRIS_HOME)
         payload["state"] = "trial-in-progress"
@@ -182,6 +184,7 @@ def probe_home(tv, snapshot, fingerprint, acknowledged, path, save_state, pause=
                 and outcome["adb_home"]["result"] == "passed")
             else "native_home_not_proven"
         )
+        retained = keep_if_passed and outcome["result"] == "native_home_trial_candidate"
     except Exception as error:
         issue = error
         outcome["result"] = "trial_failed"
@@ -189,23 +192,28 @@ def probe_home(tv, snapshot, fingerprint, acknowledged, path, save_state, pause=
     finally:
         # Always attempt restoration, even if initial set-home succeeds then
         # connection fails. The snapshot remains if restoration cannot be proven.
-        payload["state"] = "restoring"
-        save_state(path, payload)
-        try:
-            tv.adb("cmd", "package", "set-home-activity", original)
-            restored = home_resolver(tv)
-            outcome["original_restored_by_resolver"] = (
-                full_component(restored) == full_component(original))
-        except Exception as error:
+        if retained:
             outcome["original_restored_by_resolver"] = False
-            outcome["restore_error"] = str(error)
-        payload["state"] = (
-            "restored" if outcome["original_restored_by_resolver"]
-            else "restore_needs_attention"
-        )
+            outcome["retained_native_preference"] = True
+            payload["state"] = "active_pending_physical_verification"
+        else:
+            payload["state"] = "restoring"
+            save_state(path, payload)
+            try:
+                tv.adb("cmd", "package", "set-home-activity", original)
+                restored = home_resolver(tv)
+                outcome["original_restored_by_resolver"] = (
+                    full_component(restored) == full_component(original))
+            except Exception as error:
+                outcome["original_restored_by_resolver"] = False
+                outcome["restore_error"] = str(error)
+            payload["state"] = (
+                "restored" if outcome["original_restored_by_resolver"]
+                else "restore_needs_attention"
+            )
         payload["outcome"] = outcome
         save_state(path, payload)
-    if not outcome["original_restored_by_resolver"]:
+    if not retained and not outcome["original_restored_by_resolver"]:
         raise RuntimeError(
             "Original HOME NOT VERIFIED RESTORED. Use full-home-restore with "
             f"snapshot {path}; original: {original}")
@@ -213,7 +221,9 @@ def probe_home(tv, snapshot, fingerprint, acknowledged, path, save_state, pause=
         raise RuntimeError(f"Trial failed (original HOME restored): {issue}") from issue
     return dict(outcome, original=original, snapshot=str(path),
                 physical_home="unverified", cold_boot="unverified",
-                home_persistent="not_enabled_by_trial")
+                home_persistent=("pending_boot_and_wake_validation" if retained
+                                 else "not_enabled_by_trial"),
+                restore_command="full-home-restore")
 
 
 def restore_home(tv, path, save_state, *, allow_firmware_change=False):
