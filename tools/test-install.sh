@@ -120,6 +120,18 @@ grep -q '"home_allowlist": "unverified"' "$TEST/output"
 ! grep -Eq 'pm disable-user|pm uninstall|pm enable|set-home-activity|keyevent' "$LOG"
 echo 'PASS Xiaomi full-plan inspects without mutating HOME'
 : > "$LOG"
+BRAND=Xiaomi bash "$ROOT/install.sh" full-home-inspect > "$TEST/output"
+grep -q '"classification": "tigris_home_not_visible"' "$TEST/output"
+grep -q '"read_only": true' "$TEST/output"
+! grep -Eq 'pm disable-user|pm uninstall|pm enable|set-home-activity|keyevent' "$LOG"
+echo 'PASS native HOME inspection is Xiaomi-scoped and read-only'
+: > "$LOG"
+if BRAND=Sony bash "$ROOT/install.sh" full-home-probe \
+    --confirm-fingerprint test/device/fingerprint \
+    --acknowledge-recovery > "$TEST/output" 2>&1; then exit 1; fi
+! grep -Eq 'pm disable-user|pm uninstall|pm enable|set-home-activity' "$LOG"
+echo 'PASS other brands cannot trigger Xiaomi native HOME trial'
+: > "$LOG"
 if BRAND=Sony bash "$ROOT/install.sh" full-apply-ads \
     --ad-package com.miui.systemAdSolution \
     --confirm-fingerprint test/device/fingerprint \
