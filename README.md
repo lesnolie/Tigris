@@ -5,6 +5,8 @@
 > **统一安装验收 / Shared compatibility rules:** [按品牌排查、遥控器/U 盘安装、电脑检查与四项验收](docs/installation-compatibility.md). AI 与手动安装使用同一个 `tools/check-install.py`；先验证 Home，失败才处理品牌限制。APK 安装不等于桌面接管，未测项目必须标记未验证。
 
 
+> **v2.0.8（2026-10-26）正式发布：** 修复 Android 9 / 10 在「软件更新 → MiracastReceiver」安装时误报“缺少安装包签名”的问题；继续严格校验证书 SHA-256、包名和版本，不跳过安全检查。标准版和 Guard 版均沿用稳定签名，可直接覆盖升级。Sony BRAVIA VH1 的实际更新安装仍需用户复测。详见 [2.0.8 更新说明](docs/releases/v2.0.8.md)。
+
 > **v2.0.7（2026-10-25）已更新：本版未做实机测试。** 统一安装兼容性检查，并修复待机唤醒动画前露出 Tigris 主页、进程恢复后守护服务未绑定的代码路径。请红米 X50 / MIUI，以及出现相同问题的小米 / Redmi 电视用户协助测试；不保证解决系统强制停止或原厂桌面闪现。详见 [2.0.7 更新说明](docs/releases/v2.0.7.md)。
 
 请分别测试：从其他应用按实体 Home、待机唤醒时是否先闪主页及动画是否正常、长按 Home 清理内存后守护能否恢复、自行确认可重启后测试重启保持。通过 [Issues](https://github.com/lesnolie/Tigris/issues) 反馈型号、MIUI / 固件版本、标准版或 Guard 版、动画模式和等待时间，以及每项“通过 / 失败 / 未测试”；闪屏请说明是 Tigris 还是原厂桌面，方便时附短视频。
@@ -22,7 +24,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.7 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.7)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.7/Tigris-v2.0.7.apk) · [TCL / 雷鸟守护版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.7/Tigris-guard-v2.0.7.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.7/SHA256SUMS-v2.0.7.txt)）
+- 最新正式版：**[v2.0.8 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.8)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.8/Tigris-v2.0.8.apk) · [TCL / 雷鸟守护版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.8/Tigris-guard-v2.0.8.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.8/SHA256SUMS-v2.0.8.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
