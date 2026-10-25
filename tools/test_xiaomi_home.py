@@ -178,6 +178,29 @@ class XiaomiHomeTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Different TV"):
                 restore_home(tv, path, save)
 
+    def test_activation_is_opt_in_and_restorable(self):
+        tv = FakeTV()
+        with TemporaryDirectory() as temp:
+            path = Path(temp) / "home.json"
+            r = probe_home(tv, inspection(), "fake/miui/9", True,
+                           path, save, lambda _: None, keep_if_passed=True)
+            self.assertTrue(r["retained_native_preference"])
+            self.assertEqual(r["physical_home"], "unverified")
+            self.assertEqual(tv.current, TIGRIS_HOME)
+            self.assertEqual(json.loads(path.read_text())["state"],
+                             "active_pending_physical_verification")
+            self.assertEqual(restore_home(tv, path, save)["result"], "restored_by_resolver")
+
+    def test_activation_rolls_back_if_oem_routing_refuses_change(self):
+        tv = FakeTV(pinned=True)
+        with TemporaryDirectory() as temp:
+            path = Path(temp) / "home.json"
+            r = probe_home(tv, inspection(), "fake/miui/9", True,
+                           path, save, lambda _: None, keep_if_passed=True)
+            self.assertEqual(r["result"], "native_home_not_proven")
+            self.assertEqual(json.loads(path.read_text())["state"], "restored")
+            self.assertEqual(tv.current, "com.mitv.tvhome/.MainActivity")
+
     def test_refuses_trial_if_fallbackhome_or_tigris_is_original(self):
         for target in ("com.android.tv.settings/.system.FallbackHome",
                        TIGRIS_HOME):
