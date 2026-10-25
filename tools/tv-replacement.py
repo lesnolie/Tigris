@@ -75,6 +75,7 @@ class Tv:
         resolved = self.adb("cmd", "package", "resolve-activity", "--brief", *HOME_INTENT)
         candidates = self.adb("cmd", "package", "query-activities", "--brief", *HOME_INTENT)
         diagnostics = {}
+        tigris_installed = "com.leslie.tvhome" in installed
         if profile.name == "xiaomi":
             diagnostics["patchwall_installed"] = "com.mitv.tvhome" in installed
             diagnostics["patchwall_disabled"] = "com.mitv.tvhome" in disabled
@@ -97,6 +98,7 @@ class Tv:
             "home": {"resolved": resolved, "candidates": candidates,
                      "physical_home": "unverified", "boot": "unverified",
                      "standby_wake": "unverified", "memory_cleanup": "unverified"},
+            "tigris_installed": tigris_installed,
             "ad_candidates": ads, "diagnostics": diagnostics,
             "status": "not_fully_verified", "note": profile.note,
             "read_only": True,
@@ -132,6 +134,8 @@ def apply_ads(tv, inspection, approvals, confirm, acknowledge, path):
     device = inspection["device"]
     if profile.name != "xiaomi":
         raise Failure("Only Xiaomi/Redmi has a candidate ad policy; no changes for other brands")
+    if not inspection["tigris_installed"]:
+        raise Failure("Install official Tigris first; refusing ad changes without the replacement desktop")
     if not acknowledge or confirm != device["fingerprint"]:
         raise Failure("Needs --acknowledge-recovery and exact --confirm-fingerprint from inspect")
     selected = tuple(dict.fromkeys(approvals))
@@ -143,7 +147,12 @@ def apply_ads(tv, inspection, approvals, confirm, acknowledge, path):
     if any(not present[name]["installed"] for name in selected):
         raise Failure("One or more selected packages are not installed; no changes")
     if path.exists():
-        raise Failure(f"Recovery snapshot already exists: {path}. Restore before another apply")
+        previous = json.loads(path.read_text(encoding="utf-8"))
+        if previous.get("state") != "restored":
+            raise Failure(f"Recovery snapshot already exists: {path}. Restore before another apply")
+        # Preserve history instead of overwriting the last successful rollback.
+        archive = path.parent / ("replacement-restored-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%f") + ".json")
+        os.replace(path, archive)
     planned = [name for name in selected if not present[name]["disabled"]]
     data = {"schema": 1, "serial": tv.serial, "device": device,
             "profile": "xiaomi", "selected": list(selected), "restore_enabled": planned,
