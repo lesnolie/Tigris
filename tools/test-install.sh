@@ -19,7 +19,7 @@ case "$*" in
   'shell getprop ro.product.model') echo "${MODEL:-TestTV}" ;;
   'shell getprop ro.build.version.incremental') echo 2026-test ;;
   'shell getprop ro.build.fingerprint') echo "test/device/fingerprint" ;;
-  'shell pm list packages') printf 'package:com.leslie.tvhome\\npackage:com.mitv.tvhome\\npackage:com.android.tv.settings\\npackage:com.miui.systemAdSolution\\n' ;;
+  'shell pm list packages') printf 'package:com.leslie.tvhome\npackage:com.mitv.tvhome\npackage:com.android.tv.settings\npackage:com.miui.systemAdSolution\n' ;;
   'shell pm list packages -d') : ;;
   'shell cmd package query-activities'*) echo com.vendor.home/.Home ;;
   'shell dumpsys package com.android.tv.settings') echo 'FallbackHome' ;;
