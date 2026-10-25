@@ -12,7 +12,7 @@ ACK_RECOVERY=0
 ALLOW_FIRMWARE_CHANGE=0
 while (($#)); do
   case "$1" in
-    install|restore|inspect|verify|full-inspect|full-plan|full-apply-ads|full-restore-ads|full-home-inspect|full-home-probe|full-home-restore) MODE=$1 ;;
+    install|restore|inspect|verify|full-inspect|full-plan|full-apply-ads|full-restore-ads|full-home-inspect|full-home-probe|full-home-activate|full-home-restore) MODE=$1 ;;
     --ad-package) shift; AD_PACKAGES+=("${1:?Missing ad package}") ;;
     --confirm-fingerprint) shift; AD_FINGERPRINT=${1:?Missing fingerprint} ;;
     --acknowledge-recovery) ACK_RECOVERY=1 ;;
@@ -60,6 +60,7 @@ if [[ "$MODE" == full-* ]]; then
     full-restore-ads) R_MODE=restore-ads ;;
     full-home-inspect) R_MODE=home-inspect ;;
     full-home-probe) R_MODE=home-probe ;;
+    full-home-activate) R_MODE=home-activate ;;
     full-home-restore) R_MODE=home-restore ;;
   esac
   R_ARGS=("$R_MODE" --serial "$SERIAL" --state-dir "$STATE")
