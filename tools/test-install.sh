@@ -15,6 +15,14 @@ case "$*" in
   get-state) echo device ;;
   'shell getprop ro.build.version.sdk') echo "${SDK:-31}" ;;
   'shell getprop ro.product.manufacturer') echo "${BRAND:-Sony}" ;;
+  'shell getprop ro.product.brand') echo "${BRAND:-Sony}" ;;
+  'shell getprop ro.product.model') echo "${MODEL:-TestTV}" ;;
+  'shell getprop ro.build.version.incremental') echo 2026-test ;;
+  'shell getprop ro.build.fingerprint') echo "test/device/fingerprint" ;;
+  'shell pm list packages') printf 'package:com.leslie.tvhome\npackage:com.mitv.tvhome\npackage:com.android.tv.settings\npackage:com.miui.systemAdSolution\n' ;;
+  'shell pm list packages -d') : ;;
+  'shell cmd package query-activities'*) echo com.vendor.home/.Home ;;
+  'shell dumpsys package com.android.tv.settings') echo 'FallbackHome' ;;
   'shell cmd package resolve-activity'*) echo "${RESOLVED_HOME:-com.vendor.home/.Home}" ;;
   'shell settings get secure screensaver_components') echo "${SAVER:-com.vendor.saver/.Dream}" ;;
   'shell settings get secure enabled_notification_listeners') echo com.other/.Listener ;;
@@ -99,6 +107,25 @@ echo 'PASS missing verification baseline does not enable guard'
 bash "$ROOT/install.sh" inspect > "$TEST/output"
 ! grep -Eq 'install -r|pm grant|am start|am broadcast|input keyevent|set-home-activity' "$LOG"
 echo 'PASS inspect performs no TV mutations or key events'
+: > "$LOG"
+bash "$ROOT/install.sh" full-plan > "$TEST/output"
+grep -q '"profile": "sony"' "$TEST/output"
+grep -q '"commands_are_not_executed": true' "$TEST/output"
+! grep -Eq 'install -r|pm disable-user|pm uninstall|pm enable|set-home-activity|keyevent' "$LOG"
+echo 'PASS full-plan is read-only for non-Xiaomi brands'
+: > "$LOG"
+BRAND=Xiaomi bash "$ROOT/install.sh" full-plan > "$TEST/output"
+grep -q '"profile": "xiaomi"' "$TEST/output"
+grep -q '"home_allowlist": "unverified"' "$TEST/output"
+! grep -Eq 'pm disable-user|pm uninstall|pm enable|set-home-activity|keyevent' "$LOG"
+echo 'PASS Xiaomi full-plan inspects without mutating HOME'
+: > "$LOG"
+if BRAND=Sony bash "$ROOT/install.sh" full-apply-ads \
+    --ad-package com.miui.systemAdSolution \
+    --confirm-fingerprint test/device/fingerprint \
+    --acknowledge-recovery > "$TEST/output" 2>&1; then exit 1; fi
+! grep -Eq 'pm disable-user|pm uninstall|pm enable|set-home-activity' "$LOG"
+echo 'PASS Xiaomi ad changes cannot run on Sony'
 : > "$LOG"
 if HOME_FAIL=1 bash "$ROOT/install.sh" restore --uninstall > "$TEST/output" 2>&1; then exit 1; fi
 ! grep -q '^.* uninstall ' "$LOG"

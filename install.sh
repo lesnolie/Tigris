@@ -6,9 +6,15 @@ REPO=https://github.com/lesnolie/Tigris
 MODE=install
 FLAVOR=standard
 UNINSTALL=0
+AD_PACKAGES=()
+AD_FINGERPRINT=
+ACK_RECOVERY=0
 while (($#)); do
   case "$1" in
-    install|restore|inspect|verify) MODE=$1 ;;
+    install|restore|inspect|verify|full-inspect|full-plan|full-apply-ads|full-restore-ads) MODE=$1 ;;
+    --ad-package) shift; AD_PACKAGES+=("${1:?Missing ad package}") ;;
+    --confirm-fingerprint) shift; AD_FINGERPRINT=${1:?Missing fingerprint} ;;
+    --acknowledge-recovery) ACK_RECOVERY=1 ;;
     --uninstall) UNINSTALL=1 ;;
     -s|--flavor) shift; FLAVOR=${1:?Missing standard or guard} ;;
     *) echo "Unknown argument: $1" >&2; exit 2 ;;
@@ -35,6 +41,29 @@ chmod 700 "$STATE"
 HOME_QUERY=(cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME)
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
+# Replacement engine is brand-isolated and not a generic package remover.
+# The shared installer downloads its companion files for curl-piped invocations.
+if [[ "$MODE" == full-* ]]; then
+  REPLACEMENT="$(dirname "${BASH_SOURCE[0]:-.}")/tools/tv-replacement.py"
+  if [[ ! -f "$REPLACEMENT" ]]; then
+    command -v curl >/dev/null || fail 'Install curl first'
+    REPLACEMENT="$TMP/tv-replacement.py"
+    curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/tv-replacement.py -o "$REPLACEMENT"
+    curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/replacement_profiles.py -o "$TMP/replacement_profiles.py"
+  fi
+  case "$MODE" in
+    full-inspect) R_MODE=inspect ;;
+    full-plan) R_MODE=plan ;;
+    full-apply-ads) R_MODE=apply-ads ;;
+    full-restore-ads) R_MODE=restore-ads ;;
+  esac
+  R_ARGS=("$R_MODE" --serial "$SERIAL" --state-dir "$STATE")
+  for p in "${AD_PACKAGES[@]}"; do R_ARGS+=(--package "$p"); done
+  [[ -z "$AD_FINGERPRINT" ]] || R_ARGS+=(--confirm-fingerprint "$AD_FINGERPRINT")
+  (( ACK_RECOVERY == 0 )) || R_ARGS+=(--acknowledge-recovery)
+  python3 "$REPLACEMENT" "${R_ARGS[@]}"
+  exit $?
+fi
 # The same checker is used by manual users and AI agents. Piped installs fetch it.
 CHECKER="$(dirname "${BASH_SOURCE[0]:-.}")/tools/check-install.py"
 if [[ ! -f "$CHECKER" ]]; then
