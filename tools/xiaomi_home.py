@@ -11,6 +11,7 @@ wake, memory cleanup, vendor advertising and rollback require device testing.
 import json
 import re
 import time
+from datetime import datetime, timezone
 
 TIGRIS_HOME = "com.leslie.tvhome/.HomeActivity"
 TIGRIS_PACKAGE = "com.leslie.tvhome"
@@ -154,8 +155,9 @@ def probe_home(tv, snapshot, fingerprint, acknowledged, path, save_state,
         prior = json.loads(path.read_text(encoding="utf-8"))
         if prior.get("state") != "restored":
             raise ValueError("Previous HOME trial needs recovery first; snapshot preserved")
-        # No overwrite of the previous record; archived by caller or refuse.
-        raise ValueError("Previous HOME trial snapshot exists; keep it and use new state directory")
+        # Preserve the old report and its rollback evidence when probing again.
+        suffix = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%f")
+        path.rename(path.with_name("home-probe-restored-" + suffix + ".json"))
     payload = {
         "schema": 1, "operation": "home-trial", "state": "pending",
         "serial": tv.serial, "device": device, "original": original,
