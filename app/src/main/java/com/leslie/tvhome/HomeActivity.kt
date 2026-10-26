@@ -602,9 +602,10 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                 val renderW = (sw * scale).toInt().coerceAtLeast(1)
                 val renderH = (sh * scale).toInt().coerceAtLeast(1)
                 // Live video already provides motion and color; a lighter frost
-                // keeps more of that detail visible through the moving glass.
+                // and partial opacity keep more of that detail visible while the
+                // asynchronous glass texture catches up with the video.
                 val glass = LiquidGlass.bake(frame, renderW, renderH, rect, dockRadius * scale,
-                    frostStrength = 0.3f)
+                    frostStrength = 0.3f, glassOpacity = 0.65f)
                     .also { it.prepareToDraw() }
                 glass to Wallpapers.blurred(frame, darken = 0.22f)
             }

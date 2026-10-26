@@ -37,6 +37,7 @@ object LiquidGlass {
         radius: Float,
         overlay: Drawable? = null,
         frostStrength: Float = 1f,
+        glassOpacity: Float = 1f,
     ): Bitmap {
         val w = rect.width()
         val h = rect.height()
@@ -73,6 +74,7 @@ object LiquidGlass {
         val hh = h / 2f
         val rimW = 2.2f
         val frost = frostStrength.coerceIn(0f, 1f)
+        val opacity = glassOpacity.coerceIn(0f, 1f)
         val transmission = 1f - 0.14f * frost
         val lift = 30f * frost
         for (j in 0 until h) {
@@ -121,7 +123,7 @@ object LiquidGlass {
                     val k = (1f - depth / zone) * 0.16f * max(facing, 0f)
                     r += (255f - r) * k; g += (255f - g) * k; b += (255f - b) * k
                 }
-                out[j * w + i] = Color.argb((a * 255).toInt(), clamp(r), clamp(g), clamp(b))
+                out[j * w + i] = Color.argb((a * opacity * 255).toInt(), clamp(r), clamp(g), clamp(b))
             }
         }
         return Bitmap.createBitmap(out, w, h, Bitmap.Config.ARGB_8888)
