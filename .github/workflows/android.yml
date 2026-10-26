@@ -7,6 +7,10 @@ on:
     paths:
       - 'app/**'
       - 'install.sh'
+      - 'tools/installation_strategy.py'
+      - 'tools/installation_strategies.json'
+      - 'tools/install-plan.py'
+      - 'tools/test_installation_strategy.py'
       - 'tools/test-install.sh'
       - 'tools/check-install.py'
       - 'tools/test_install_check.py'
@@ -26,6 +30,10 @@ on:
     paths:
       - 'app/**'
       - 'install.sh'
+      - 'tools/installation_strategy.py'
+      - 'tools/installation_strategies.json'
+      - 'tools/install-plan.py'
+      - 'tools/test_installation_strategy.py'
       - 'tools/test-install.sh'
       - 'tools/check-install.py'
       - 'tools/test_install_check.py'

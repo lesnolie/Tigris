@@ -4,6 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 SPEC = importlib.util.spec_from_file_location("replacement", Path(__file__).with_name("tv-replacement.py"))
 replacement = importlib.util.module_from_spec(SPEC)
@@ -63,6 +64,22 @@ class FakeTv:
 
 
 class ReplacementTests(unittest.TestCase):
+    def setUp(self):
+        # Synthetic reviewed firmware only; never add this to the shipped policy.
+        self.policy = patch.dict("replacement_profiles.VERIFIED_AD_FIRMWARES", {
+            "demo/firmware/123": ("com.miui.systemAdSolution", "com.mitv.tvad")})
+        self.policy.start()
+        self.addCleanup(self.policy.stop)
+
+    def test_unknown_firmware_cannot_disable_ads_even_with_consent(self):
+        fake = FakeTv(fingerprint="unreviewed/firmware")
+        tv = self.tv(fake)
+        with TemporaryDirectory() as d:
+            with self.assertRaisesRegex(replacement.Failure, "exact-firmware"):
+                replacement.apply_ads(tv, tv.inspect(), ["com.miui.systemAdSolution"],
+                                      fake.fingerprint, True, Path(d)/"replacement.json")
+        self.assertEqual(fake.writes(), [])
+
     def tv(self, fake):
         return replacement.Tv("192.168.1.23:5555", fake)
 

@@ -1,5 +1,31 @@
 # Installing Tigris — instructions for AI agents
 
+## Module development boundaries / 模块开发边界
+
+Read [the bilingual module guide](docs/modules.md) before extending modules.
+Host installation belongs in `tools/` and `install.sh`; TV capabilities belong in
+`tv/TvControls.kt` and `TvAdapter`; shared features belong in the runtime, never in
+brand installers. Preserve existing preference keys, visuals, Sony native HOME and
+TCL/FFalcon Guard/T-Cast operations. No runtime package manager workarounds in adapters.
+Do not merge, publish, deploy, disable stock HOME/settings, or mark hardware verified
+without explicit task authorization and evidence. Hardware reports are not authorization.
+
+安装器在电脑运行，设备能力在 tv/，通用功能不按品牌复制。保留设置键、视觉效果和既有成功路径。
+不要将宿主安装命令放入运行时 Adapter。历史实机报告不代表本次授权。
+
+Full source checkout (v2.0.9+) / 完整源码检出目录（v2.0.9 起）:
+`python tools/install-plan.py --platform android --serial 192.168.1.20:5555`
+(macOS/Linux: `python3`). This read-only plan is shared by AI, manual and automatic
+installation; append `--execute` only when installation is requested. It uses the
+reviewed `installation_strategies.json` registry. Windows execution requires Git Bash
+on PATH. Non-Android platforms must use their separate installer, never ADB.
+`install.sh` remains the backwards-compatible low-level executor. Never assume the
+an older checkout includes this entry point; use v2.0.9 or newer.
+
+AI、手动、一键安装复用上述计划；需要执行安装时加 `--execute`。Windows 执行需要 Git Bash。
+先确认平台；非 Android 不调用 ADB。广告候选不是安全清单：只有精确固件审查记录匹配、
+逐包明确授权且保存原状态后才可执行；当前没有已批准固件，因此广告处理只做诊断。
+
 > **LG webOS 测试包 / Developer preview:** [webos-v0.1.0-preview.1](https://github.com/lesnolie/Tigris/releases/tag/webos-v0.1.0-preview.1) · [IPK 安装、启动、更新和卸载 / Setup guide](https://github.com/lesnolie/Tigris/blob/main/docs/webos-preview-install.md)。已提供打包 IPK，无需自行构建；未做实机测试，不是稳定版，不接管 Home。Prebuilt IPK available; hardware untested, no Home takeover.
 
 > **统一安装验收 / Shared compatibility rules:** [按品牌排查、遥控器/U 盘安装、电脑检查与四项验收](docs/installation-compatibility.md). AI 与手动安装使用同一个 `tools/check-install.py`；先验证 Home，失败才处理品牌限制。APK 安装不等于桌面接管，未测项目必须标记未验证。
@@ -8,6 +34,19 @@
 > **Platform check first:** These instructions and the current Tigris releases support **Android TV/Google TV** only. For **LG webOS**, do **not** use ADB or any Android `pm`, `am` or HOME commands. Read [docs/WEBOS_AI_INSTALL.md](docs/WEBOS_AI_INSTALL.md) for the future LG Developer Mode + SSH preflight, native Home Helper probe, safe installation gates and fallback. As of 2026-10-25, a separate webOS **source preview** and `webos/install.sh` can package/install a normal webOS application (subject to LG device authorization), but there is **no released stable IPK or tested Home Helper**. Never claim Home interception or TV hardware validation has been completed. If webOS is detected, explain this clearly and stop Android installation instructions. The preflight design allows a future AI installer to check compatibility before installing the full desktop, but a physical Home-key test is still required for final verification.
 
 You are installing Tigris, an Android TV launcher, onto the user's TV from their computer. Follow these steps in order. Talk to the user in their language (most users write Chinese). The TV is someone's home device: whenever a step below says to ask, ask first.
+
+## AI adaptive installation / AI 自适应安装
+
+When the request is to replace a TV's factory launcher and reduce firmware ads,
+**first run the existing read-only `full-plan` inspection and follow its `adaptive_install` decision**.
+Use [the capability-first AI installation policy](docs/ai-adaptive-installation.md).
+Do not pick a Xiaomi/Redmi workaround by brand, model name, MIUI/HyperOS label,
+or copied GitHub commands alone. Historical TV reports are evidence for investigation,
+not authorization to disable a system component. Continue to use the existing
+Sony and TCL/FFalcon installer/Guard paths unchanged. Treat advertising and performance
+as separately verified outcomes; do not call installation success full HOME takeover.
+Only propose an opt-in HOME probe when the live device meets the safety preconditions.
+Never automatically disable stock HOME, Settings, FallbackHome, HDMI, or OTA.
 
 ## Hard rules
 
@@ -278,6 +317,12 @@ If the guard is listed but `dumpsys accessibility` shows no bound service for it
 If verification fails, report the observed failure and unverified firmware restrictions. Tigris can still be opened as an app; do not claim a package allowlist is confirmed without firmware evidence.
 
 ## 11. Optional: remove preinstalled apps
+
+For background ad maintenance, the development policy above takes precedence:
+use `tv-replacement.py plan`, require reviewed exact-firmware evidence in
+`VERIFIED_AD_FIRMWARES`, then obtain per-package consent. That table is currently
+empty, so do not execute the generic removal examples below for ad candidates.
+后台广告维护必须先匹配精确固件审查记录再逐包授权；当前无批准记录，不执行通用删除示例。
 
 Only on request. Tigris's long-press menu can delete preinstalled apps that appear on the home screen (see README). For background-only ones (ad, push, tracking services with no icon), list them with `pm list packages -s`, identify each by its label and path, and propose a list to the user. Explain each entry and ask before removing anything.
 

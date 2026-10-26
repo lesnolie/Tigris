@@ -6,6 +6,7 @@ REPO=https://github.com/lesnolie/Tigris
 MODE=install
 FLAVOR=standard
 UNINSTALL=0
+APK_ONLY=0
 AD_PACKAGES=()
 AD_FINGERPRINT=
 ACK_RECOVERY=0
@@ -18,6 +19,7 @@ while (($#)); do
     --acknowledge-recovery) ACK_RECOVERY=1 ;;
     --allow-firmware-change) ALLOW_FIRMWARE_CHANGE=1 ;;
     --uninstall) UNINSTALL=1 ;;
+    --apk-only) APK_ONLY=1 ;;
     -s|--flavor) shift; FLAVOR=${1:?Missing standard or guard} ;;
     *) echo "Unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -26,6 +28,7 @@ done
 fail() { echo "ERROR: $*" >&2; exit 1; }
 [[ "$FLAVOR" == standard || "$FLAVOR" == guard ]] || fail 'Use -s standard or -s guard'
 [[ "$MODE" == restore || "$UNINSTALL" == 0 ]] || fail '--uninstall is only for restore'
+[[ "$MODE" == install || "$APK_ONLY" == 0 ]] || fail '--apk-only is only for install'
 : "${TV:?Set TV to your TV IPv4 address, for example TV=192.168.1.20}"
 [[ "$TV" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(:[0-9]+)?$ ]] || fail 'TV must be an IPv4 address, optionally with :port'
 SERIAL=$TV
@@ -37,7 +40,9 @@ adb connect "$SERIAL"
 [[ "$(ad get-state)" == device ]] || fail 'Enable network ADB, then allow debugging on the TV and retry'
 SDK=$(shread getprop ro.build.version.sdk)
 [[ "$SDK" =~ ^[0-9]+$ ]] && (( SDK >= 28 )) || fail 'Tigris requires Android 9 / API 28 or newer'
-STATE=${STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/tigris/$SERIAL}
+STATE_SERIAL=$SERIAL
+case "${OSTYPE:-}" in msys*|cygwin*) STATE_SERIAL=${SERIAL//:/_} ;; esac
+STATE=${STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/tigris/$STATE_SERIAL}
 mkdir -p "$STATE"
 chmod 700 "$STATE"
 HOME_QUERY=(cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME)
@@ -52,6 +57,9 @@ if [[ "$MODE" == full-* ]]; then
     REPLACEMENT="$TMP/tv-replacement.py"
     curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/tv-replacement.py -o "$REPLACEMENT"
     curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/replacement_profiles.py -o "$TMP/replacement_profiles.py"
+    curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/xiaomi_home.py -o "$TMP/xiaomi_home.py"
+    curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/installation_strategy.py -o "$TMP/installation_strategy.py"
+    curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/installation_strategies.json -o "$TMP/installation_strategies.json"
   fi
   case "$MODE" in
     full-inspect) R_MODE=inspect ;;
@@ -179,6 +187,11 @@ PY
 fi
 if ! ad install -r "$TMP/$ASSET"; then
   fail 'Installation failed; nothing uninstalled. Signature mismatch requires the original signing key. TCL verification failure: use Guard APK via tools/tcast-push.py (see AGENTS.md).'
+fi
+if (( APK_ONLY )); then
+  echo "APK installed/updated without HOME or Guard changes. Original state: $STATE"
+  echo 'HOME, physical remote, wake, boot and ads: UNVERIFIED. Run tools/install-plan.py again for diagnostics.'
+  exit 0
 fi
 GUARD=false
 if [[ "$FLAVOR" == standard ]]; then

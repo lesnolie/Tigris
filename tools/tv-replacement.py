@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 
 from replacement_profiles import CORE_DENY, detect
 from xiaomi_home import inspect_route, probe_home, restore_home
+from installation_strategy import select
 
 HOME_INTENT = ("-a", "android.intent.action.MAIN", "-c", "android.intent.category.HOME")
 SERIAL_RE = re.compile(r"^[a-zA-Z0-9._:-]+$")
@@ -113,7 +114,8 @@ class Tv:
 
 def state_path(directory, serial):
     # Require directory per device; do not reuse or overwrite existing snapshots.
-    folder = Path(directory).expanduser() if directory else Path.home() / ".local" / "state" / "tigris" / serial
+    directory_name = serial.replace(":", "_") if os.name == "nt" else serial
+    folder = Path(directory).expanduser() if directory else Path.home() / ".local" / "state" / "tigris" / directory_name
     return folder / "replacement.json"
 
 
@@ -151,6 +153,10 @@ def apply_ads(tv, inspection, approvals, confirm, acknowledge, path):
     present = {item["package"]: item for item in inspection["ad_candidates"]}
     if any(not present[name]["installed"] for name in selected):
         raise Failure("One or more selected packages are not installed; no changes")
+    from replacement_profiles import VERIFIED_AD_FIRMWARES
+    approved = VERIFIED_AD_FIRMWARES.get(device["fingerprint"], ())
+    if any(name not in approved for name in selected):
+        raise Failure("No reviewed exact-firmware safety evidence for selected ad packages; diagnostic only")
     if path.exists():
         previous = json.loads(path.read_text(encoding="utf-8"))
         if previous.get("state") != "restored":
@@ -228,6 +234,70 @@ def restore_ads(tv, path, firmware_change=False):
             "home": "unchanged", "reboot": "unverified"}
 
 
+
+def adaptive_install_decision(inspection):
+    """Read-only, evidence-driven AI installation routing.
+
+    A brand/model match provides context, never permission to apply an OEM
+    workaround. Only live device observations can select a safe next step;
+    physical HOME/boot/wake and ad removal remain unverified until tested.
+    This function does not run ADB or alter existing install/Guard behavior.
+    """
+    profile = inspection.get("profile", "android")
+    device = inspection.get("device", {})
+    routing = inspection.get("home_route", {})
+    classification = routing.get("classification", "unknown")
+    installed = bool(inspection.get("tigris_installed"))
+    candidate = bool(routing.get("tigris_home_candidate"))
+    step = "use_existing_standard_install_and_verify"
+    if profile not in ("sony", "tcl", "xiaomi"):
+        step = "safe_apk_only_then_inspect"
+    if profile == "xiaomi":
+        if not installed:
+            step = "install_signed_standard_apk_then_inspect"
+        elif not candidate:
+            step = "diagnose_missing_home_candidate_without_system_changes"
+        elif classification == "tigris_resolves_native_candidate":
+            step = "verify_physical_home_boot_wake_and_memory_cleanup"
+        elif classification == "patchwall_selected":
+            step = "offer_opt_in_reversible_native_home_probe"
+        else:
+            step = "investigate_firmware_home_routing_read_only"
+    return {
+        "schema": 1,
+        "policy": "capability_first_no_model_only_mutations",
+        "device_identity": {
+            "manufacturer": device.get("manufacturer"),
+            "brand": device.get("brand"),
+            "model": device.get("model"),
+            "firmware": device.get("firmware"),
+            "fingerprint": device.get("fingerprint"),
+        },
+        "selected_profile": profile,
+        "current_observation": classification if profile == "xiaomi" else "existing_brand_path",
+        "next_step": step,
+        "automatic_system_package_changes": [],
+        "automatic_ads_package_changes": [],
+        "existing_sony_tcl_install_guard_paths_unchanged": True,
+        "reference_repositories": "research_only_not_firmware_certification",
+        "physical_home": inspection.get("home", {}).get("physical_home", "unverified"),
+        "boot": inspection.get("home", {}).get("boot", "unverified"),
+        "standby_wake": inspection.get("home", {}).get("standby_wake", "unverified"),
+        "system_ads": "unverified",
+        "performance_gain": "unverified",
+        "rules": [
+            "Never treat model or MIUI/HyperOS name alone as sufficient to disable packages",
+            "Preserve the original launcher, Settings, HDMI/TV playback and OTA",
+            "Verify Android HOME candidate and resolver before any HOME trial",
+            "Use the native HOME preference only when supported by live observations",
+            "An ADB HOME simulation never certifies physical Home, cold boot or wake",
+            "Do not infer ad package safety from the package name or a different TV",
+            "Request separate explicit consent and proven rollback for risky firmware changes",
+            "Use existing Guard only as an opt-in fallback after native HOME fails",
+            "Report unverified features honestly instead of claiming complete replacement",
+        ],
+    }
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("inspect", "plan", "apply-ads", "restore-ads",
@@ -264,8 +334,10 @@ def main():
             report(inspected)
         elif args.mode == "plan":
             inspected["mode"] = "plan"
+            inspected["adaptive_install"] = adaptive_install_decision(inspected)
+            inspected["installation_strategy"] = select(inspected["device"])
             inspected["recommended_order"] = [
-                "Install official signed Tigris via install.sh",
+                "Follow installation_strategy via tools/install-plan.py; never execute a diagnostic_only plan",
                 "Read home_route classification and use home-inspect for Xiaomi native HOME diagnostics",
                 "Optional home-probe changes only HOME preference and ALWAYS restores the original",
                 "Verify real HOME resolution with check-install.py and physical remote",

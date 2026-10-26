@@ -54,6 +54,15 @@ jobs:
             grep -F '7d2b6be8a86ce8981e368dde4920869b90c8206137934a6d1fc89a2d1d1b6114' "$RUNNER_TEMP/cert.txt"
           done
           (cd dist && sha256sum "Tigris-$GITHUB_REF_NAME.apk" "Tigris-guard-$GITHUB_REF_NAME.apk" > "SHA256SUMS-$GITHUB_REF_NAME.txt")
+      - name: Verify upgrade compatibility with previous official APKs
+        run: |
+          set -euo pipefail
+          OLD_STANDARD=$(python3 tools/download-release.py standard)
+          OLD_GUARD=$(python3 tools/download-release.py guard)
+          python3 tools/verify-apk-upgrade.py "$OLD_STANDARD" "dist/Tigris-$GITHUB_REF_NAME.apk" \
+            --tools "$ANDROID_HOME/build-tools/36.0.0" --version "${GITHUB_REF_NAME#v}" --flavor standard
+          python3 tools/verify-apk-upgrade.py "$OLD_GUARD" "dist/Tigris-guard-$GITHUB_REF_NAME.apk" \
+            --tools "$ANDROID_HOME/build-tools/36.0.0" --version "${GITHUB_REF_NAME#v}" --flavor guard
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}

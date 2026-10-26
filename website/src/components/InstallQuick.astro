@@ -2,7 +2,7 @@
 import type { Locale } from "../data/lang";
 interface Props { locale: Locale }
 const zh = Astro.props.locale === "zh";
-const install = "curl -fsSL https://tigris-tv.pages.dev/install.sh | KEEP_ADB=1 TV=192.168.1.20 bash";
+const install = "curl -fsSL https://tigris-tv.pages.dev/install.sh | TV=192.168.1.20 bash";
 const restore = "curl -fsSL https://tigris-tv.pages.dev/install.sh | TV=192.168.1.20 bash -s -- restore";
 ---
 <div class="quick-install reveal">
@@ -11,7 +11,7 @@ const restore = "curl -fsSL https://tigris-tv.pages.dev/install.sh | TV=192.168.
     <h3>{zh ? "一行命令，装好并验收。" : "One command. Install and verify."}</h3>
     <p>{zh ? "先装好 adb、curl 和 Python 3，将示例 IP 换成电视 IP。脚本保存原桌面记录，并校验安装包。" : "Install adb, curl and Python 3 first. Replace the sample IP. The script records the original home and verifies the APK."}</p>
     <div class="code"><pre><code id="cmd-quick-install">{install}</code></pre><button class="copy" data-copy="#cmd-quick-install" type="button"><span class="label"></span></button></div>
-    <p class="fine">{zh ? "Windows 推荐交给能执行命令的电脑版 Agent。手机聊天和网页版聊天通常只能提供步骤。KEEP_ADB=1 表示保持 ADB 开启。" : "On Windows, use a desktop agent that can execute commands. KEEP_ADB=1 keeps ADB enabled."}</p>
+    <p class="fine">{zh ? "Windows 推荐交给能执行命令的电脑版 Agent。默认保留 ADB 设置；电视仍需授权，实体 Home 与待机唤醒需要人工验收。" : "On Windows, use a desktop agent that can execute commands. ADB preferences are preserved by default. TV authorization, physical Home and standby/wake checks require your participation."}</p>
   </article>
   <article class="quick-card">
     <p class="eyebrow">UPDATE / RESTORE</p>
