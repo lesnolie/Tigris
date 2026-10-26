@@ -53,14 +53,22 @@ class SonyAdapter(ctx: Context) : AndroidAdapter(ctx) {
 /**
  * The TV's own BRAVIA IP-control API on 127.0.0.1:80. Reads work without
  * auth; writes need the "auth" cookie, which a registered client gets back
- * from actRegister without a PIN. ("tvhome:1" was registered once with the
- * PIN shown on screen.)
+ * from actRegister without a PIN, but only once "tvhome:1" has been paired
+ * with the PIN the TV shows.
+ *
+ * On a TV that was never paired the PIN-less actRegister can't succeed, so
+ * only writes ask for the cookie and a failed attempt backs off. Otherwise
+ * every read would raise Sony's registration dialog over the home screen,
+ * again as soon as it was dismissed.
  */
 private object Bravia {
     private const val BASE = "http://127.0.0.1/sony/"
     private const val CLIENT = "tvhome:1"
+    /** How long an unpaired TV is left alone before actRegister is tried again. */
+    private const val RETRY_AFTER = 30 * 60 * 1000L
     private var cookie: String? = null
     private var cookieAt = 0L
+    private var failedAt = 0L
 
     fun volume(): Level? = call("audio", "getVolumeInformation")?.optJSONArray(0)?.let { list ->
         val o = (0 until list.length()).map { list.getJSONObject(it) }
@@ -95,17 +103,32 @@ private object Bravia {
 
     // ---- transport ----------------------------------------------------------------
 
-    private fun call(service: String, method: String, param: JSONObject? = null, version: String = "1.0", retry: Boolean = true): JSONArray? {
+    /**
+     * Which methods the TV refuses without the cookie, measured on a BRAVIA 4K VH2: the setters,
+     * plus getPlayingContentInfo. getVolumeInformation, getPictureQualitySettings and
+     * getCurrentExternalInputsStatus all answer unauthenticated, so they must never ask for it.
+     */
+    private fun needsAuth(method: String) =
+        method.startsWith("set") || method == "getPlayingContentInfo"
+
+    private fun call(
+        service: String,
+        method: String,
+        param: JSONObject? = null,
+        version: String = "1.0",
+        retry: Boolean = true,
+        needsAuth: Boolean = needsAuth(method),
+    ): JSONArray? {
         val body = JSONObject().put("method", method).put("id", 1).put("version", version)
             .put("params", JSONArray().apply { if (param != null) put(param) })
         return try {
-            val (code, text, _) = post(service, body.toString(), authCookie())
+            val (code, text, _) = post(service, body.toString(), if (needsAuth) authCookie() else null)
             val o = JSONObject(text)
             val err = o.optJSONArray("error")
             if (err != null) {
-                if (retry && (err.optInt(0) == 403 || err.optInt(0) == 401 || code == 403)) {
+                if (retry && needsAuth && (err.optInt(0) == 403 || err.optInt(0) == 401 || code == 403)) {
                     cookie = null
-                    return call(service, method, param, version, false)
+                    return call(service, method, param, version, retry = false, needsAuth = true)
                 }
                 Log.w("Bravia", "$method: $err")
                 null
@@ -118,7 +141,11 @@ private object Bravia {
 
     @Synchronized
     private fun authCookie(): String? {
-        if (cookie != null && System.currentTimeMillis() - cookieAt < 7 * 24 * 3_600_000L) return cookie
+        val now = System.currentTimeMillis()
+        if (cookie != null && now - cookieAt < 7 * 24 * 3_600_000L) return cookie
+        // An unpaired TV answers every attempt with its registration dialog; asking again right
+        // away would put that dialog back over the home screen the moment the user dismissed it.
+        if (failedAt != 0L && now - failedAt < RETRY_AFTER) return null
         val body = JSONObject().put("method", "actRegister").put("id", 1).put("version", "1.0")
             .put("params", JSONArray()
                 .put(JSONObject().put("clientid", CLIENT).put("nickname", "TVHome").put("level", "private"))
@@ -127,8 +154,10 @@ private object Bravia {
             val (_, _, setCookie) = post("accessControl", body.toString(), null)
             cookie = setCookie?.substringAfter("auth=", "")?.substringBefore(';')?.takeIf { it.isNotEmpty() }
             cookieAt = System.currentTimeMillis()
+            failedAt = if (cookie == null) cookieAt else 0L
             cookie
         } catch (e: Exception) {
+            failedAt = System.currentTimeMillis()
             null
         }
     }
