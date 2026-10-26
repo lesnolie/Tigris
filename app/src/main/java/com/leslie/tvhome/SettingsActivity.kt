@@ -151,15 +151,50 @@ class SettingsActivity : Activity() {
     }
 
     /** The uploaded background, whose TV stands in for the big icon; or the plain dark page. RGB_565: half the memory. */
+    private val downloadingAssets = mutableSetOf<String>()
+
+    override fun onResume() {
+        super.onResume()
+        showBackdrop()
+        if (page == Page.MAIN) show(Page.MAIN, opener)
+    }
+
+    private fun optionalAssetRow(asset: OptionalAssets.Asset, title: Int) {
+        row(I18n.text(title), I18n.text(R.string.optional_asset_help), {
+            I18n.text(if (asset.id in downloadingAssets) R.string.asset_downloading
+                else if (OptionalAssets.file(this, asset) != null) R.string.asset_remove else R.string.asset_download)
+        }) { value ->
+            if (asset.id !in downloadingAssets) {
+                downloadingAssets.add(asset.id)
+                value.text = I18n.text(R.string.asset_downloading)
+                val app = applicationContext
+                Thread {
+                    val result = runCatching {
+                        if (OptionalAssets.file(app, asset) != null) OptionalAssets.delete(app, asset)
+                        else OptionalAssets.download(app, asset)
+                    }
+                    runOnUiThread {
+                        downloadingAssets.remove(asset.id)
+                        if (!isDestroyed && !isFinishing) {
+                            Toast.makeText(this, I18n.text(if (result.isSuccess) R.string.asset_done else R.string.asset_failed), Toast.LENGTH_LONG).show()
+                            showBackdrop()
+                            show(Page.MAIN)
+                        }
+                    }
+                }.start()
+            }
+        }
+    }
+
     private fun showBackdrop() {
         val file = if (prefs.settingsBg) backdropFile(this) else null
-        bundledBackdrop = prefs.settingsBg && file == null
-        val bmp = file?.let {
+        val downloaded = if (prefs.settingsBg && file == null) OptionalAssets.file(this, OptionalAssets.backdrop) else null
+        bundledBackdrop = downloaded != null
+        val bmp = (file ?: downloaded)?.let {
             android.graphics.BitmapFactory.decodeFile(it.path, android.graphics.BitmapFactory.Options().apply {
                 inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
             })
-        } ?: if (bundledBackdrop) android.graphics.BitmapFactory.decodeResource(resources, R.drawable.default_settings_bg,
-            android.graphics.BitmapFactory.Options().apply { inPreferredConfig = android.graphics.Bitmap.Config.RGB_565 }) else null
+        }
         backdrop.setImageBitmap(bmp)
         placeBackdrop(backdrop)
         icon.visibility = if (bmp != null) android.view.View.INVISIBLE else android.view.View.VISIBLE
@@ -205,7 +240,8 @@ class SettingsActivity : Activity() {
             val opts = listOf(Prefs.CLOCK_CORNER, Prefs.CLOCK_LARGE, Prefs.CLOCK_OFF)
             prefs.clockStyle = opts[(opts.indexOf(prefs.clockStyle) + 1) % opts.size]
         }
-        if (backdropFile(this) != null) row(I18n.text(R.string.i18n_settingsactivity_018), I18n.text(R.string.i18n_settingsactivity_019), {
+        optionalAssetRow(OptionalAssets.backdrop, R.string.download_default_backdrop)
+        if (backdropFile(this) != null || OptionalAssets.file(this, OptionalAssets.backdrop) != null) row(I18n.text(R.string.i18n_settingsactivity_018), I18n.text(R.string.i18n_settingsactivity_019), {
             if (prefs.settingsBg) I18n.text(R.string.i18n_settingsactivity_020) else I18n.text(R.string.i18n_settingsactivity_021)
         }) {
             prefs.settingsBg = !prefs.settingsBg
@@ -253,7 +289,8 @@ class SettingsActivity : Activity() {
         }
 
         section(I18n.text(R.string.i18n_settingsactivity_040))
-        val video = Intro.videoFile(this) != null
+        optionalAssetRow(OptionalAssets.intro, R.string.download_default_intro)
+        val video = Intro.videoFile(this) != null || OptionalAssets.file(this, OptionalAssets.intro) != null
         row(I18n.text(R.string.i18n_settingsactivity_041), I18n.text(R.string.i18n_settingsactivity_042) +
             if (video) "" else I18n.text(R.string.i18n_settingsactivity_043), {
             when (prefs.intro) { Prefs.INTRO_BOOT -> I18n.text(R.string.i18n_settingsactivity_044); Prefs.INTRO_WAKE -> I18n.text(R.string.i18n_settingsactivity_045); else -> I18n.text(R.string.i18n_settingsactivity_046) }

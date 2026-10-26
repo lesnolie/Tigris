@@ -42,16 +42,16 @@
     <string name="i18n_settingsactivity_040" formatted="false">Boot animation</string>
     <string name="i18n_settingsactivity_041" formatted="false">Boot animation</string>
     <string name="i18n_settingsactivity_042" formatted="false">Plays the first time the home screen appears after boot; the logo zooms into the desktop at the end. Press any key to skip.</string>
-    <string name="i18n_settingsactivity_043" formatted="false">\nPlays the built-in boot video by default; you can also upload your own.</string>
+    <string name="i18n_settingsactivity_043" formatted="false">\nDownload the default video or upload your own; otherwise the Tigris wordmark plays.</string>
     <string name="i18n_settingsactivity_044" formatted="false">On boot</string>
     <string name="i18n_settingsactivity_045" formatted="false">On boot and wake</string>
     <string name="i18n_settingsactivity_046" formatted="false">Off</string>
     <string name="i18n_settingsactivity_047" formatted="false">Animation content</string>
     <string name="i18n_settingsactivity_048" formatted="false">Uploaded video: for example Apple TV\'s boot animation, with the logo zooming in at the end. Tigris wordmark: the wordmark fades in and then zooms.</string>
-    <string name="i18n_settingsactivity_049" formatted="false">\nWithout an uploaded video, video mode uses the built-in animation.</string>
+    <string name="i18n_settingsactivity_049" formatted="false">\nWithout a downloaded or uploaded video, use the Tigris wordmark.</string>
     <string name="i18n_settingsactivity_050" formatted="false">Tigris wordmark</string>
-    <string name="i18n_settingsactivity_051" formatted="false">Uploaded video</string>
-    <string name="i18n_settingsactivity_052" formatted="false">Built-in video</string>
+    <string name="i18n_settingsactivity_051" formatted="false">Downloaded / uploaded video</string>
+    <string name="i18n_settingsactivity_052" formatted="false">No video · Tigris wordmark</string>
     <string name="i18n_settingsactivity_053" formatted="false">Wait after wake</string>
     <string name="i18n_settingsactivity_054" formatted="false">When waking from standby, stay black for this long before playing the animation. Many TVs (especially OLED) take a few seconds to actually light up; increase it if you miss the start of the animation, decrease it if the black screen lasts too long.</string>
     <string name="i18n_settingsactivity_055" formatted="false">No wait</string>

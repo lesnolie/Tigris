@@ -67,6 +67,10 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private lateinit var scene: FrameLayout
     private lateinit var backdrop: FrameLayout
     private lateinit var bg: ImageView
+    private lateinit var videoWallpaper: VideoWallpaper
+    private val wallpaperChanges = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (resumed && (key == "background" || key == "wallpaper_video_revision")) applyBackground()
+    }
     private lateinit var header: FrameLayout
     private lateinit var weatherCard: TextView
     private var weatherLoading = false
@@ -252,9 +256,11 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private val screenOn = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
             if (i.action == Intent.ACTION_SCREEN_OFF) {
+                videoWallpaper.stop()
                 armWakeIntro()
                 return
             }
+            if (resumed && !wakeIntro) applyBackground()
             if (!wakeIntro) return
             if (resumed) { consumeWakeIntro(); return }
             startActivity(Intent(c, HomeActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra(EXTRA_WAKE, true))
@@ -264,16 +270,20 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     /** Plays the boot animation over the home screen; [preview] is the one started from settings. */
     fun playIntro(preview: Boolean = false, wake: Boolean = false) {
         if (intro != null) return
+        videoWallpaper.stop()
         if (!preview) prefs.introBoot = Intro.bootStamp(this)
         sheets.toList().forEach { it.dismiss() }
         control.close()
         intro = Intro(this, root, scene, prefs.introSound) {
             intro = null
+            if (resumed) applyBackground()
             if (sheets.isEmpty() && !control.isOpen) focusAt(focusedPos)
         }.also { it.start(if (wake) prefs.wakeDelay.toLong() else 0) }
     }
 
     override fun onDestroy() {
+        resumed = false
+        videoWallpaper.stop()
         unregisterReceiver(pkgReceiver)
         main.removeCallbacksAndMessages(null)
         control.destroy()
@@ -295,6 +305,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         scene.addView(backdrop, match())
         bg = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
         backdrop.addView(bg, match())
+        videoWallpaper = VideoWallpaper(this, backdrop)
 
         val dm = resources.displayMetrics
         sw = dm.widthPixels
@@ -504,6 +515,13 @@ class HomeActivity : Activity(), TileAdapter.Listener {
      */
     private fun applyBackground() {
         val theme = prefs.background
+        if (theme in VideoWallpaper.SOURCES) {
+            showBackground("graphite", null)
+            if (resumed && intro == null && getSystemService(android.os.PowerManager::class.java).isInteractive)
+                videoWallpaper.start(theme)
+            return
+        }
+        videoWallpaper.stop()
         if (!Wallpapers.isPhoto(theme)) return showBackground(theme, null)
         if (refreshing) return
         refreshing = true
@@ -524,8 +542,9 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             val bmp = photo?.let { Wallpapers(this, Wallpapers.sourceFor(theme)).forHome(it) } ?: Backgrounds.render(if (Wallpapers.isPhoto(theme)) "green" else theme)
             val glass = LiquidGlass.bake(bmp, sw, sh, dockRect, dockRadius).also { it.prepareToDraw() }
             val blurred = Wallpapers.blurred(bmp, darken = 0.22f)
-            homeDock = glass
             main.post {
+                if (isDestroyed || shownBackground != key) return@post
+                homeDock = glass
                 frost.setImageBitmap(blurred)
                 scrollGlass.texture(blurred)
                 if (!shelfShown) setDock(glass, 1200)
@@ -1107,6 +1126,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     override fun onResume() {
         super.onResume()
+        prefs.observe(wallpaperChanges)
         avatar.visibility = if (prefs.showAvatar) View.VISIBLE else View.GONE
         avatar.setPortrait(SettingsActivity.avatarFile(this)?.let { SettingsActivity.decodeIcon(it, 96) })
         adapter.tvosFocus = prefs.focusTvos(this)
@@ -1126,6 +1146,9 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     }
 
     override fun onPause() {
+        resumed = false
+        prefs.unobserve(wallpaperChanges)
+        videoWallpaper.stop()
         // Leaving for another app (or standby) ends the intro rather than leaving it half played.
         intro?.finish()
         if (!getSystemService(android.os.PowerManager::class.java).isInteractive) armWakeIntro()
