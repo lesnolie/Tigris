@@ -72,6 +72,9 @@ object LiquidGlass {
         val hw = w / 2f
         val hh = h / 2f
         val rimW = 2.2f
+        val frost = frostStrength.coerceIn(0f, 1f)
+        val transmission = 1f - 0.14f * frost
+        val lift = 30f * frost
         for (j in 0 until h) {
             val py = j + 0.5f
             for (i in 0 until w) {
@@ -103,9 +106,6 @@ object LiquidGlass {
                 // A little milky and a little more saturated than what is behind.
                 val luma = r * 0.3f + g * 0.59f + b * 0.11f
                 r = luma + (r - luma) * 1.2f; g = luma + (g - luma) * 1.2f; b = luma + (b - luma) * 1.2f
-                val frost = frostStrength.coerceIn(0f, 1f)
-                val transmission = 1f - 0.14f * frost
-                val lift = 30f * frost
                 r = r * transmission + lift; g = g * transmission + lift; b = b * transmission + lift
 
                 // Specular rim: strongest where it faces the light (top left), a softer

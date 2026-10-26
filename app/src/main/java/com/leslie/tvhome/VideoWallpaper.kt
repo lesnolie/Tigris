@@ -67,9 +67,9 @@ internal class VideoWallpaper(
                     onFrame(it)
                 }
             }
-            // The dock is a live reflection of the moving wallpaper. A 500ms
-            // poll made it visibly trail the video; busy bakes are still skipped.
-            main.postDelayed(this, 200)
+            // Check frequently so the next sample starts soon after a bake ends.
+            // The busy gate still limits this to one in-flight CPU bake.
+            main.postDelayed(this, 100)
         }
     }
 

@@ -594,12 +594,16 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val source = prefs.background
         io.execute {
             val result = runCatching {
-                // Bake the slab at half screen resolution, then let ImageView scale it.
-                val rect = Rect(dockRect.left / 2, dockRect.top / 2,
-                    dockRect.right / 2, dockRect.bottom / 2)
+                // Match the bake to the captured frame's resolution. Rendering a
+                // larger bitmap only stretched pixels that the snapshot did not have.
+                val scale = minOf(0.5f, frame.width / sw.toFloat())
+                val rect = Rect((dockRect.left * scale).toInt(), (dockRect.top * scale).toInt(),
+                    (dockRect.right * scale).toInt(), (dockRect.bottom * scale).toInt())
+                val renderW = (sw * scale).toInt().coerceAtLeast(1)
+                val renderH = (sh * scale).toInt().coerceAtLeast(1)
                 // Live video already provides motion and color; a lighter frost
                 // keeps more of that detail visible through the moving glass.
-                val glass = LiquidGlass.bake(frame, sw / 2, sh / 2, rect, dockRadius / 2,
+                val glass = LiquidGlass.bake(frame, renderW, renderH, rect, dockRadius * scale,
                     frostStrength = 0.3f)
                     .also { it.prepareToDraw() }
                 glass to Wallpapers.blurred(frame, darken = 0.22f)
