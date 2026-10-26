@@ -9,6 +9,19 @@
 
 You are installing Tigris, an Android TV launcher, onto the user's TV from their computer. Follow these steps in order. Talk to the user in their language (most users write Chinese). The TV is someone's home device: whenever a step below says to ask, ask first.
 
+## AI adaptive installation / AI 自适应安装
+
+When the request is to replace a TV's factory launcher and reduce firmware ads,
+**first run the existing read-only `full-plan` inspection and follow its `adaptive_install` decision**.
+Use [the capability-first AI installation policy](docs/ai-adaptive-installation.md).
+Do not pick a Xiaomi/Redmi workaround by brand, model name, MIUI/HyperOS label,
+or copied GitHub commands alone. Historical TV reports are evidence for investigation,
+not authorization to disable a system component. Continue to use the existing
+Sony and TCL/FFalcon installer/Guard paths unchanged. Treat advertising and performance
+as separately verified outcomes; do not call installation success full HOME takeover.
+Only propose an opt-in HOME probe when the live device meets the safety preconditions.
+Never automatically disable stock HOME, Settings, FallbackHome, HDMI, or OTA.
+
 ## Hard rules
 
 - Never run `svc power shutdown`, `svc power reboot`, `reboot` or `input keyevent KEYCODE_POWER` / `KEYCODE_SLEEP` without asking. A powered-off TV can only be turned back on with its remote.
