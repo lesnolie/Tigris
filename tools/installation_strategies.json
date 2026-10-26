@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "strategies": [
+    {
+      "id": "sony-native", "platform": "android", "brands": ["sony"], "priority": 100,
+      "fingerprints": [], "min_sdk": 28, "executor": "legacy", "apk": "standard",
+      "name": {"zh": "Sony 原生 HOME", "en": "Sony native HOME"},
+      "guidance": {"zh": "沿用标准版与原生 HOME，实际验收失败才使用既有守护。", "en": "Keep Standard and native HOME; existing Guard only follows an observed HOME failure."},
+      "preconditions": ["authorized_adb", "saved_original_home", "official_signature"],
+      "detection": ["manufacturer", "brand", "model", "sdk", "fingerprint", "home_candidates", "home_resolver"],
+      "home": "existing_native_then_verified_guard", "verification": ["apk", "adb_home", "physical_home", "boot", "standby_wake", "memory_cleanup", "hdmi", "restore"],
+      "failure": "stop_keep_data_and_original_launcher", "recovery": "install.sh restore with original snapshot",
+      "risk": "settings", "evidence": ["docs/installation-compatibility.md"], "validation": "automated_only"
+    },
+    {
+      "id": "tcl-compatible", "platform": "android", "brands": ["tcl", "ffalcon", "iffalcon"], "priority": 100,
+      "fingerprints": [], "min_sdk": 28, "executor": "legacy", "apk": "standard",
+      "name": {"zh": "TCL / 雷鸟兼容安装", "en": "TCL / FFalcon compatible installation"},
+      "guidance": {"zh": "保留 Guard 及 T-Cast 特殊推送；只有确认固件限制后才切换，不卸载旧版绕过签名。", "en": "Keep Guard and T-Cast push for observed firmware restrictions; never uninstall to bypass a signature mismatch."},
+      "preconditions": ["authorized_adb", "saved_original_home", "official_signature"],
+      "detection": ["manufacturer", "brand", "model", "sdk", "fingerprint", "home_candidates", "home_resolver", "install_failure"],
+      "home": "existing_native_then_verified_guard", "verification": ["apk", "adb_home", "physical_home", "boot", "standby_wake", "memory_cleanup", "hdmi", "restore"],
+      "failure": "review_guard_tcast_on_verification_failure", "recovery": "install.sh restore with original snapshot",
+      "risk": "settings", "evidence": ["https://github.com/lesnolie/Tigris/issues/14", "tools/tcast-push.py"], "validation": "automated_only"
+    },
+    {
+      "id": "xiaomi-diagnostic", "platform": "android", "brands": ["xiaomi", "redmi"], "priority": 100,
+      "fingerprints": [], "min_sdk": 28, "executor": "apk-only", "apk": "standard",
+      "name": {"zh": "小米 / Redmi 固件诊断", "en": "Xiaomi / Redmi firmware diagnostics"},
+      "guidance": {"zh": "MIUI 与 HyperOS 名称不是兼容证据。先安全安装，再检查 HOME 候选、PatchWall 和 FallbackHome；接管试验须单独授权。", "en": "MIUI and HyperOS names are not compatibility evidence. Safely install, then inspect HOME candidates, PatchWall and FallbackHome; authorize a HOME trial separately."},
+      "preconditions": ["authorized_adb", "saved_original_home", "official_signature"],
+      "detection": ["manufacturer", "brand", "model", "sdk", "firmware", "fingerprint", "home_candidates", "home_resolver", "guard"],
+      "home": "xiaomi_home.inspect_route_then_opt_in_probe", "verification": ["apk", "adb_home", "physical_home", "boot", "standby_wake", "memory_cleanup", "ads", "hdmi", "restore"],
+      "failure": "read_only_diagnostics_preserve_patchwall_and_fallbackhome", "recovery": "home-restore with home-probe.json; install.sh restore with original snapshot",
+      "risk": "apk_only", "evidence": ["tools/xiaomi_home.py", "https://github.com/wangrongding/tv-fresh", "https://github.com/lesnolie/Tigris/issues/8"], "validation": "automated_only"
+    },
+    {
+      "id": "generic-android", "platform": "android", "brands": [], "priority": 0,
+      "fingerprints": [], "min_sdk": 28, "executor": "apk-only", "apk": "standard",
+      "name": {"zh": "未知 Android 固件", "en": "Unknown Android firmware"},
+      "guidance": {"zh": "只做安全安装及诊断，不猜测原厂组件或自动启用守护。", "en": "Safe APK installation and diagnostics only; do not guess vendor components or automatically enable Guard."},
+      "preconditions": ["authorized_adb", "saved_original_home", "official_signature"],
+      "detection": ["manufacturer", "brand", "model", "sdk", "fingerprint", "home_candidates", "home_resolver"],
+      "home": "read_only_diagnostics", "verification": ["apk", "adb_home", "physical_home", "boot", "standby_wake", "memory_cleanup", "hdmi", "restore"],
+      "failure": "stop_keep_data_and_original_launcher", "recovery": "install.sh restore with original snapshot",
+      "risk": "apk_only", "evidence": ["tools/check-install.py"], "validation": "automated_only"
+    }
+  ]
+}

@@ -6,6 +6,11 @@ on:
     paths:
       - 'website/**'
       - 'install.sh'
+      - 'tools/installation_strategy.py'
+      - 'tools/installation_strategies.json'
+      - 'tools/install-plan.py'
+      - 'tools/test_installation_strategy.py'
+      - 'tools/check-website-install.py'
       - 'AGENTS.md'
       - 'webos/install.sh'
       - 'docs/installation-compatibility.md'
@@ -17,6 +22,11 @@ on:
     paths:
       - 'website/**'
       - 'install.sh'
+      - 'tools/installation_strategy.py'
+      - 'tools/installation_strategies.json'
+      - 'tools/install-plan.py'
+      - 'tools/test_installation_strategy.py'
+      - 'tools/check-website-install.py'
       - 'AGENTS.md'
       - 'webos/install.sh'
       - 'docs/installation-compatibility.md'
@@ -51,6 +61,8 @@ jobs:
         run: pnpm check
       - name: Build both locales and install shell route
         run: pnpm build
+      - name: Check installation strategy and APK boundaries in built pages
+        run: python3 ../tools/check-website-install.py
       - name: Validate Releases download entry points and installer helper
         run: |
           python3 - <<'PY'

@@ -6,6 +6,10 @@ Home/standby/reboot/restore testing. Never generalize a tv-fresh device finding.
 """
 from dataclasses import dataclass
 
+# Exact fingerprint -> reviewed packages. External model reports are insufficient.
+# Intentionally empty: no firmware has supplied component-purpose + recovery evidence.
+VERIFIED_AD_FIRMWARES: dict[str, tuple[str, ...]] = {}
+
 @dataclass(frozen=True)
 class Profile:
     name: str

@@ -1,5 +1,12 @@
 # Tigris Full Replacement / 完整替换模式（第一、二阶段）
 
+> **开发分支新增门槛 / Development gate:** 广告操作必须匹配
+> `VERIFIED_AD_FIRMWARES` 中经过审查的精确指纹与包名；目前表为空，因此下面的
+> apply-ads 示例会安全拒绝。用户授权与候选包存在都不能代替用途和恢复证据。
+> Ad execution requires reviewed exact-firmware package evidence; the current table
+> is empty. Consent and package presence alone do not authorize execution.
+> AI、手动和一键安装统一使用 [模块指南](modules.md) 的计划入口（尚未发布）。
+
 > **目标适用于所有品牌：** 日常使用 Tigris 而非厂商首页、实体 Home 返回 Tigris、开机和待机恢复稳定、尽可能屏蔽固件系统广告，保留 HDMI / 投屏 / 声音 / 设置 / OTA，并可恢复原厂状态。
 >
 > **当前实现边界：** 本阶段提供各品牌统一目标/安装检查、小米固件只读诊断、需逐个授权的小米系统广告候选处理及恢复。**未实机验证任何机型能完全替换并消除全部广告**。这不是“一键去除所有广告”，更不保证删除 PatchWall 或 FallbackHome 能安全完成。第三方影视 App 内广告不在该功能承诺之内。
@@ -16,7 +23,9 @@
 连接电视、允许 ADB 调试后，先使用官方稳定签名包安装 Tigris，保留原厂状态：
 
 ```bash
-TV=192.168.1.20 bash install.sh install -s standard
+python3 tools/install-plan.py --platform android --serial 192.168.1.20:5555
+# 核对计划后执行 / Execute after reviewing the plan:
+python3 tools/install-plan.py --platform android --serial 192.168.1.20:5555 --execute
 # 安装不等于真正接管，按遥控器物理 Home 另行验收
 TV=192.168.1.20 bash install.sh verify
 ```

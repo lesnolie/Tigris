@@ -52,8 +52,8 @@ fi
 # Run the real evidence checker with a virtual clock so polling tests are fast.
 cat > "$TEST/bin/python3" <<'MOCK'
 #!/usr/bin/env bash
-if [[ "$1" == *check-install.py ]]; then
-  exec python -c 'import os,runpy,sys,time,subprocess; time.sleep=lambda _:None; original=subprocess.run; subprocess.run=lambda args,**kw:original([os.environ["MOCK_BASH"],os.environ["MOCK_ADB"],*args[1:]],**kw); sys.argv=sys.argv[1:]; runpy.run_path(sys.argv[0],run_name="__main__")' "$@"
+if [[ "$1" == *.py ]]; then
+  exec python -c 'import os,runpy,sys,time,subprocess; time.sleep=lambda _:None; original=subprocess.run; subprocess.run=lambda args,**kw:original([os.environ["MOCK_BASH"],os.environ["MOCK_ADB"],*args[1:]],**kw) if args[0]=="adb" else (_ for _ in ()).throw(RuntimeError("Unexpected subprocess in isolated test")); sys.argv=sys.argv[1:]; sys.path.insert(0,os.path.dirname(os.path.abspath(sys.argv[0]))); runpy.run_path(sys.argv[0],run_name="__main__")' "$@"
 fi
 exec python "$@"
 MOCK
@@ -70,6 +70,18 @@ bash "$ROOT/install.sh" > "$TEST/output"
 grep -q 'install -r' "$LOG"
 ! grep -Eq 'uninstall|disable-user|keyevent KEYCODE_POWER' "$LOG"
 echo 'PASS install snapshots original launcher and never removes apps'
+: > "$LOG"
+BRAND=Xiaomi bash "$ROOT/install.sh" --apk-only > "$TEST/output"
+grep -q 'install -r' "$LOG"
+! grep -Eq 'set-home-activity|am broadcast|pm grant|appops set|keyevent|disable-user|uninstall' "$LOG"
+echo 'PASS safe APK-only route preserves HOME, Guard and permissions'
+: > "$LOG"
+BRAND=TCL bash "$ROOT/install.sh" --flavor guard > "$TEST/output"
+grep -q 'APP_AUTO_START allow' "$LOG"
+grep -q 'APP_ASSOC_START allow' "$LOG"
+grep -q -- '--ez guard true' "$LOG"
+! grep -Eq 'set-home-activity|disable-user|uninstall' "$LOG"
+echo 'PASS explicit TCL Guard retains vendor autostart and original HOME'
 printf com.saved.home/.Home > "$STATE_DIR/home"
 bash "$ROOT/install.sh" > "$TEST/output"
 [[ "$(cat "$STATE_DIR/home")" == com.saved.home/.Home ]]
@@ -173,7 +185,7 @@ cat > "$TEST/bin/curl" <<'REMOTE_CURL'
 url="$2"
 out="$4"
 case "$url" in
-  https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/*.py)
+  https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/*.py|https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/installation_strategies.json)
     file="${url##*/}"
     cp "$SOURCE_ROOT/tools/$file" "$out"
     echo "$file" >> "$LOG.downloads"

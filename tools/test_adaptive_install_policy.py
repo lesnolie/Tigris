@@ -73,6 +73,9 @@ class AdaptiveInstallationTests(unittest.TestCase):
                 self.assertEqual(plan["system_ads"], "unverified")
                 self.assertEqual(plan["performance_gain"], "unverified")
 
+    def test_unknown_vendor_matches_safe_registry_path(self):
+        self.assertEqual(self.plan(profile="android")["next_step"], "safe_apk_only_then_inspect")
+
 
 if __name__ == "__main__":
     unittest.main()

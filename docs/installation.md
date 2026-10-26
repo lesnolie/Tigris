@@ -1,5 +1,26 @@
 # 安装、升级与还原
 
+## Direct APK boundary / 直接 APK 的能力边界
+
+APK installed ≠ HOME takeover ≠ system ads removed. A sideload may leave Tigris as
+an ordinary app; remote Home, reboot or wake may return to the factory launcher.
+Some firmware rejects Standard and needs TCL/FFalcon Guard + T-Cast, or Xiaomi/Redmi
+HOME diagnostics. APKs grant neither ADB nor system privileges, do not clean ads,
+and cannot bypass background/accessibility restrictions. Android version, CPU ABI,
+signature and upgrade compatibility must match. LG webOS and Samsung Tizen cannot
+run these APKs. Keep official signing, update in place, save original state, and do
+not uninstall to bypass signing conflicts: settings, folders and layouts may be lost.
+
+APK 安装成功不等于 HOME 接管或广告清理成功。安装后可能只是普通应用；实体 Home、
+重启、待机唤醒可能返回原厂桌面。部分 TCL/雷鸟固件需要 Guard 与特殊推送，小米/Redmi
+需要额外诊断。APK 不自动获得 ADB/系统权限、清理广告或解除后台/无障碍限制。
+Android 版本、CPU 架构、签名与升级兼容性必须匹配；不适用于 webOS/Tizen。
+保留官方签名、覆盖升级与原始状态；不要为绕过签名而卸载，避免设置、布局和文件夹丢失。
+
+For the **unreleased development checkout** shared AI/manual/automatic strategy
+entry point and contributor contracts, see [Module guide](modules.md).
+开发分支的统一安装入口尚未发布，见[模块指南](modules.md)；线上入口仍按已发布能力使用。
+
 > **统一安装验收 / Shared compatibility rules:** [按品牌排查、遥控器/U 盘安装、电脑检查与四项验收](installation-compatibility.md). AI 与手动安装使用同一个 `tools/check-install.py`；先验证 Home，失败才处理品牌限制。APK 安装不等于桌面接管，未测项目必须标记未验证。
 
 

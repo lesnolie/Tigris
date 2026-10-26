@@ -147,7 +147,7 @@ class Prefs(ctx: Context) {
 
     /** Explicit opt-in. Never request weather or geolocation while false. */
     var weatherEnabled: Boolean
-        get() = sp.getBoolean("weather_enabled", false)
+        get() = sp.getBoolean("weather_enabled", com.leslie.tvhome.features.Features.weather.defaultEnabled)
         set(v) = sp.edit().putBoolean("weather_enabled", v).apply()
 
     var weatherFahrenheit: Boolean

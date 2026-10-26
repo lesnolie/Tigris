@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 
 from replacement_profiles import CORE_DENY, detect
 from xiaomi_home import inspect_route, probe_home, restore_home
+from installation_strategy import select
 
 HOME_INTENT = ("-a", "android.intent.action.MAIN", "-c", "android.intent.category.HOME")
 SERIAL_RE = re.compile(r"^[a-zA-Z0-9._:-]+$")
@@ -113,7 +114,8 @@ class Tv:
 
 def state_path(directory, serial):
     # Require directory per device; do not reuse or overwrite existing snapshots.
-    folder = Path(directory).expanduser() if directory else Path.home() / ".local" / "state" / "tigris" / serial
+    directory_name = serial.replace(":", "_") if os.name == "nt" else serial
+    folder = Path(directory).expanduser() if directory else Path.home() / ".local" / "state" / "tigris" / directory_name
     return folder / "replacement.json"
 
 
@@ -151,6 +153,10 @@ def apply_ads(tv, inspection, approvals, confirm, acknowledge, path):
     present = {item["package"]: item for item in inspection["ad_candidates"]}
     if any(not present[name]["installed"] for name in selected):
         raise Failure("One or more selected packages are not installed; no changes")
+    from replacement_profiles import VERIFIED_AD_FIRMWARES
+    approved = VERIFIED_AD_FIRMWARES.get(device["fingerprint"], ())
+    if any(name not in approved for name in selected):
+        raise Failure("No reviewed exact-firmware safety evidence for selected ad packages; diagnostic only")
     if path.exists():
         previous = json.loads(path.read_text(encoding="utf-8"))
         if previous.get("state") != "restored":
@@ -244,6 +250,8 @@ def adaptive_install_decision(inspection):
     installed = bool(inspection.get("tigris_installed"))
     candidate = bool(routing.get("tigris_home_candidate"))
     step = "use_existing_standard_install_and_verify"
+    if profile not in ("sony", "tcl", "xiaomi"):
+        step = "safe_apk_only_then_inspect"
     if profile == "xiaomi":
         if not installed:
             step = "install_signed_standard_apk_then_inspect"
@@ -327,8 +335,9 @@ def main():
         elif args.mode == "plan":
             inspected["mode"] = "plan"
             inspected["adaptive_install"] = adaptive_install_decision(inspected)
+            inspected["installation_strategy"] = select(inspected["device"])
             inspected["recommended_order"] = [
-                "Install official signed Tigris via install.sh",
+                "Follow installation_strategy via tools/install-plan.py; never execute a diagnostic_only plan",
                 "Read home_route classification and use home-inspect for Xiaomi native HOME diagnostics",
                 "Optional home-probe changes only HOME preference and ALWAYS restores the original",
                 "Verify real HOME resolution with check-install.py and physical remote",
