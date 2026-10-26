@@ -164,6 +164,32 @@ echo 'PASS missing snapshot stops without changing TV'
 if SDK=26 bash "$ROOT/install.sh" > "$TEST/output" 2>&1; then exit 1; fi
 ! grep -q 'install -r' "$LOG"
 echo 'PASS unsupported Android blocked'
+# Simulate the public curl-piped installer (no local tools directory).
+# All three Python modules must be downloaded before HOME inspection works.
+mkdir -p "$TEST/piped"
+cp "$ROOT/install.sh" "$TEST/piped/install.sh"
+cat > "$TEST/bin/curl" <<'REMOTE_CURL'
+#!/usr/bin/env bash
+url="$2"
+out="$4"
+case "$url" in
+  https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/*.py)
+    file="${url##*/}"
+    cp "$SOURCE_ROOT/tools/$file" "$out"
+    echo "$file" >> "$LOG.downloads"
+    ;;
+  *) echo "unexpected test URL: $url" >&2; exit 4 ;;
+esac
+REMOTE_CURL
+chmod +x "$TEST/bin/curl"
+: > "$LOG"
+SOURCE_ROOT="$ROOT" BRAND=Xiaomi bash "$TEST/piped/install.sh" full-home-inspect > "$TEST/output"
+grep -q '"read_only": true' "$TEST/output"
+grep -Fxq 'tv-replacement.py' "$LOG.downloads"
+grep -Fxq 'replacement_profiles.py' "$LOG.downloads"
+grep -Fxq 'xiaomi_home.py' "$LOG.downloads"
+! grep -Eq 'pm disable-user|pm uninstall|pm enable|set-home-activity|keyevent' "$LOG"
+echo 'PASS piped installer fetches all HOME dependencies without writes'
 cat > "$TEST/bin/curl" <<'MOCK'
 #!/usr/bin/env bash
 url=$2
