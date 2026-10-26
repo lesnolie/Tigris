@@ -1,8 +1,11 @@
 name: Signed updater device test
 on:
+  workflow_dispatch:
   push:
     branches: ['fix/updater-progress-recovery']
-    paths: ['.github/workflows/updater-device-test.yml']
+    paths:
+      - '.github/workflows/updater-device-test.yml'
+      - 'app/src/main/java/com/leslie/tvhome/UpdateActivity.kt'
 permissions:
   contents: read
 jobs:
