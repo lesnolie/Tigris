@@ -52,6 +52,7 @@ if [[ "$MODE" == full-* ]]; then
     REPLACEMENT="$TMP/tv-replacement.py"
     curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/tv-replacement.py -o "$REPLACEMENT"
     curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/replacement_profiles.py -o "$TMP/replacement_profiles.py"
+    curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/xiaomi_home.py -o "$TMP/xiaomi_home.py"
   fi
   case "$MODE" in
     full-inspect) R_MODE=inspect ;;
