@@ -44,7 +44,7 @@ Only metadata and concepts cross the host/runtime boundary; no Python in the APK
    SDK blocks writes. Model and MIUI/HyperOS strings never authorize system changes.
    优先扩展固件规则；同优先级冲突停止执行，信息不足不猜测。
 3. Use existing `legacy` or `apk-only` executors. A genuinely new mechanism needs a
-   reviewed host implementation, rollback and mock tests; never remote arbitrary code.
+   reviewed host implementation, rollback and mock tests; never run remote arbitrary code.
    复用现有执行器；新机制必须有实现、恢复和测试，不执行远程未审核代码。
 4. Add a fixture and assert `select()` plus command capture in
    `tools/test_installation_strategy.py`. The existing generic row is a runnable
