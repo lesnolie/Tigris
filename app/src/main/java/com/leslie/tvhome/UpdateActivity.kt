@@ -155,7 +155,12 @@ class UpdateActivity : Activity() {
             addView(column)
             setOnScrollChangeListener { _, _, _, _, _ -> surfaces.forEach { it.invalidateSelf() } }
         }
-        content.addView(options, LinearLayout.LayoutParams(0, -1, 0.54f))
+        val optionsViewport = FrameLayout(this).apply {
+            // The row zoom and the scrolling child must stay inside the right-hand viewport.
+            clipChildren = true; clipToPadding = true
+            addView(options, FrameLayout.LayoutParams(-1, -1))
+        }
+        content.addView(optionsViewport, LinearLayout.LayoutParams(0, -1, 0.54f))
         setContentView(root)
         options.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> sizeVisibleRows() }
         options.post { sizeVisibleRows() }
