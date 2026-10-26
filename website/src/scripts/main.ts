@@ -19,6 +19,19 @@
       body?.dataset.compareValue || (isEnglish ? "Showing {p}% of the before image" : "显示 {p}% 的安装前画面"),
   };
 
+
+  const host = document.querySelector<HTMLSelectElement>("#install-host");
+  const system = document.querySelector<HTMLSelectElement>("#install-system");
+  const action = document.querySelector<HTMLSelectElement>("#install-action");
+  function updateQuickInstall() {
+    document.querySelectorAll<HTMLElement>("[data-install-system]").forEach(el => { el.hidden = el.dataset.installSystem !== system?.value; });
+    const commands = document.querySelector<HTMLElement>("#android-quick-commands");
+    if (commands) commands.hidden = ["webos", "tizen", "vidaa"].includes(system?.value || "");
+    document.querySelectorAll<HTMLElement>("[data-install-command]").forEach(el => { el.hidden = el.dataset.installCommand !== `${host?.value}-${action?.value}`; });
+  }
+  [host, system, action].forEach(el => el?.addEventListener("change", updateQuickInstall));
+  updateQuickInstall();
+
   const shellStorageKey = "tigris-shell";
   const initialShell = (() => {
     try {
