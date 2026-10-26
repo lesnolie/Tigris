@@ -31,14 +31,16 @@ import java.security.SecureRandom
  */
 class PhoneServer private constructor(private val ctx: Context, private val token: String) : NanoHTTPD(PORT) {
     private val prefs = Prefs(ctx)
+    private val activeRequests = java.util.concurrent.atomic.AtomicInteger()
 
     override fun serve(session: IHTTPSession): Response {
         val prefix = "/$token"
         val uri = session.uri
-        if (!uri.startsWith(prefix)) return text(Response.Status.NOT_FOUND, "Not found")
+        if (uri != prefix && !uri.startsWith("$prefix/")) return text(Response.Status.NOT_FOUND, "Not found")
         val path = uri.removePrefix(prefix).ifEmpty { "/" }
         val post = session.method == Method.POST
-        return runCatching {
+        activeRequests.incrementAndGet()
+        return try { runCatching {
             when {
                 path == "/" -> newFixedLengthResponse(Response.Status.OK, "text/html; charset=utf-8", page())
                 path == "/i18n.js" && !post ->
@@ -48,7 +50,9 @@ class PhoneServer private constructor(private val ctx: Context, private val toke
                 path.startsWith("/thumb/") -> thumb(path.removePrefix("/thumb/"))
                 post && path == "/api/background" -> {
                     val v = form(session)["id"].orEmpty()
-                    if (v in Wallpapers.SOURCES || v in Backgrounds.THEMES) {
+                    if (v == VideoWallpaper.LOCAL && MediaFiles.wallpaper(ctx) == null)
+                        return text(Response.Status.BAD_REQUEST, I18n.text(R.string.live_wallpaper_upload))
+                    if (v in Wallpapers.SOURCES || v in Backgrounds.THEMES || v in VideoWallpaper.SOURCES) {
                         prefs.background = v
                         Wallpapers.trimExcept(ctx, v)
                     }
@@ -76,6 +80,42 @@ class PhoneServer private constructor(private val ctx: Context, private val toke
                     json(state())
                 }
                 post && path == "/api/upload" -> upload(session)
+                post && path == "/api/wallpaper/video" -> {
+                    val length = session.headers["content-length"]?.toLongOrNull() ?: 0L
+                    MediaFiles.uploadWallpaper(ctx, session.inputStream, length)
+                    json(state().put("ok", true))
+                }
+                post && path == "/api/wallpaper/video/delete" -> {
+                    form(session)
+                    synchronized(MediaFiles) {
+                        MediaFiles.wallpaper(ctx)?.let { check(it.delete()) }
+                        if (prefs.background == VideoWallpaper.LOCAL) prefs.background = Wallpapers.BING
+                    }
+                    json(state())
+                }
+                post && path == "/api/assets" -> {
+                    val fields = form(session)
+                    val asset = when (fields["id"]) {
+                        "intro" -> OptionalAssets.intro
+                        "backdrop" -> OptionalAssets.backdrop
+                        else -> return text(Response.Status.BAD_REQUEST, "Unknown asset")
+                    }
+                    if (fields["action"] == "delete") OptionalAssets.delete(ctx, asset)
+                    else OptionalAssets.download(ctx, asset)
+                    json(state())
+                }
+                post && path == "/api/wallhaven" -> {
+                    val fields = form(session)
+                    prefs.wallhavenQuery = fields["query"].orEmpty().trim().take(150)
+                    prefs.wallhavenCategories = WallhavenApi.category(fields["categories"].orEmpty())
+                    prefs.wallhavenSorting = WallhavenApi.sorting(fields["sorting"].orEmpty())
+                    prefs.wallhavenResolution = WallhavenApi.resolution(fields["resolution"].orEmpty())
+                    val walls = Wallpapers(ctx, Wallpapers.WALLHAVEN)
+                    val refreshed = walls.refresh(force = true)
+                    if (refreshed) walls.advance(prefs.wallMinutes, force = true)
+                    prefs.background = Wallpapers.WALLHAVEN
+                    json(state().put("ok", refreshed && walls.current() != null))
+                }
                 post && path == "/api/intro/source" -> {
                     val v = form(session)["source"].orEmpty()
                     if (v == Prefs.INTRO_VIDEO || v == Prefs.INTRO_WORDMARK) prefs.introSource = v
@@ -117,6 +157,7 @@ class PhoneServer private constructor(private val ctx: Context, private val toke
                 else -> text(Response.Status.NOT_FOUND, "Not found")
             }
         }.getOrElse { text(Response.Status.INTERNAL_ERROR, it.message ?: "error") }
+        } finally { activeRequests.decrementAndGet() }
     }
 
     private fun page(): String = ctx.assets.open("web/index.html").bufferedReader().use { it.readText() }
@@ -126,9 +167,15 @@ class PhoneServer private constructor(private val ctx: Context, private val toke
 
     private fun state(): JSONObject = JSONObject()
         .put("background", prefs.background)
+        .put("wallpaperVideo", MediaFiles.wallpaper(ctx)?.length() ?: 0L)
+        .put("defaultIntro", OptionalAssets.file(ctx, OptionalAssets.intro) != null)
+        .put("defaultBackdrop", OptionalAssets.file(ctx, OptionalAssets.backdrop) != null)
+        .put("wallhaven", JSONObject().put("query", prefs.wallhavenQuery).put("categories", prefs.wallhavenCategories)
+            .put("sorting", prefs.wallhavenSorting).put("resolution", prefs.wallhavenResolution))
         .put("screensaver", prefs.saverMode)
         .put("links", prefs.customWallUrls)
         .put("sources", JSONArray().apply {
+            VideoWallpaper.SOURCES.forEach { put(JSONObject().put("id", it).put("label", VideoWallpaper.label(it))) }
             Wallpapers.SOURCES.forEach { put(JSONObject().put("id", it).put("label", Wallpapers.label(it))) }
         })
         .put("themes", JSONArray().apply {
@@ -294,16 +341,18 @@ class PhoneServer private constructor(private val ctx: Context, private val toke
         fun start(ctx: Context): String? {
             val ip = lanAddress(ctx) ?: return null
             val server = running ?: PhoneServer(ctx.applicationContext, newToken()).also {
-                runCatching { it.start(SOCKET_READ_TIMEOUT, true) }.onFailure { return null }
+                runCatching { it.start(60_000, true) }.onFailure { return null }
                 running = it
             }
             return "http://$ip:$PORT/${server.token}/"
         }
 
         @Synchronized
-        fun stop() {
+        fun stop(): Boolean {
+            if ((running?.activeRequests?.get() ?: 0) > 0) return false
             running?.stop()
             running = null
+            return true
         }
 
         private fun newToken(): String {

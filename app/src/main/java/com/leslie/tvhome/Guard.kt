@@ -377,7 +377,7 @@ class ConfigReceiver : BroadcastReceiver() {
         if (i.hasExtra("clock_24")) prefs.clock24 = i.getBooleanExtra("clock_24", false)
         i.getStringExtra("intro")?.let { prefs.intro = it; prefs.introBoot = Intro.bootStamp(c) }
         i.getStringExtra("intro_source")?.let { prefs.introSource = it }
-        i.getStringExtra("background")?.takeIf { it in Wallpapers.SOURCES || it in Backgrounds.THEMES }?.let {
+        i.getStringExtra("background")?.takeIf { it in Wallpapers.SOURCES || it in Backgrounds.THEMES || it in VideoWallpaper.SOURCES }?.let {
             prefs.background = it
             Wallpapers.trimExcept(c, it)
         }

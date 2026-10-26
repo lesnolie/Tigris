@@ -22,6 +22,10 @@ object Device {
 class Prefs(ctx: Context) {
     private val sp: SharedPreferences = ctx.getSharedPreferences("tvhome", Context.MODE_PRIVATE)
 
+    fun observe(listener: SharedPreferences.OnSharedPreferenceChangeListener) = sp.registerOnSharedPreferenceChangeListener(listener)
+    fun unobserve(listener: SharedPreferences.OnSharedPreferenceChangeListener) = sp.unregisterOnSharedPreferenceChangeListener(listener)
+    fun wallpaperVideoChanged() = sp.edit().putLong("wallpaper_video_revision", System.nanoTime()).apply()
+
     /** Show the default profile portrait beside the home-screen clock and controls. */
     var showAvatar: Boolean
         get() = sp.getBoolean("show_avatar", true)
@@ -71,6 +75,19 @@ class Prefs(ctx: Context) {
     var background: String
         get() = sp.getString("background", "daily")!!
         set(v) = sp.edit().putString("background", v).apply()
+
+    var wallhavenQuery: String
+        get() = sp.getString("wallhaven_query", "landscape")!!
+        set(v) = sp.edit().putString("wallhaven_query", v).apply()
+    var wallhavenCategories: String
+        get() = sp.getString("wallhaven_categories", "100")!!
+        set(v) = sp.edit().putString("wallhaven_categories", v).apply()
+    var wallhavenSorting: String
+        get() = sp.getString("wallhaven_sorting", "toplist")!!
+        set(v) = sp.edit().putString("wallhaven_sorting", v).apply()
+    var wallhavenResolution: String
+        get() = sp.getString("wallhaven_resolution", "3840x2160")!!
+        set(v) = sp.edit().putString("wallhaven_resolution", v).apply()
 
     /** Minutes between background photo changes. */
     var wallMinutes: Int

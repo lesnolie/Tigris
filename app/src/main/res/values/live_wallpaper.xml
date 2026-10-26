@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="live_wallpaper_local">My video · 4K</string>
+    <string name="live_wallpaper_aerial">Apple aerials · 4K</string>
+    <string name="live_wallpaper_stream">Stream in 4K when supported; fall back if needed</string>
+    <string name="live_wallpaper_upload">Scan the QR code to upload a video first</string>
+    <string name="live_wallpaper_failed">Video unavailable. Showing a static background; check format or network.</string>
+    <string name="download_default_backdrop">Default Settings background</string>
+    <string name="download_default_intro">Default welcome video</string>
+    <string name="optional_asset_help">Optional download. Uploaded files take priority. Remove to free space; without media, use the plain background or Tigris wordmark.</string>
+    <string name="asset_downloading">Working…</string>
+    <string name="asset_download">Download</string>
+    <string name="asset_remove">Downloaded · remove</string>
+    <string name="asset_done">Updated</string>
+    <string name="asset_failed">Download failed. Check the network and retry; existing files are unchanged.</string>
+</resources>

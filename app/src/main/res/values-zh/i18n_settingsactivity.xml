@@ -42,16 +42,16 @@
     <string name="i18n_settingsactivity_040" formatted="false">开机动画</string>
     <string name="i18n_settingsactivity_041" formatted="false">开机动画</string>
     <string name="i18n_settingsactivity_042" formatted="false">开机后第一次显示主屏幕时播放，最后标志放大进入桌面。按任意键可以跳过。</string>
-    <string name="i18n_settingsactivity_043" formatted="false">\n默认播放内置开机视频，也可上传自己的视频。</string>
+    <string name="i18n_settingsactivity_043" formatted="false">\n可下载默认视频或上传自己的视频；未下载时显示 Tigris 字样。</string>
     <string name="i18n_settingsactivity_044" formatted="false">开机时</string>
     <string name="i18n_settingsactivity_045" formatted="false">开机和唤醒时</string>
     <string name="i18n_settingsactivity_046" formatted="false">关</string>
     <string name="i18n_settingsactivity_047" formatted="false">动画内容</string>
     <string name="i18n_settingsactivity_048" formatted="false">上传的视频：比如 Apple TV 的开机动画，结尾的标志放大进入桌面。Tigris 字样：Tigris 字样淡入后放大。</string>
-    <string name="i18n_settingsactivity_049" formatted="false">\n没有上传视频时，视频模式使用内置动画。</string>
+    <string name="i18n_settingsactivity_049" formatted="false">\n没有下载或上传视频时，使用 Tigris 字样。</string>
     <string name="i18n_settingsactivity_050" formatted="false">Tigris 字样</string>
-    <string name="i18n_settingsactivity_051" formatted="false">上传的视频</string>
-    <string name="i18n_settingsactivity_052" formatted="false">内置视频</string>
+    <string name="i18n_settingsactivity_051" formatted="false">已下载 / 上传的视频</string>
+    <string name="i18n_settingsactivity_052" formatted="false">暂无视频 · 使用 Tigris 字样</string>
     <string name="i18n_settingsactivity_053" formatted="false">唤醒后等待</string>
     <string name="i18n_settingsactivity_054" formatted="false">从待机唤醒时，先黑屏这么久再播放动画。不少电视（尤其是 OLED）在系统亮屏后过几秒画面才真正亮起；看不到动画开头就调长，黑屏太久就调短。</string>
     <string name="i18n_settingsactivity_055" formatted="false">不等待</string>
