@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_transfer_busy">正在下载或校验，请稍候</string>
+    <string name="update_cancelled">已取消待处理任务，可重新检查更新</string>
+    <string name="update_pending_recovery">等待电视安装确认。请选择「继续安装确认」；若仍卡住，选择「取消旧任务并重试」。</string>
+    <string name="update_download_percent">正在下载 · %1$d%%</string>
+    <string name="update_verifying">正在校验安装包、版本和签名…</string>
+    <string name="update_staging">正在准备系统安装…</string>
+    <string name="update_continue_product">继续安装确认 · %1$s</string>
+    <string name="update_retry_product">取消旧任务并重试 · %1$s</string>
+    <string name="update_no_confirmation">没有可打开的确认页。若安装卡住，请选择「取消旧任务并重试」。</string>
+    <string name="update_download_failed">下载不完整或超出安装包大小，请重试。</string>
+</resources>
