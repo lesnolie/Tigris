@@ -4,13 +4,13 @@ import { brand } from "../data/site";
 interface Props { locale: Locale }
 const zh = Astro.props.locale === "zh";
 const items = zh ? [
-  ["01", "把同类应用，放在一起。", "长按应用创建文件夹，视频、音乐、工具各有位置。"],
-  ["02", "桌面与投屏，一起更新。", "进入设置里的「软件更新与投屏」，检查新版本或开启自动更新。"],
-  ["03", "换上自己的头像。", "手机扫码上传；下滑进入全部应用时，背景化成磨砂玻璃。"],
+  ["01", "动态壁纸下，Dock 跟手不再滞后。", "提高视频取样频率并缩短玻璃贴图处理时间，让动态画面及时透过 Dock，同时保留液态玻璃质感。"],
+  ["02", "软件更新进度清晰可见。", "显示下载百分比，并可恢复系统安装确认；遇到卡住的任务可取消后重试。"],
+  ["03", "更新选项在自己的区域滚动。", "右侧列表在标题下方独立滚动，页面其他内容保持稳定，避免遮挡和裁切。"],
 ] : [
-  ["01", "A place for every app.", "Long-press to organize video, music and tools into folders."],
-  ["02", "One place to stay current.", "Check Tigris and MiracastReceiver in Settings → Software updates & casting."],
-  ["03", "Make it yours.", "Upload an avatar from your phone. Scroll down into a frosted app library."],
+  ["01", "A more responsive Dock over live wallpaper.", "More frequent video sampling and faster glass updates help moving scenes show through the Dock with less visible lag."],
+  ["02", "Clear software update progress.", "See download percentage, reopen the system install confirmation, or cancel a stuck task and retry."],
+  ["03", "Update options scroll in their own panel.", "The right-hand list stays below its title while the rest of the page remains steady, avoiding overlap and clipping."],
 ];
 ---
 <section class="release-strip wrap" aria-label={zh ? "本次更新" : "Latest update"}>

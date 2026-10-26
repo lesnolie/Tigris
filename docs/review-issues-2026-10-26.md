@@ -1,8 +1,8 @@
 # Recent issue and PR review — 2026-10-26
 
-Read-only review of the two most recent open issues and the two open PRs. No
-issue comments/reviews were sent and no PR was merged. Reports from contributors
-are evidence, not certification of other TVs.
+Review of the two most recent open issues and related PRs. No issue comments or
+PR reviews were sent. After the user authorized release, PR #49 and PR #50 were
+merged; contributor reports are evidence, not certification of other TVs.
 
 ## #45 / PR #46 — Sony registration loop
 
@@ -52,7 +52,15 @@ are evidence, not certification of other TVs.
 ## PR #49 — updater progress/recovery
 
 - https://github.com/lesnolie/Tigris/pull/49
-- Own change from the preceding task. Both Android CI and signed test build passed.
-  `2.0.10-updater-test` was installed on the user's Sony TV for their testing.
-- Remains open; user confirmation flow/retry results have not been supplied.
-  This glass fix is based on main and does not silently bundle the updater change.
+- Merged on 2026-10-26 after Android CI and the signed updater test build passed.
+- The official-signed `2.0.10-updater-test` package was installed on the user's Sony TV.
+
+## PR #50 — live wallpaper glass and update-page layout
+
+- https://github.com/lesnolie/Tigris/pull/50
+- Merged on 2026-10-26 after Android CI passed.
+- A signed test build was checked on the Sony BRAVIA. The live video showed
+  through the Dock glass as scenes changed, without the previously visible lag.
+  The right-hand update list stayed below the title and scrolled inside its area.
+- The device reports a 3840×2160 panel at 60 Hz and a 1920×1080 Android logical
+  display size; this was not a 3840×2160 logical-rendering test.
