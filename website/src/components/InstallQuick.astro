@@ -1,26 +1,58 @@
 ---
 import type { Locale } from "../data/lang";
+import { systems, strategyFor, quickCommand } from "../data/quick-install";
 interface Props { locale: Locale }
-const zh = Astro.props.locale === "zh";
-const install = "curl -fsSL https://tigris-tv.pages.dev/install.sh | TV=192.168.1.20 bash";
-const restore = "curl -fsSL https://tigris-tv.pages.dev/install.sh | TV=192.168.1.20 bash -s -- restore";
+const { locale } = Astro.props;
+const zh = locale === "zh";
 ---
-<div class="quick-install reveal">
-  <article class="quick-card">
-    <p class="eyebrow">MACOS / LINUX</p>
-    <h3>{zh ? "一行命令，装好并验收。" : "One command. Install and verify."}</h3>
-    <p>{zh ? "先装好 adb、curl 和 Python 3，将示例 IP 换成电视 IP。脚本保存原桌面记录，并校验安装包。" : "Install adb, curl and Python 3 first. Replace the sample IP. The script records the original home and verifies the APK."}</p>
-    <div class="code"><pre><code id="cmd-quick-install">{install}</code></pre><button class="copy" data-copy="#cmd-quick-install" type="button"><span class="label"></span></button></div>
-    <p class="fine">{zh ? "Windows 推荐交给能执行命令的电脑版 Agent。默认保留 ADB 设置；电视仍需授权，实体 Home 与待机唤醒需要人工验收。" : "On Windows, use a desktop agent that can execute commands. ADB preferences are preserved by default. TV authorization, physical Home and standby/wake checks require your participation."}</p>
-  </article>
-  <article class="quick-card">
-    <p class="eyebrow">UPDATE / RESTORE</p>
-    <h3>{zh ? "升级保留设置，还原有路可走。" : "Keep your settings. Keep a way back."}</h3>
-    <p>{zh ? "2.0.4 起：控制中心 → 设置 → 软件更新与投屏。可自动检查桌面和投屏组件的新版本；系统可能仍需你确认安装。" : "From 2.0.4: Control Center → Settings → Software updates & casting. Check both apps automatically; Android may ask you to confirm installation."}</p>
-    <details><summary>{zh ? "恢复原桌面" : "Restore the original home"}</summary>
-      <p>{zh ? "在原来的电脑上使用原安装记录。默认保留 Tigris，末尾加 --uninstall 才会卸载。" : "Use the original computer and saved installation snapshot. Tigris stays installed unless you append --uninstall."}</p>
-      <div class="code"><pre><code id="cmd-quick-restore">{restore}</code></pre><button class="copy" data-copy="#cmd-quick-restore" type="button"><span class="label"></span></button></div>
-    </details>
-    <a class="text-link" href="/agent.md">{zh ? "完整安装、验收与还原说明" : "Full installation, verification and restore guide"} ↗</a>
+<div class="quick-install" id="quick-install">
+  <article class="quick-card platform-install">
+    <p class="eyebrow">INSTALL BY SYSTEM</p>
+    <h3>{zh ? "选电脑、选电视系统，再复制安装指令。" : "Choose your computer and TV system, then copy the installer."}</h3>
+    <div class="install-selectors">
+      <label>{zh ? "电脑系统" : "Computer"}<select id="install-host"><option value="powershell">Windows PowerShell</option><option value="posix">macOS / Linux</option></select></label>
+      <label>{zh ? "电视系统 / 品牌" : "TV system / brand"}<select id="install-system">{systems.map(s => <option value={s.id}>{s[locale]}</option>)}</select></label>
+      <label>{zh ? "操作" : "Action"}<select id="install-action"><option value="plan">{zh ? "先检测（不修改电视）" : "Inspect first (read-only)"}</option><option value="execute">{zh ? "检测后安装" : "Inspect and install"}</option></select></label>
+    </div>
+    {systems.map((system, i) => <div data-install-system={system.id} hidden={i !== 0}>
+      {system.strategy ? <>
+        <p>{strategyFor(system.id)?.guidance[locale]}</p>
+        {system.id === "hisense" && <p>{zh ? "用户案例：海信电视通过 WorkBuddy 安装成功。型号与系统版本未提供，不代表所有海信或 VIDAA 都兼容。" : "User report: Tigris successfully installed on a Hisense TV using WorkBuddy. Model and OS version were not supplied; this does not certify every Hisense or VIDAA TV."}</p>}
+        {system.id === "tcl" && <p>{zh ? "已用 Guard 的用户继续使用 Guard；遇到验证器拒绝时按下方手动说明走多屏互动（T-Cast）推送，不卸载绕过签名。" : "Existing Guard users should keep Guard. For verifier rejection, use the manual T-Cast push guide below; do not uninstall to bypass signing."}</p>}
+      </> : <p>{system.id === "webos"
+        ? (zh ? "webOS 使用独立 IPK 测试版和 LG Developer Mode，不执行 Android APK / ADB 指令。" : "webOS uses a separate IPK preview and LG Developer Mode, not Android APK / ADB commands.")
+        : (zh ? "当前没有此平台的一键桌面安装方案。先确认系统；不要对 Tizen、原生 VIDAA 或未知平台执行 Android APK / ADB 指令。" : "No one-click launcher installer is available for this platform. Confirm the OS first; do not run Android APK / ADB instructions on Tizen, native VIDAA or an unknown platform.")}</p>}
+      {system.id === "webos" && <a class="text-link" href={zh ? "/webos/" : "/en/webos/"}>{zh ? "打开 LG webOS 独立安装指南" : "Open the separate LG webOS guide"} ↗</a>}
+    </div>)}
+    <div id="android-quick-commands">
+      <p>{zh ? "先安装 Git、Python 3、Android SDK Platform-Tools（adb）、Bash 和 curl。Windows 需安装 Git for Windows，并将 Git Bash 与 adb 加入 PATH。电脑和电视同一局域网，在电视上允许调试。将第一行地址改为电视 IP。" : "Install Git, Python 3, Android SDK Platform-Tools (adb), Bash and curl. On Windows, install Git for Windows and add Git Bash and adb to PATH. Use the same network and allow debugging on the TV. Replace the address on the first line."}</p>
+      {(["powershell", "posix"] as const).map(shell => (["plan", "execute"] as const).map(mode => <div data-install-command={`${shell}-${mode}`} hidden={shell !== "powershell" || mode !== "plan"}>
+        <div class="code"><pre><code id={`quick-${shell}-${mode}`}>{quickCommand(shell, mode)}</code></pre><button class="copy" data-copy={`#quick-${shell}-${mode}`} type="button"><span class="label"></span></button></div>
+      </div>))}
+      <p class="fine">{zh ? "品牌选项用于说明差异；执行时读取电视的真实型号、固件与 HOME，再匹配统一策略库。安装不等于接管成功；实体 Home、开机与待机需分别验收。现有用户推荐在 Tigris 软件更新中覆盖升级，保留原安装包类型。" : "Brand choices explain differences; execution inspects the actual model, firmware and HOME against the shared registry. Installation is not takeover: verify physical Home, startup and wake separately. Existing users should update in place through Tigris Software Updates, retaining their APK flavor."}</p>
+      <p>{zh ? "恢复原桌面：保留原电脑的安装快照，在源码目录按下方说明执行 install.sh restore；不要凭品牌猜原桌面组件。" : "Recovery: keep the original computer's installation snapshot and follow the guide below to run install.sh restore from the source checkout. Never guess the original launcher by brand."}</p>
+      <a class="text-link" href="/agent.md">{zh ? "安装前准备、专用安装与恢复说明" : "Preparation, special installation and recovery"} ↗</a>
+    </div>
+    <noscript>{zh ? "交互选择需要 JavaScript；也可直接使用下方手动安装说明。" : "Selectors need JavaScript; the manual installation guide below remains available."}</noscript>
   </article>
 </div>
+<style>
+  .quick-install { display:block; }
+  .install-selectors { display:flex; flex-wrap:wrap; gap:16px; margin:20px 0; }
+  label { display:grid; gap:8px; flex:1 1 210px; min-width:0; }
+  select { width:100%; min-width:0; padding:12px; border:1px solid #536072; border-radius:10px; background:#131b28; color:#fff; font:inherit; }
+  [hidden] { display:none !important; }
+</style>
+<script>
+  const host = document.querySelector<HTMLSelectElement>("#install-host");
+  const system = document.querySelector<HTMLSelectElement>("#install-system");
+  const action = document.querySelector<HTMLSelectElement>("#install-action");
+  function updateQuickInstall() {
+    document.querySelectorAll<HTMLElement>("[data-install-system]").forEach(el => { el.hidden = el.dataset.installSystem !== system?.value; });
+    const commands = document.querySelector<HTMLElement>("#android-quick-commands");
+    if (commands) commands.hidden = ["webos", "tizen", "vidaa"].includes(system?.value || "");
+    document.querySelectorAll<HTMLElement>("[data-install-command]").forEach(el => { el.hidden = el.dataset.installCommand !== `${host?.value}-${action?.value}`; });
+  }
+  [host, system, action].forEach(el => el?.addEventListener("change", updateQuickInstall));
+  updateQuickInstall();
+</script>

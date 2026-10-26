@@ -35,6 +35,12 @@ const dl = locale === "zh" ? "打开 Releases" : "Open Releases";
 
     <ApkLimits locale={locale} />
     <div class="prereq reveal">{s.prereq}</div>
+    <aside class="prereq hisense-report">
+      <strong>{locale === "zh" ? "用户案例 · 海信通过 WorkBuddy 安装成功" : "User report · Hisense installation succeeded with WorkBuddy"}</strong>
+      <p>{locale === "zh" ? "2026-10-26 收录。型号、系统/固件及 Tigris 版本未提供；仅作为安装成功案例，不推断所有海信或原生 VIDAA 兼容，不代表实体 Home、冷启动、待机或广告清理已验证。" : "Recorded 2026-10-26. Model, OS/firmware and Tigris version were not supplied. Installation success only: not certification of all Hisense/native VIDAA TVs or verification of physical Home, cold boot, wake or ad removal."}</p>
+    </aside>
+
+    <InstallQuick locale={locale} />
 
     <div class="agent-card reveal">
       <h3><svg aria-hidden="true"><use href="#i-terminal"></use></svg>{s.agent.title}</h3>
@@ -48,7 +54,6 @@ const dl = locale === "zh" ? "打开 Releases" : "Open Releases";
       <p class="fine">{s.agent.note}</p>
     </div>
 
-    <InstallQuick locale={locale} />
     <InstallationChecks locale={locale} />
     <StrategyGuide locale={locale} />
     <details class="manual-install"><summary>{locale === "zh" ? "手动安装 · 按电视品牌查看步骤" : "Manual installation · choose your TV brand"}</summary>

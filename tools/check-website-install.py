@@ -32,4 +32,8 @@ for locale, name in (("zh", "index.html"), ("en", "en/index.html")):
     assert "install.sh restore" in text and "--execute" in text
     assert "v2.0.9" in text
     assert "Sony" in text and "TCL" in text and "Redmi" in text
+    assert 'id="install-host"' in html and 'id="install-system"' in html
+    assert 'id="install-action"' in html and 'id="android-quick-commands"' in html
+    assert 'class="prereq hisense-report"' in html and "WorkBuddy" in text
+    assert "Keep ADB enabled: yes" not in text and "保持 ADB 常开：要" not in text
     print(f"PASS {locale}: adjacent APK limits, official downloads, shared strategies, shell variants and restore")

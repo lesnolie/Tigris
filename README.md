@@ -1,5 +1,7 @@
 # Tigris
 
+> **海信安装成功案例（用户反馈，2026-10-26）：** 用户通过 WorkBuddy 在海信电视上成功安装 Tigris。未提供型号、系统/固件及 Tigris 版本；仅收录为安装成功案例，不推断所有海信或原生 VIDAA 兼容，也不作为实体 Home、冷启动、待机唤醒或广告清理的验证结论。
+
 > **LG webOS 测试包 / Developer preview:** [webos-v0.1.0-preview.1](https://github.com/lesnolie/Tigris/releases/tag/webos-v0.1.0-preview.1) · [IPK 安装、启动、更新和卸载 / Setup guide](https://github.com/lesnolie/Tigris/blob/main/docs/webos-preview-install.md)。已提供打包 IPK，无需自行构建；未做实机测试，不是稳定版，不接管 Home。Prebuilt IPK available; hardware untested, no Home takeover.
 
 > **统一安装验收 / Shared compatibility rules:** [按品牌排查、遥控器/U 盘安装、电脑检查与四项验收](docs/installation-compatibility.md). AI 与手动安装使用同一个 `tools/check-install.py`；先验证 Home，失败才处理品牌限制。APK 安装不等于桌面接管，未测项目必须标记未验证。

@@ -1,5 +1,7 @@
 # Tigris
 
+> **Hisense installation success (user report, 2026-10-26):** A user successfully installed Tigris on a Hisense TV using WorkBuddy. Model, OS/firmware and Tigris version were not supplied. This is an installation success case only, not certification of all Hisense/native VIDAA TVs or verification of physical Home, cold boot, wake or ad removal.
+
 > **LG webOS 测试包 / Developer preview:** [webos-v0.1.0-preview.1](https://github.com/lesnolie/Tigris/releases/tag/webos-v0.1.0-preview.1) · [IPK 安装、启动、更新和卸载 / Setup guide](https://github.com/lesnolie/Tigris/blob/main/docs/webos-preview-install.md)。已提供打包 IPK，无需自行构建；未做实机测试，不是稳定版，不接管 Home。Prebuilt IPK available; hardware untested, no Home takeover.
 
 > **Shared installation checks:** [Brand troubleshooting, USB installation and verification](docs/installation-compatibility.md). AI and manual installation use `tools/check-install.py`. Test Home before applying firmware workarounds; report untested remote Home, wake and boot as unverified.

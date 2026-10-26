@@ -289,9 +289,9 @@ adb -s 192.168.x.x:5555 shell appops set com.leslie.tvhome SYSTEM_ALERT_WINDOW a
     },
     agent: {
       title: "Let an AI agent do it (recommended)",
-      body: "Send this message with the repository link to an agent that can run commands (Codex, Claude Code and similar). It confirms your brand and IP, installs, verifies and keeps a way back to the stock home screen.",
+      body: "Send this message to WorkBuddy, Codex, Claude Code or another desktop agent that can run commands. It should confirm the TV OS and IP, follow the shared strategy, verify installation and preserve recovery.",
       prompt:
-        "Install the open-source Tigris launcher on my TV and make it the home screen.\nTV IP: <TV_IP>\nKeep ADB enabled: yes\n\nRead https://tigris-tv.pages.dev/agent.md fully first (fallback: https://raw.githubusercontent.com/lesnolie/Tigris/main/AGENTS.md), then run commands on my computer. Preserve existing settings; do not uninstall automatically. Tell me when I must act on the TV.\nPaste the raw outputs of:\n- adb shell \"cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME\"\n- adb shell settings get secure enabled_accessibility_services\n- after pressing Home: adb shell \"dumpsys window | grep mCurrentFocus\"",
+        "Install Tigris on my TV. TV IP: <TV_IP>. Read https://tigris-tv.pages.dev/agent.md first (fallback: https://raw.githubusercontent.com/lesnolie/Tigris/main/AGENTS.md). Confirm Android, webOS or another OS before acting; never use ADB/APKs on non-Android systems. For Android, inspect with tools/install-plan.py from v2.0.9 or newer source, then follow the shared strategy. Preserve settings, APK flavor and the factory launcher. Do not automatically uninstall, disable system components or enable keep-ADB. Tell me when TV authorization is needed. Report APK installation, synthetic Home, physical Home, startup, wake and recovery separately; mark untested results unverified and do not promise ad removal.",
       note: "The TV shows two or three permission dialogs; choose “Allow” with the remote. On TCL, choose “同意” when the T-Cast push prompt appears.",
     },
     safety:
