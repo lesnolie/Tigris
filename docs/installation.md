@@ -17,9 +17,9 @@ APK 安装成功不等于 HOME 接管或广告清理成功。安装后可能只�
 Android 版本、CPU 架构、签名与升级兼容性必须匹配；不适用于 webOS/Tizen。
 保留官方签名、覆盖升级与原始状态；不要为绕过签名而卸载，避免设置、布局和文件夹丢失。
 
-For the **unreleased development checkout** shared AI/manual/automatic strategy
+For the **v2.0.9+ full source checkout** shared AI/manual/automatic strategy
 entry point and contributor contracts, see [Module guide](modules.md).
-开发分支的统一安装入口尚未发布，见[模块指南](modules.md)；线上入口仍按已发布能力使用。
+v2.0.9 起的统一安装入口见[模块指南](modules.md)，需要完整源码及文档列出的工具。
 
 > **统一安装验收 / Shared compatibility rules:** [按品牌排查、遥控器/U 盘安装、电脑检查与四项验收](installation-compatibility.md). AI 与手动安装使用同一个 `tools/check-install.py`；先验证 Home，失败才处理品牌限制。APK 安装不等于桌面接管，未测项目必须标记未验证。
 

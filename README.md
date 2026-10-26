@@ -5,9 +5,9 @@
 > **统一安装验收 / Shared compatibility rules:** [按品牌排查、遥控器/U 盘安装、电脑检查与四项验收](docs/installation-compatibility.md). AI 与手动安装使用同一个 `tools/check-install.py`；先验证 Home，失败才处理品牌限制。APK 安装不等于桌面接管，未测项目必须标记未验证。
 
 
-> **完整替换模式开发中：** 统一目标是“用 Tigris 替换原厂桌面、尽量去除固件广告、保留恢复能力”。新增 [完整替换模式说明](docs/full-replacement.md)，小米只读固件诊断和需明确授权的广告候选处理通过电脑端安装器提供；这些源码变更**尚未发布为新 APK，也尚未完成实机完整替换验证**。其他品牌仍保留原有安装行为。
+> **安装与模块化：** v2.0.9 提供共享电脑端安装策略和[模块扩展指南](docs/modules.md)。小米 HOME 与广告行为仍需实机验证；未获精确固件审查的广告候选不执行禁用，其他品牌保留既有路径。
 
-> **v2.0.8（2026-10-26）正式发布：** 修复 Android 9 / 10 在「软件更新 → MiracastReceiver」安装时误报“缺少安装包签名”的问题；继续严格校验证书 SHA-256、包名和版本，不跳过安全检查。标准版和 Guard 版均沿用稳定签名，可直接覆盖升级。Sony BRAVIA VH1 的实际更新安装仍需用户复测。详见 [2.0.8 更新说明](docs/releases/v2.0.8.md)。
+> **v2.0.9（2026-10-26）：** 统一安装策略、固件安全门槛及通用功能扩展契约。保持官方签名和安装包类型，递增版本以支持覆盖升级；不清除用户设置或布局。继续包含 2.0.8 的 Android 9/10 签名兼容修复。详见 [2.0.9 更新说明](docs/releases/v2.0.9.md)。
 
 > **v2.0.7（2026-10-25）已更新：本版未做实机测试。** 统一安装兼容性检查，并修复待机唤醒动画前露出 Tigris 主页、进程恢复后守护服务未绑定的代码路径。请红米 X50 / MIUI，以及出现相同问题的小米 / Redmi 电视用户协助测试；不保证解决系统强制停止或原厂桌面闪现。详见 [2.0.7 更新说明](docs/releases/v2.0.7.md)。
 
@@ -26,7 +26,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.8 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.8)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.8/Tigris-v2.0.8.apk) · [TCL / 雷鸟守护版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.8/Tigris-guard-v2.0.8.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.8/SHA256SUMS-v2.0.8.txt)）
+- 最新正式版：**[v2.0.9 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.9)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.9/Tigris-v2.0.9.apk) · [TCL / 雷鸟守护版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.9/Tigris-guard-v2.0.9.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.9/SHA256SUMS-v2.0.9.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 

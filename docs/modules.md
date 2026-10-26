@@ -1,7 +1,7 @@
 # Module architecture / 模块架构
 
-Development branch only; no production rollout or hardware certification.
-仅开发分支实现；未部署，未新增实机认证。
+Shared source installation entry point requires v2.0.9 or newer. No new hardware certification.
+统一源码安装入口需要 v2.0.9 或更新版本；没有新增实机认证。
 
 ## Audit / 审计
 

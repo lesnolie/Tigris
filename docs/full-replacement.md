@@ -5,7 +5,7 @@
 > apply-ads 示例会安全拒绝。用户授权与候选包存在都不能代替用途和恢复证据。
 > Ad execution requires reviewed exact-firmware package evidence; the current table
 > is empty. Consent and package presence alone do not authorize execution.
-> AI、手动和一键安装统一使用 [模块指南](modules.md) 的计划入口（尚未发布）。
+> AI、手动和一键安装统一使用 [模块指南](modules.md) 的计划入口（v2.0.9 起）。
 
 > **目标适用于所有品牌：** 日常使用 Tigris 而非厂商首页、实体 Home 返回 Tigris、开机和待机恢复稳定、尽可能屏蔽固件系统广告，保留 HDMI / 投屏 / 声音 / 设置 / OTA，并可恢复原厂状态。
 >

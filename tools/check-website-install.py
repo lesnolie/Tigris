@@ -30,6 +30,6 @@ for locale, name in (("zh", "index.html"), ("en", "en/index.html")):
     assert "--platform android --serial 192.168.1.20:5555" in text
     assert "python tools/install-plan.py" in text and "python3 tools/install-plan.py" in text
     assert "install.sh restore" in text and "--execute" in text
-    assert ("尚未发布" if locale == "zh" else "not released") in text
+    assert "v2.0.9" in text
     assert "Sony" in text and "TCL" in text and "Redmi" in text
     print(f"PASS {locale}: adjacent APK limits, official downloads, shared strategies, shell variants and restore")

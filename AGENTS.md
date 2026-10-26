@@ -13,14 +13,14 @@ without explicit task authorization and evidence. Hardware reports are not autho
 安装器在电脑运行，设备能力在 tv/，通用功能不按品牌复制。保留设置键、视觉效果和既有成功路径。
 不要将宿主安装命令放入运行时 Adapter。历史实机报告不代表本次授权。
 
-Development checkout only / 仅开发检出目录（尚未发布）:
+Full source checkout (v2.0.9+) / 完整源码检出目录（v2.0.9 起）:
 `python tools/install-plan.py --platform android --serial 192.168.1.20:5555`
 (macOS/Linux: `python3`). This read-only plan is shared by AI, manual and automatic
 installation; append `--execute` only when installation is requested. It uses the
 reviewed `installation_strategies.json` registry. Windows execution requires Git Bash
 on PATH. Non-Android platforms must use their separate installer, never ADB.
 `install.sh` remains the backwards-compatible low-level executor. Never assume the
-deployed website or main branch already includes this development entry point.
+an older checkout includes this entry point; use v2.0.9 or newer.
 
 AI、手动、一键安装复用上述计划；需要执行安装时加 `--execute`。Windows 执行需要 Git Bash。
 先确认平台；非 Android 不调用 ADB。广告候选不是安全清单：只有精确固件审查记录匹配、
