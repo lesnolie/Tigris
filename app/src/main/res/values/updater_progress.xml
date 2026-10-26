@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_transfer_busy">Download or verification is in progress. Please wait.</string>
+    <string name="update_cancelled">Pending task cancelled. Check for updates to try again.</string>
+    <string name="update_pending_recovery">Waiting for TV confirmation. Choose Continue installation; if stuck, choose Cancel pending task and retry.</string>
+    <string name="update_download_percent">Downloading · %1$d%%</string>
+    <string name="update_verifying">Verifying package integrity, version and signature…</string>
+    <string name="update_staging">Preparing system installation…</string>
+    <string name="update_continue_product">Continue installation confirmation · %1$s</string>
+    <string name="update_retry_product">Cancel pending task and retry · %1$s</string>
+    <string name="update_no_confirmation">No confirmation screen is available. Use Cancel pending task and retry if installation is stuck.</string>
+    <string name="update_download_failed">Download incomplete or larger than the expected package. Please retry.</string>
+</resources>

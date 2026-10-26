@@ -15,10 +15,22 @@ class UpdateActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var column: LinearLayout
     private var busy = false
+    private val progressBars = mutableMapOf<String, ProgressBar>()
+    private val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+        if (!isDestroyed && ::status.isInitialized) renderStatus()
+    }
     private val surfaces = mutableListOf<FrostGlass>()
     override fun onCreate(state: Bundle?) { super.onCreate(state); show() }
-    override fun onResume() { super.onResume(); visible = true; if (::status.isInitialized && !busy) renderStatus() }
-    override fun onPause() { visible = false; super.onPause() }
+    override fun onResume() {
+        super.onResume(); visible = true
+        Updates.prefs(this).registerOnSharedPreferenceChangeListener(listener)
+        if (::status.isInitialized) renderStatus()
+    }
+    override fun onPause() {
+        visible = false
+        Updates.prefs(this).unregisterOnSharedPreferenceChangeListener(listener)
+        super.onPause()
+    }
     private fun button(label: String, action: () -> Unit): TextView {
         val view = text(17f, weight = 600).apply {
             text = label; gravity = Gravity.CENTER_VERTICAL
@@ -35,6 +47,15 @@ class UpdateActivity : Activity() {
         return view
     }
     private fun renderStatus() {
+        val sp = Updates.prefs(this)
+        progressBars.forEach { (pkg, bar) ->
+            val phase = sp.getString(pkg + ".phase", "idle")
+            val percent = sp.getInt(pkg + ".progress", -1)
+            val working = phase in listOf("download", "verify", "stage", "pending")
+            bar.visibility = if (working) View.VISIBLE else View.GONE
+            bar.isIndeterminate = percent < 0
+            if (percent >= 0) bar.progress = percent
+        }
         status.text = Updates.products.joinToString("\n\n") { p ->
             p.name + "\n" + Updates.prefs(this).getString(p.pkg + ".status", Updates.installed(this, p)?.let { I18n.text(R.string.i18n_updateactivity_001, it) } ?: I18n.text(R.string.i18n_updateactivity_002))
         }
@@ -59,7 +80,14 @@ class UpdateActivity : Activity() {
             text = I18n.text(R.string.i18n_updateactivity_005); setPadding(0, dp(12), 0, dp(20))
         })
         status = text(16f).apply { setLineSpacing(dp(4).toFloat(), 1f) }
-        info.addView(status); renderStatus()
+        info.addView(status)
+        for (p in Updates.products) {
+            info.addView(text(13f).apply { text = p.name }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
+            val bar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply { max = 100 }
+            progressBars[p.pkg] = bar
+            info.addView(bar, LinearLayout.LayoutParams(-1, dp(12)))
+        }
+        renderStatus()
         info.addView(text(13f, Color.argb(175,255,255,255)).apply {
             text = I18n.text(R.string.i18n_updateactivity_006)
             setPadding(0, dp(24), 0, 0)
@@ -103,6 +131,16 @@ class UpdateActivity : Activity() {
         }
         for (p in Updates.products) {
             button(I18n.text(R.string.i18n_updateactivity_013, p.name)) { work { Updates.install(applicationContext, p) } }
+            button(I18n.text(R.string.update_continue_product, p.name)) {
+                if (!Updates.confirm(this, p)) Toast.makeText(this, I18n.text(R.string.update_no_confirmation), Toast.LENGTH_LONG).show()
+            }
+            button(I18n.text(R.string.update_retry_product, p.name)) {
+                work {
+                    Updates.cancelPending(applicationContext, p)
+                    Updates.check(applicationContext)
+                    if (Updates.prefs(this).getBoolean(p.pkg + ".available", false)) Updates.install(applicationContext, p)
+                }
+            }
         }
         button(I18n.text(R.string.i18n_updateactivity_014)) {
             val pm = packageManager; val pkg = Updates.products[1].pkg
