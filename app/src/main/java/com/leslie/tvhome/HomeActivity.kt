@@ -605,7 +605,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                 // and partial opacity keep more of that detail visible while the
                 // asynchronous glass texture catches up with the video.
                 val glass = LiquidGlass.bake(frame, renderW, renderH, rect, dockRadius * scale,
-                    frostStrength = 0.3f, glassOpacity = 0.65f)
+                    frostStrength = 0.3f, glassOpacity = 0.5f)
                     .also { it.prepareToDraw() }
                 glass to Wallpapers.blurred(frame, darken = 0.22f)
             }
