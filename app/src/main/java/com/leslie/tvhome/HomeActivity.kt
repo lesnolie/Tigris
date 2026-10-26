@@ -68,6 +68,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private lateinit var backdrop: FrameLayout
     private lateinit var bg: ImageView
     private lateinit var videoWallpaper: VideoWallpaper
+    private val videoGlassFrames = VideoGlassFrames()
     private val wallpaperChanges = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (resumed && (key == "background" || key == "wallpaper_video_revision")) applyBackground()
     }
@@ -305,7 +306,9 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         scene.addView(backdrop, match())
         bg = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
         backdrop.addView(bg, match())
-        videoWallpaper = VideoWallpaper(this, backdrop)
+        videoWallpaper = VideoWallpaper(this, backdrop,
+            canSample = { resumed && !shelfShown && !videoGlassFrames.busy },
+            onFrame = ::updateVideoGlass)
 
         val dm = resources.displayMetrics
         sw = dm.widthPixels
@@ -544,10 +547,14 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             val blurred = Wallpapers.blurred(bmp, darken = 0.22f)
             main.post {
                 if (isDestroyed || shownBackground != key) return@post
-                homeDock = glass
-                frost.setImageBitmap(blurred)
-                scrollGlass.texture(blurred)
-                if (!shelfShown) setDock(glass, 1200)
+                // A video bake may have overtaken this initial static fallback.
+                val live = prefs.background in VideoWallpaper.SOURCES && videoWallpaper.frame != null
+                if (!live) homeDock = glass
+                if (!live) {
+                    frost.setImageBitmap(blurred)
+                    scrollGlass.texture(blurred)
+                    if (!shelfShown) setDock(glass, 1200)
+                }
                 val old = bgPhoto
                 val next = android.graphics.drawable.BitmapDrawable(resources, bmp)
                 if (old == null) {
@@ -571,10 +578,50 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         }
     }
 
+    /** Small video snapshots feed the existing glass renderers; never decode 4K bitmaps per frame. */
+    private fun updateVideoGlass(frame: Bitmap?) {
+        if (frame == null) {
+            videoGlassFrames.invalidate()
+            // A pause/restart must rebuild fallback textures if no video frame returns.
+            shownBackground = null
+            if (!isDestroyed && resumed && prefs.background in VideoWallpaper.SOURCES) {
+                showBackground("graphite", null)
+                control.refreshGlass()
+            }
+            return
+        }
+        val ticket = videoGlassFrames.begin() ?: return
+        val source = prefs.background
+        io.execute {
+            val result = runCatching {
+                // Bake the slab at half screen resolution, then let ImageView scale it.
+                val rect = Rect(dockRect.left / 2, dockRect.top / 2,
+                    dockRect.right / 2, dockRect.bottom / 2)
+                val glass = LiquidGlass.bake(frame, sw / 2, sh / 2, rect, dockRadius / 2)
+                    .also { it.prepareToDraw() }
+                glass to Wallpapers.blurred(frame, darken = 0.22f)
+            }
+            main.post {
+                val current = videoGlassFrames.finish(ticket)
+                if (!current || isDestroyed || !resumed || prefs.background != source) return@post
+                result.getOrNull()?.let { (glass, blurred) ->
+                    homeDock = glass
+                    if (!shelfShown) {
+                        frost.setImageBitmap(blurred)
+                        scrollGlass.texture(blurred)
+                        // Periodic live frames replace directly; still photos retain their cross-fade.
+                        setDock(glass, 0)
+                        control.refreshGlass()
+                    }
+                }
+            }
+        }
+    }
+
     private fun setDock(b: Bitmap, fadeMs: Int) {
         val next = BitmapDrawable(resources, b)
         val old = dockShown
-        if (old == null) {
+        if (old == null || fadeMs == 0) {
             dock.setImageDrawable(next)
         } else {
             val fade = TransitionDrawable(arrayOf(old, next)).apply { isCrossFadeEnabled = true }
@@ -732,7 +779,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     /** An opaque wallpaper base prevents transitional scene alpha from baking black into glass. */
     fun drawGlassScene(canvas: Canvas): Boolean {
-        val bitmap = (bgPhoto as? BitmapDrawable)?.bitmap ?: return false
+        val bitmap = videoWallpaper.frame ?: (bgPhoto as? BitmapDrawable)?.bitmap ?: return false
         val scale = maxOf(scene.width.toFloat() / bitmap.width, scene.height.toFloat() / bitmap.height)
         val left = (scene.width - bitmap.width * scale) / 2f
         val top = (scene.height - bitmap.height * scale) / 2f

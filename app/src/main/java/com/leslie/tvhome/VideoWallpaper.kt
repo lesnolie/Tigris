@@ -2,6 +2,10 @@ package com.leslie.tvhome
 
 import android.content.Context
 import android.graphics.Matrix
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
 import android.view.TextureView
@@ -21,8 +25,26 @@ import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 
 /** Home-only playback; TextureView stays inside the existing backdrop/shelf/intro layers. */
 @androidx.annotation.OptIn(UnstableApi::class)
-internal class VideoWallpaper(private val ctx: Context, host: FrameLayout) {
+internal class VideoWallpaper(
+    private val ctx: Context,
+    host: FrameLayout,
+    private val canSample: () -> Boolean,
+    private val onFrame: (Bitmap?) -> Unit,
+) {
     private val texture = TextureView(ctx).apply { alpha = 0f; isOpaque = false }
+    var frame: Bitmap? = null
+        private set
+    private val framePaint = Paint(Paint.FILTER_BITMAP_FLAG)
+    // TextureView cannot draw its hardware layer into ControlCenter's software Canvas.
+    // Substitute the same bounded video snapshot only during that offscreen capture.
+    private val layer = object : FrameLayout(ctx) {
+        override fun dispatchDraw(canvas: Canvas) {
+            if (canvas.isHardwareAccelerated) super.dispatchDraw(canvas)
+            else if (texture.alpha > 0f) frame?.let {
+                canvas.drawBitmap(it, null, Rect(0, 0, width, height), framePaint)
+            }
+        }
+    }
     private val main = Handler(Looper.getMainLooper())
     private var player: ExoPlayer? = null
     private var key: String? = null
@@ -32,9 +54,24 @@ internal class VideoWallpaper(private val ctx: Context, host: FrameLayout) {
     private var failures = 0
     private var aspect = 16f / 9f
     private val timeout = Runnable { nextAfterError() }
+    private val sample = object : Runnable {
+        override fun run() {
+            if (player == null) return
+            if (texture.alpha > 0f && texture.isAvailable && canSample() && texture.width > 0 && texture.height > 0) {
+                val width = minOf(480, texture.width)
+                val height = (width.toLong() * texture.height / texture.width).toInt().coerceAtLeast(1)
+                runCatching { texture.getBitmap(width, height) }.getOrNull()?.let {
+                    frame = it
+                    onFrame(it)
+                }
+            }
+            main.postDelayed(this, 500)
+        }
+    }
 
     init {
-        host.addView(texture, FrameLayout.LayoutParams(-1, -1))
+        layer.addView(texture, FrameLayout.LayoutParams(-1, -1))
+        host.addView(layer, FrameLayout.LayoutParams(-1, -1))
         texture.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> crop() }
     }
 
@@ -67,6 +104,8 @@ internal class VideoWallpaper(private val ctx: Context, host: FrameLayout) {
                 if (player !== p) return
                 main.removeCallbacks(timeout)
                 texture.alpha = 1f
+                main.removeCallbacks(sample)
+                sample.run()
             }
             override fun onVideoSizeChanged(size: VideoSize) {
                 if (size.height > 0) aspect = size.width * size.pixelWidthHeightRatio / size.height
@@ -104,6 +143,7 @@ internal class VideoWallpaper(private val ctx: Context, host: FrameLayout) {
     private fun playCurrent() {
         val p = player ?: return
         texture.alpha = 0f
+        clearFrame()
         p.setMediaItem(MediaItem.fromUri(films[filmIndex][variant]))
         armTimeout()
         p.prepare()
@@ -126,9 +166,17 @@ internal class VideoWallpaper(private val ctx: Context, host: FrameLayout) {
 
     private fun release() {
         main.removeCallbacks(timeout)
+        main.removeCallbacks(sample)
         player?.release()
         player = null
         texture.alpha = 0f
+        clearFrame()
+    }
+
+    private fun clearFrame() {
+        if (frame == null) return
+        frame = null
+        onFrame(null)
     }
 
     fun stop() {

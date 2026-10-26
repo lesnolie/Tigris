@@ -436,7 +436,7 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         blurDirty = true
         if (glassStyle) {
             host.removeCallbacks(resample)
-            host.postDelayed(resample, 80)
+            if (isOpen) host.postDelayed(resample, 80)
         }
     }
 
