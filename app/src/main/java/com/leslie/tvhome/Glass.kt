@@ -29,7 +29,15 @@ object LiquidGlass {
      * refracts; the rim itself is a thin line lit from the top left and tinted
      * by what is behind it.
      */
-    fun bake(source: Bitmap, screenW: Int, screenH: Int, rect: Rect, radius: Float, overlay: Drawable? = null): Bitmap {
+    fun bake(
+        source: Bitmap,
+        screenW: Int,
+        screenH: Int,
+        rect: Rect,
+        radius: Float,
+        overlay: Drawable? = null,
+        frostStrength: Float = 1f,
+    ): Bitmap {
         val w = rect.width()
         val h = rect.height()
         // Match Canvas round-rect geometry for capsules, including when the requested radius exceeds half the short side.
@@ -95,7 +103,10 @@ object LiquidGlass {
                 // A little milky and a little more saturated than what is behind.
                 val luma = r * 0.3f + g * 0.59f + b * 0.11f
                 r = luma + (r - luma) * 1.2f; g = luma + (g - luma) * 1.2f; b = luma + (b - luma) * 1.2f
-                r = r * 0.86f + 30f; g = g * 0.86f + 30f; b = b * 0.86f + 30f
+                val frost = frostStrength.coerceIn(0f, 1f)
+                val transmission = 1f - 0.14f * frost
+                val lift = 30f * frost
+                r = r * transmission + lift; g = g * transmission + lift; b = b * transmission + lift
 
                 // Specular rim: strongest where it faces the light (top left), a softer
                 // reflection on the opposite side, tinted by the colour behind it.

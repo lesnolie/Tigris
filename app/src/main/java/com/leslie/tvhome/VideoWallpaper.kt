@@ -58,14 +58,18 @@ internal class VideoWallpaper(
         override fun run() {
             if (player == null) return
             if (texture.alpha > 0f && texture.isAvailable && canSample() && texture.width > 0 && texture.height > 0) {
-                val width = minOf(480, texture.width)
+                // 480px looked soft after the glass slab was enlarged to half-screen.
+                // Keep enough detail for the dock while bounding the readback cost.
+                val width = minOf(640, texture.width)
                 val height = (width.toLong() * texture.height / texture.width).toInt().coerceAtLeast(1)
                 runCatching { texture.getBitmap(width, height) }.getOrNull()?.let {
                     frame = it
                     onFrame(it)
                 }
             }
-            main.postDelayed(this, 500)
+            // The dock is a live reflection of the moving wallpaper. A 500ms
+            // poll made it visibly trail the video; busy bakes are still skipped.
+            main.postDelayed(this, 200)
         }
     }
 

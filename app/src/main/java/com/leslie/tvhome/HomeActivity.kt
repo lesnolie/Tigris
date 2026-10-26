@@ -597,7 +597,10 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                 // Bake the slab at half screen resolution, then let ImageView scale it.
                 val rect = Rect(dockRect.left / 2, dockRect.top / 2,
                     dockRect.right / 2, dockRect.bottom / 2)
-                val glass = LiquidGlass.bake(frame, sw / 2, sh / 2, rect, dockRadius / 2)
+                // Live video already provides motion and color; a lighter frost
+                // keeps more of that detail visible through the moving glass.
+                val glass = LiquidGlass.bake(frame, sw / 2, sh / 2, rect, dockRadius / 2,
+                    frostStrength = 0.3f)
                     .also { it.prepareToDraw() }
                 glass to Wallpapers.blurred(frame, darken = 0.22f)
             }
