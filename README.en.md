@@ -52,7 +52,7 @@ Earlier versions were tested by the maintainer on Sony BRAVIA XR-55A80J (Android
 | TV model | Android / firmware | Installation / launch result | Evidence and limitations | Source |
 |---|---|---|---|---|
 | **Sony BRAVIA XR-55A80J** | Android TV 12 | ✅ Maintainer-tested on real hardware | Primary supported test TV; not a promise for every Sony model | Maintainer's project notes |
-| **Sony BRAVIA VH1** | Android TV 10 / API 29 | ✅ Running on v1.9; rapid Back presses no longer reproduced crash | Rapid Back had crashed v1.8; this does not certify every v2.0.2 feature | [#2](https://github.com/lesnolie/Tigris/issues/2) |
+| **Sony BRAVIA VH1** | Android TV 10 / API 29 | ✅ Running on v1.9; rapid Back presses no longer reproduce the crash | Rapid Back had crashed v1.8; this does not certify every v2.0.2 feature | [#2](https://github.com/lesnolie/Tigris/issues/2) |
 | **Sony KD-55X9500H** | Android TV 10 / API 29 | ✅ Reported running v1.9 | Glass capsule clipping was observed; fix landed on `main` via [#11](https://github.com/lesnolie/Tigris/pull/11), but no new-TV retest confirmed | [#10](https://github.com/lesnolie/Tigris/pull/10) |
 | **FFalcon 75R685C** (`tcl_mt5879_cn`) | Android 11 / API 30, China firmware | ✅ Community hardware-tested with Guard build and TCL installation method | Direct `adb install` rejected; TCL T-Cast sideload used. Tested volume, vendor settings and source picker. Brightness slider intentionally hidden | [#1](https://github.com/lesnolie/Tigris/pull/1) |
 | **Xiaomi MiTV-ANSP0** | Android 9 / API 28 | ⚠️ APK installed but **older release crashed on startup** | `BlendMode` API crash fixed in v2.0+; **no confirmed v2.0.2 retest on this TV** | [#9](https://github.com/lesnolie/Tigris/issues/9) |
