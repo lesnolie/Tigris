@@ -2,10 +2,10 @@
 <resources>
     <string name="i18n_updateactivity_001">Installed %1$s</string>
     <string name="i18n_updateactivity_002" formatted="false">Not installed</string>
-    <string name="i18n_updateactivity_003" formatted="false">Software update</string>
-    <string name="i18n_updateactivity_004" formatted="false">Keep Apps Up to Date</string>
-    <string name="i18n_updateactivity_005" formatted="false">Updates for Tigris and MiracastReceiver.</string>
-    <string name="i18n_updateactivity_006" formatted="false">Checks for updates automatically. Your settings are preserved.</string>
+    <string name="i18n_updateactivity_003" formatted="false">Apps and updates</string>
+    <string name="i18n_updateactivity_004" formatted="false">Apps when you want them</string>
+    <string name="i18n_updateactivity_005" formatted="false">Tigris updates, plus optional casting and HGTV short-drama apps.</string>
+    <string name="i18n_updateactivity_006" formatted="false">Checks updates automatically. Only existing apps can auto-update. New optional apps require your action.</string>
     <string name="i18n_updateactivity_007" formatted="false">Check for updates</string>
     <string name="i18n_updateactivity_008" formatted="false">Auto update</string>
     <string name="i18n_updateactivity_009" formatted="false">On</string>
