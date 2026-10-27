@@ -414,11 +414,22 @@ class SettingsActivity : Activity() {
         }
         // Resolver success is not proof that the physical HOME key reaches us.
         row(I18n.text(R.string.install_home_check_title), I18n.text(R.string.install_home_check_help), { "" }) {
+            val native = Guard.isDefaultHome(this)
+            val bound = HomeGuardService.isRunning
+            val secure = Guard.hasSecureSettings(this)
+            val next = HomeInstallGuide.nextStep(
+                android.os.Build.MANUFACTURER, android.os.Build.BRAND, native, bound, secure)
+            val status = I18n.text(R.string.install_home_check_status,
+                native.toString(), bound.toString(), secure.toString())
             android.app.AlertDialog.Builder(this)
                 .setTitle(I18n.text(R.string.install_home_check_title))
-                .setMessage(I18n.text(R.string.install_home_check_status,
-                    Guard.isDefaultHome(this).toString(), HomeGuardService.isRunning.toString(),
-                    Guard.hasSecureSettings(this).toString()))
+                .setMessage(status + "\n\n" + I18n.text(next))
+                .setNeutralButton(I18n.text(R.string.install_home_guide_open)) { _, _ ->
+                    runCatching {
+                        startActivity(Intent(Intent.ACTION_VIEW,
+                            android.net.Uri.parse("https://tigris-tv.pages.dev/#install")))
+                    }
+                }
                 .setPositiveButton(android.R.string.ok, null).show()
         }
         row(I18n.text(R.string.i18n_settingsactivity_122), I18n.text(R.string.i18n_settingsactivity_123),
