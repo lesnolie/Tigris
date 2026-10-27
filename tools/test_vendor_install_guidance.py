@@ -21,6 +21,26 @@ class VendorGuidanceTests(unittest.TestCase):
                 self.assertFalse(data["hardware_verified"])
                 self.assertEqual(data["mutations"], [])
 
+    def test_upstream_hardware_examples_are_never_certification(self):
+        checks = [
+            ("TCL", {"board_platform": "mt5879"}, "tcl-mt5879-example"),
+            ("TCL", {"board_platform": "mt9655"}, "tcl-mt9655-example"),
+            ("Redmi", {"model": "MiTV-MFTR0"}, "xiaomi-mftr0-example"),
+            ("Xiaomi", {"model": "MiTV-MFTP0"}, "xiaomi-mftp0-example"),
+            ("Hisense", {"model": "VIDAA_TV"}, "hisense-vidaa-android-example"),
+        ]
+        for brand, changes, expected in checks:
+            with self.subTest(brand=brand, changes=changes):
+                sample = self.sample(brand)
+                sample.update(changes)
+                info = guidance_for(sample)
+                self.assertIn(expected, [e["id"] for e in info["matching_upstream_examples"]])
+                self.assertFalse(info["hardware_verified"])
+                self.assertEqual(info["mutations"], [])
+        self.assertEqual(
+            guidance_for(self.sample("TCL"))["matching_upstream_examples"], []
+        )
+
     def test_conflict_is_ambiguous(self):
         result = guidance_for({"manufacturer": "Sony", "brand": "Xiaomi"})
         self.assertEqual(result["status"], "identity_conflict")
