@@ -306,8 +306,10 @@ class HomeGuardService : AccessibilityService() {
         )
             // Negative priorities are fallbacks shown only while nothing else can be Home.
             .filter { it.activityInfo.packageName != packageName && it.priority >= 0 }
-            .groupBy({ it.activityInfo.packageName }, { it.activityInfo.name })
-            .mapValues { it.value.toSet() }
+            .groupBy({ it.activityInfo.packageName }) {
+                StockHomeActivities.classes(it.activityInfo.packageName, it.activityInfo.name, it.activityInfo.targetActivity)
+            }
+            .mapValues { it.value.flatten().toSet() }
     }
 
     private fun goHome() {

@@ -1275,12 +1275,21 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             .button(I18n.text(R.string.i18n_homeactivity_053)) {})
     }
 
+    private var adbAuthorizing = false
+
     fun authorizeAdb() {
+        if (adbAuthorizing) return
+        adbAuthorizing = true
         Toast.makeText(this, I18n.text(R.string.i18n_homeactivity_054), Toast.LENGTH_LONG).show()
         io.execute {
-            val ok = LocalAdb.shell(this, "echo ok", 60_000) != null
+            val result = LocalAdb.authorize(applicationContext)
             main.post {
-                Toast.makeText(this, if (ok) I18n.text(R.string.i18n_homeactivity_055) else I18n.text(R.string.i18n_homeactivity_056), Toast.LENGTH_LONG).show()
+                adbAuthorizing = false
+                if (isFinishing || isDestroyed) return@post
+                if (result.authorized) Toast.makeText(this, result.description(), Toast.LENGTH_LONG).show()
+                else showSheet(Sheet(root).title(I18n.text(R.string.adb_failure_title)).message(result.description())
+                    .button(I18n.text(R.string.adb_retry)) { authorizeAdb() }
+                    .button(getString(android.R.string.cancel)) {})
                 control.refresh()
             }
         }

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="adb_failure_title">本机调试连接失败</string>
+    <string name="adb_retry">重试</string>
+    <string name="adb_failure_keys">无法准备 Tigris 的本机调试密钥，请检查应用可用存储。已有密钥会保留。</string>
+    <string name="adb_failure_connect">无法连接电视本机 ADB 服务（127.0.0.1:5555）。打开 USB 或无线调试不代表这个端口可用；Android 11 及以上的无线调试也可能需要单独的 TLS 配对。请反馈“连接失败”和固件版本，反复等待授权弹窗不能解决端口未开放的问题。</string>
+    <string name="adb_failure_auth">ADB 服务拒绝了 Tigris 的调试密钥。如果电视弹出授权提示，请自行确认；没有提示时请反馈“认证被拒绝”。应用不会重置已有信任密钥或绕过配对。</string>
+    <string name="adb_failure_handshake_timeout">ADB 握手超时，请检查电视是否有等待确认的授权弹窗。没有弹窗时请反馈“握手超时”和固件版本；这项结果不能单独证明密钥被拒绝。</string>
+    <string name="adb_failure_protocol">本机端口返回了不兼容的 ADB 响应，部分固件只提供需要 TLS 配对的无线调试。请反馈“协议错误”和固件版本，Tigris 没有更改配对或调试设置。</string>
+    <string name="adb_failure_closed">电视在检查完成前关闭了本机 ADB 连接，请反馈“连接被关闭”和固件版本。本次没有记为授权成功。</string>
+    <string name="adb_failure_shell">已经建立 ADB 连接，但 shell 检查没有成功完成。请反馈“命令检查失败”，这与授权弹窗未出现是不同的失败阶段。</string>
+    <string name="adb_failure_unknown">本机 ADB 握手发生了尚未分类的错误，请反馈固件版本和应用日志中 LocalAdb 的阶段、原因。不要公开调试密钥或配对码。</string>
+    <string name="sony_input_choose_system">无法自动切换 HDMI，请在电视设置中选择输入源。</string>
+    <string name="sony_input_unavailable">电视拒绝切换 HDMI，也无法打开电视设置。</string>
+</resources>
