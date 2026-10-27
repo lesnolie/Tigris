@@ -2,10 +2,10 @@
 <resources>
     <string name="i18n_updateactivity_001">已安装 %1$s</string>
     <string name="i18n_updateactivity_002" formatted="false">未安装</string>
-    <string name="i18n_updateactivity_003" formatted="false">软件更新</string>
-    <string name="i18n_updateactivity_004" formatted="false">始终保持新鲜</string>
-    <string name="i18n_updateactivity_005" formatted="false">桌面与投屏，一起更新。</string>
-    <string name="i18n_updateactivity_006" formatted="false">自动检查正式版。需要安装确认时会通知你，更新保留应用配置。</string>
+    <string name="i18n_updateactivity_003" formatted="false">应用与更新</string>
+    <string name="i18n_updateactivity_004" formatted="false">按需安装，保持更新</string>
+    <string name="i18n_updateactivity_005" formatted="false">Tigris 更新、投屏和 HGTV 短剧按需安装。</string>
+    <string name="i18n_updateactivity_006" formatted="false">自动检查正式版，仅已安装的应用可自动更新；新应用必须主动选择安装。</string>
     <string name="i18n_updateactivity_007" formatted="false">检查更新</string>
     <string name="i18n_updateactivity_008" formatted="false">自动更新    </string>
     <string name="i18n_updateactivity_009" formatted="false">已开启</string>
