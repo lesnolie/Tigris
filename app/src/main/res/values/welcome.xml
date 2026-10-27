@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="welcome_continue">Press OK to continue  ›</string>
+    <string name="welcome_writing">Tigris. Press OK to finish the logo animation.</string>
+    <string name="welcome_preview">Preview first-use welcome</string>
+    <string name="welcome_preview_help">Watch the Tigris logo write itself across a blue sky. Previewing does not reset first-use setup.</string>
+</resources>

@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.13 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.13)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.13/Tigris-v2.0.13.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.13/Tigris-guard-v2.0.13.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.13/SHA256SUMS-v2.0.13.txt)）
+- 最新正式版：**[v2.0.14 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.14)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.14/Tigris-v2.0.14.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.14/Tigris-guard-v2.0.14.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.14/SHA256SUMS-v2.0.14.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **正式版为 v2.0.13。** 安装包名称沿用 `Tigris-v2.0.13.apk`（标准版）和 `Tigris-guard-v2.0.13.apk`（兼容守护版）。名称中的 *Guard* 指运行方式，**不是所有 TCL 必装或小米通用的破解包**。本版支持可选 5/6 图标 Dock、异步视频取帧及按固件诊断的安装策略；除 Dock 外的新能力仍需更多真实机型反馈。
+> **正式版为 v2.0.14。** 安装包名称沿用 `Tigris-v2.0.14.apk`（标准版）和 `Tigris-guard-v2.0.14.apk`（兼容守护版）。名称中的 *Guard* 指运行方式，**不是所有 TCL 必装或小米通用的破解包**。本版统一液态玻璃 Settings 与更新页，修复滚动底色跳动，并加入蓝天白云的首次手写欢迎动画；已在 Sony 电视展示验证。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
@@ -36,6 +36,10 @@
 | Samsung **Tizen**、海信**原生 VIDAA** | **无兼容的 Android APK 安装方式** | 不适用 | 请勿执行 Android ADB 安装命令 |
 
 **如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
+
+## v2.0.14：液态玻璃设置与蓝天欢迎
+
+Settings 和「应用与更新」统一使用透明折射玻璃及当前主屏幕壁纸，修复滚动停止后底色突然跳动的问题。设置增加可视开关、应用图标与勾选、玻璃弹窗和真实关于详情。首次使用时，Tigris Logo 在蓝天白云中逐笔写出，确认后进入桌面；可在「设置 → 预览首次欢迎」重播。完整内容见 [v2.0.14 更新说明](docs/releases/v2.0.14.md)。
 
 ## v2.0.13：投屏和 HGTV 按需安装
 

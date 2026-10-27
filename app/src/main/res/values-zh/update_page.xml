@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_page_description">让电视保持最新。\n需要的应用，随时添加。</string>
+    <string name="update_auto_description">仅更新已安装的应用。\n可选应用由你决定是否安装。</string>
+    <string name="update_section_home">桌面</string>
+    <string name="update_section_optional">可选应用</string>
+    <string name="update_version_status">%1$s · %2$s</string>
+    <string name="update_working">正在处理…</string>
+    <string name="update_app_version">Tigris %1$s</string>
+    <string name="update_available_version">可更新至 %1$s</string>
+</resources>

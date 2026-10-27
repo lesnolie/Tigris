@@ -9,7 +9,7 @@ const zh = locale === "zh";
   <article class="quick-card platform-install">
     <p class="eyebrow">INSTALL BY SYSTEM</p>
     <h3>{zh ? "选电视系统，再获取适用的安装方式。" : "Choose your TV system, then get the right installer."}</h3>
-    <p>{zh ? "正式 APK v2.0.13：Sony 和标准 Android TV 优先标准版；TCL / 雷鸟中拒绝 HOME APK 的固件使用兼容守护版 Guard。小米等特殊固件先诊断。其他机型是否真正接管 Home，仍以实体遥控器和待机测试为准。" : "Official v2.0.13: Standard for Sony and ordinary Android TV; Compatibility Guard for TCL / FFalcon firmware that refuses HOME-declaring APKs. Diagnose Xiaomi and restricted firmware first. Hardware takeover is not assumed until physical remote and wake tests pass."}</p>
+    <p>{zh ? "正式 APK v2.0.14：Sony 和标准 Android TV 优先标准版；TCL / 雷鸟中拒绝 HOME APK 的固件使用兼容守护版 Guard。小米等特殊固件先诊断。其他机型是否真正接管 Home，仍以实体遥控器和待机测试为准。" : "Official v2.0.14: Standard for Sony and ordinary Android TV; Compatibility Guard for TCL / FFalcon firmware that refuses HOME-declaring APKs. Diagnose Xiaomi and restricted firmware first. Hardware takeover is not assumed until physical remote and wake tests pass."}</p>
     <div class="install-selectors">
       <label>{zh ? "电脑系统" : "Computer"}<select id="install-host"><option value="powershell">Windows PowerShell</option><option value="posix">macOS / Linux</option></select></label>
       <label>{zh ? "电视系统 / 品牌" : "TV system / brand"}<select id="install-system">{systems.map(s => <option value={s.id}>{s[locale]}</option>)}</select></label>
@@ -33,7 +33,7 @@ const zh = locale === "zh";
       {(["powershell", "posix"] as const).map(shell => (["plan", "execute"] as const).map(mode => <div data-install-command={`${shell}-${mode}`} hidden={shell !== "powershell" || mode !== "plan"}>
         <div class="code"><pre><code id={`quick-${shell}-${mode}`}>{quickCommand(shell, mode)}</code></pre><button class="copy" data-copy={`#quick-${shell}-${mode}`} type="button"><span class="label"></span></button></div>
       </div>))}
-      <p class="fine">{zh ? "品牌选项用于说明差异；执行时读取电视的真实型号、固件与 HOME，再匹配统一策略库。安装不等于接管成功；实体 Home、开机与待机需分别验收。现有用户推荐在 Tigris 软件更新中覆盖升级，保留原安装包类型。 此处命令获取已发布 v2.0.13 安装器；机型细分诊断仅提供安全建议，具体固件仍需用户实测。" : "Brand choices explain differences; execution inspects the actual model, firmware and HOME against the shared registry. Installation is not takeover: verify physical Home, startup and wake separately. Existing users should update in place through Tigris Software Updates, retaining their APK flavor. These commands fetch the officially released v2.0.13 installer; firmware guidance is diagnostic until verified on the actual device."}</p>
+      <p class="fine">{zh ? "品牌选项用于说明差异；执行时读取电视的真实型号、固件与 HOME，再匹配统一策略库。安装不等于接管成功；实体 Home、开机与待机需分别验收。现有用户推荐在 Tigris 软件更新中覆盖升级，保留原安装包类型。 此处命令获取已发布 v2.0.14 安装器；机型细分诊断仅提供安全建议，具体固件仍需用户实测。" : "Brand choices explain differences; execution inspects the actual model, firmware and HOME against the shared registry. Installation is not takeover: verify physical Home, startup and wake separately. Existing users should update in place through Tigris Software Updates, retaining their APK flavor. These commands fetch the officially released v2.0.14 installer; firmware guidance is diagnostic until verified on the actual device."}</p>
       <p>{zh ? "恢复原桌面：保留原电脑的安装快照，在源码目录按下方说明执行 install.sh restore；不要凭品牌猜原桌面组件。" : "Recovery: keep the original computer's installation snapshot and follow the guide below to run install.sh restore from the source checkout. Never guess the original launcher by brand."}</p>
       <a class="text-link" href="/agent.md">{zh ? "安装前准备、专用安装与恢复说明" : "Preparation, special installation and recovery"} ↗</a>
     </div>

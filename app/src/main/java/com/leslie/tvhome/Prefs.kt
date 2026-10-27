@@ -251,6 +251,11 @@ class Prefs(ctx: Context) {
         get() = sp.getLong("intro_boot", 0L)
         set(v) = sp.edit().putLong("intro_boot", v).apply()
 
+    /** Only Continue completes first use; previews do not change this preference. */
+    var welcomeCompleted: Boolean
+        get() = sp.getBoolean("welcome_completed", false)
+        set(v) = sp.edit().putBoolean("welcome_completed", v).apply()
+
     companion object {
         const val SAVER_PHOTOS = "photos"
         const val SAVER_AERIAL = "aerial"

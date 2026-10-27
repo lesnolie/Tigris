@@ -6,10 +6,10 @@ const { locale } = Astro.props;
 const zh = locale === "zh";
 ---
 <div class="table-wrap apk-choice reveal">
-  <h3>{zh ? "按电视系统选择安装包（正式版 v2.0.13）" : "Choose the APK by TV and firmware (official v2.0.13)"}</h3>
+  <h3>{zh ? "按电视系统选择安装包（正式版 v2.0.14）" : "Choose the APK by TV and firmware (official v2.0.14)"}</h3>
   <p>{zh
-    ? "标准版文件：Tigris-v2.0.13.apk；兼容守护版文件：Tigris-guard-v2.0.13.apk。Guard 是不声明 HOME 的兼容模式，不代表全部 TCL 必须使用。"
-    : "Standard file: Tigris-v2.0.13.apk; Compatibility Guard file: Tigris-guard-v2.0.13.apk. Guard declares no HOME role and is not required by every TCL device."}</p>
+    ? "标准版文件：Tigris-v2.0.14.apk；兼容守护版文件：Tigris-guard-v2.0.14.apk。Guard 是不声明 HOME 的兼容模式，不代表全部 TCL 必须使用。"
+    : "Standard file: Tigris-v2.0.14.apk; Compatibility Guard file: Tigris-guard-v2.0.14.apk. Guard declares no HOME role and is not required by every TCL device."}</p>
   <table>
     <thead><tr><th>{zh ? "电视 / 系统" : "TV / system"}</th><th>{zh ? "选哪个" : "Recommended build"}</th><th>{zh ? "区别与限制" : "Why / limitations"}</th></tr></thead>
     <tbody>{apkChoices.map(x => <tr>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_apps_group">Apps</string>
+    <string name="settings_row_value">%1$s · %2$s</string>
+    <string name="settings_removed_empty">There are no apps to restore. Deleted preinstalled apps will appear here.</string>
+    <string name="settings_search">Search</string>
+    <string name="settings_city_short">Enter a city name</string>
+    <string name="settings_city_minimum">Enter at least two characters.</string>
+    <string name="settings_about">Tigris %1$s\n\nA home for your TV. Apps, wallpapers and controls with Liquid Glass.</string>
+</resources>

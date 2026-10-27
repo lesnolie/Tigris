@@ -82,6 +82,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private lateinit var bigDate: TextView
     private lateinit var bigTime: TextView
     private var intro: Intro? = null
+    private var welcome: Welcome? = null
     private lateinit var avatar: IconButton
     private lateinit var netButton: IconButton
     private lateinit var ccButton: IconButton
@@ -175,7 +176,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
      * keeps the screen on so Xiaomi's does not follow. Elsewhere Android's screensaver applies.
      */
     private val idleFrame = Runnable {
-        if (hasWindowFocus() && sheets.isEmpty() && !control.isOpen) openFrame()
+        if (hasWindowFocus() && welcome == null && sheets.isEmpty() && !control.isOpen) openFrame()
     }
 
     private fun firmwareSaverDelay(): Long? {
@@ -211,7 +212,10 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         buildViews()
         control = ControlCenter(this, root)
         // Covers the screen before its first frame, so the home screen is never seen ahead of it.
-        if (Intro.dueAfterBoot(this)) playIntro()
+        val welcomePreview = intent.getBooleanExtra(Welcome.EXTRA_PREVIEW, false)
+        intent.removeExtra(Welcome.EXTRA_PREVIEW)
+        if (welcomePreview || !prefs.welcomeCompleted) playWelcome(preview = welcomePreview)
+        else if (Intro.dueAfterBoot(this)) playIntro()
         reload()
         registerReceiver(pkgReceiver, IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
@@ -224,7 +228,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             addAction(Intent.ACTION_SCREEN_OFF)
         })
         KeeperService.start(this)
-        if (!prefs.adbAuthorized) main.postDelayed({ askAdbAuthorization() }, if (intro != null) 8000L else 1500L)
+        if (!prefs.adbAuthorized && welcome == null) main.postDelayed({ askAdbAuthorization() }, if (intro != null) 8000L else 1500L)
     }
 
     // ------------------------------------------------------------------- intro
@@ -271,7 +275,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     /** Plays the boot animation over the home screen; [preview] is the one started from settings. */
     fun playIntro(preview: Boolean = false, wake: Boolean = false) {
-        if (intro != null) return
+        if (intro != null || welcome != null) return
         videoWallpaper.stop()
         if (!preview) prefs.introBoot = Intro.bootStamp(this)
         sheets.toList().forEach { it.dismiss() }
@@ -283,6 +287,40 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         }.also { it.start(if (wake) prefs.wakeDelay.toLong() else 0) }
     }
 
+    /** Independent of the user's boot video and sound preferences. */
+    private fun playWelcome(preview: Boolean = false) {
+        welcome?.let { it.close(); root.removeView(it) }
+        intro?.finish()
+        videoWallpaper.stop()
+        pauseShelfRotation()
+        sheets.toList().forEach { it.dismiss() }
+        control.close()
+        scene.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        fun leave(continued: Boolean) {
+            if (continued && !preview) {
+                prefs.welcomeCompleted = true
+                // Do not immediately play a second introduction on this same boot.
+                prefs.introBoot = Intro.bootStamp(this)
+            }
+            val overlay = welcome ?: return
+            welcome = null
+            scene.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+            overlay.animate().alpha(0f).setDuration(450).withEndAction {
+                root.removeView(overlay)
+                if (!isDestroyed && !isFinishing) {
+                    if (resumed) applyBackground()
+                    restoreGridFocus()
+                    if (!preview && !prefs.adbAuthorized) main.postDelayed({ askAdbAuthorization() }, 550)
+                }
+            }.start()
+        }
+        welcome = Welcome(this, onContinue = { leave(true) }, onCancel = { leave(false) }).also {
+            root.addView(it, FrameLayout.LayoutParams(-1, -1))
+            it.requestFocus()
+            if (resumed) it.resume()
+        }
+    }
+
     override fun onDestroy() {
         resumed = false
         videoWallpaper.destroy()
@@ -290,6 +328,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         main.removeCallbacksAndMessages(null)
         control.destroy()
         intro?.finish()
+        welcome?.close()
         runCatching { unregisterReceiver(screenOn) }
         io.shutdown()
         net.shutdown()
@@ -522,7 +561,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val theme = prefs.background
         if (theme in VideoWallpaper.SOURCES) {
             showBackground("graphite", null)
-            if (resumed && intro == null && getSystemService(android.os.PowerManager::class.java).isInteractive)
+            if (resumed && intro == null && welcome == null && getSystemService(android.os.PowerManager::class.java).isInteractive)
                 videoWallpaper.start(theme)
             return
         }
@@ -845,7 +884,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     }
 
     private fun focusAt(pos: Int) {
-        if (adapter.itemCount == 0) return
+        if (welcome != null || adapter.itemCount == 0) return
         val p = pos.coerceIn(0, adapter.itemCount - 1)
         val vh = grid.findViewHolderForAdapterPosition(p)
         if (vh != null) vh.itemView.requestFocus() else {
@@ -1136,6 +1175,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         restartIdle()
+        welcome?.let { return it.key(event) }
         // Any key skips the intro to its closing zoom; nothing behind it reacts meanwhile.
         intro?.let { if (event.action == KeyEvent.ACTION_UP) it.skip(); return true }
         val code = event.keyCode
@@ -1161,6 +1201,12 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (intent.getBooleanExtra(Welcome.EXTRA_PREVIEW, false)) {
+            intent.removeExtra(Welcome.EXTRA_PREVIEW)
+            playWelcome(preview = true)
+            return
+        }
+        if (welcome != null) return
         if (intent.getBooleanExtra(Intro.EXTRA_PREVIEW, false)) { playIntro(preview = true); return }
         if (intent.getBooleanExtra(EXTRA_WAKE, false)) return // consume only the pending wake, never re-arm
         // Home pressed while already home: close everything and go back to the top.
@@ -1193,6 +1239,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         control.applyStyle()
         if (getSystemService(android.os.PowerManager::class.java).isInteractive) consumeWakeIntro()
         resumed = true
+        welcome?.resume()
         prefs.homeInFront = true
         HomeGuardService.onHomeResumed()
         restartIdle()
@@ -1210,6 +1257,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         videoWallpaper.stop()
         // Leaving for another app (or standby) ends the intro rather than leaving it half played.
         intro?.finish()
+        welcome?.pause()
         if (!getSystemService(android.os.PowerManager::class.java).isInteractive) armWakeIntro()
         resumed = false
         prefs.homeInFront = false
@@ -1220,7 +1268,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     }
 
     private fun askAdbAuthorization() {
-        if (prefs.adbAuthorized || isFinishing) return
+        if (prefs.adbAuthorized || isFinishing || !resumed || welcome != null) return
         showSheet(Sheet(root).title(I18n.text(R.string.i18n_homeactivity_050))
             .message(I18n.text(R.string.i18n_homeactivity_051))
             .button(I18n.text(R.string.i18n_homeactivity_052)) { authorizeAdb() }

@@ -57,5 +57,12 @@ object Features {
         lifecycle = "HomeActivity releases playback on pause, screen off, intro and destroy; no background service",
         testMethod = "Transfer tests, both-flavor builds; hardware 4K playback, pause/wake, crop, upload failure and offline fallback",
     )
-    val all = listOf(weather, liquidGlass, dock, hdmi, videoWallpaper)
+    val welcome = FeatureSpec(
+        id = "welcome", name = "Welcome", purpose = "First-use handwritten logo on a blue sky",
+        capabilities = emptySet(), settings = setOf("welcome_completed"), defaultEnabled = true,
+        permissions = emptySet(), fallback = "Built-in cursive wordmark; Continue and Back always remain available",
+        lifecycle = "HomeActivity owns the overlay; pause suspends animation, destroy releases callbacks and worker",
+        testMethod = "Native first-use persistence, preview isolation and pause/resume; physical TV playback",
+    )
+    val all = listOf(weather, liquidGlass, dock, hdmi, videoWallpaper, welcome)
 }

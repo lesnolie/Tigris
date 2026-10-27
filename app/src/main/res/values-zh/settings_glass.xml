@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_apps_group">应用</string>
+    <string name="settings_row_value">%1$s · %2$s</string>
+    <string name="settings_removed_empty">暂时没有需要恢复的应用。删除过的预装应用会显示在这里。</string>
+    <string name="settings_search">搜索</string>
+    <string name="settings_city_short">输入城市名称</string>
+    <string name="settings_city_minimum">请至少输入两个字符。</string>
+    <string name="settings_about">Tigris %1$s\n\n你的电视主屏幕。应用、壁纸和控制，以液态玻璃呈现。</string>
+</resources>

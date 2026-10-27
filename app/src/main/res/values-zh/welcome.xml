@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="welcome_continue">按遥控器确认键，进入下一步  ›</string>
+    <string name="welcome_writing">Tigris，按确认键可完成 Logo 书写动画。</string>
+    <string name="welcome_preview">预览首次欢迎</string>
+    <string name="welcome_preview_help">蓝天白云中的 Tigris Logo 逐笔写出。预览不会重置首次使用状态。</string>
+</resources>

@@ -4,11 +4,21 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Rect
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.provider.Settings
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.View
+import android.view.accessibility.AccessibilityNodeInfo
+import android.text.Editable
+import android.text.TextWatcher
+import java.util.concurrent.Executors
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -19,8 +29,7 @@ import android.widget.Toast
 import com.leslie.tvhome.tv.TvControls
 
 /**
- * tvOS-style settings: the title centred on top, a large icon on the left with a
- * description of the focused row under it, and grouped rows on the right.
+ * tvOS-style settings: context and a glass icon on the left, grouped rows on the right.
  * Sub-pages (keep list, hidden apps) reuse the same list.
  */
 class SettingsActivity : Activity() {
@@ -61,8 +70,7 @@ class SettingsActivity : Activity() {
         }
 
         private val IDLE_TEXT = Color.argb(235, 255, 255, 255)
-        private val IDLE_VALUE = Color.argb(130, 255, 255, 255)
-        private val FOCUS_VALUE = Color.argb(140, 0, 0, 0)
+        private val IDLE_VALUE = Color.argb(195, 255, 255, 255)
     }
 
     private lateinit var prefs: Prefs
@@ -72,8 +80,17 @@ class SettingsActivity : Activity() {
     private lateinit var about: TextView
     private lateinit var icon: ImageView
     private lateinit var backdrop: ImageView
+    private lateinit var pageShade: View
     private lateinit var scroll: ScrollView
-    private var bundledBackdrop = false
+    private lateinit var root: FrameLayout
+    private lateinit var glass: UpdateGlass
+    private lateinit var focusedTitle: TextView
+    private lateinit var back: TextView
+    private val artwork = Executors.newSingleThreadExecutor()
+    private var scene: Bitmap? = null
+    private var backdropKey: String? = null
+    private var backdropRevision = 0
+    private var activeDialog: SettingsDialog? = null
     private var page = Page.MAIN
     /** The main-page row that opened the current sub-page, focused again on the way back. */
     private var opener = 0
@@ -84,55 +101,97 @@ class SettingsActivity : Activity() {
         super.onCreate(savedInstanceState)
         prefs = Prefs(this)
         repo = AppRepo(this)
-
-        val root = FrameLayout(this).apply { setBackgroundColor(Color.rgb(28, 28, 30)) }
+        root = FrameLayout(this).apply {
+            setBackgroundColor(Color.rgb(18, 24, 34))
+            clipChildren = false; clipToPadding = false
+        }
+        glass = UpdateGlass(root, moving = true)
         backdrop = ImageView(this).apply {
-            scaleType = ImageView.ScaleType.MATRIX
-            addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ -> placeBackdrop(v as ImageView) }
+            scaleType = ImageView.ScaleType.CENTER_CROP
         }
         root.addView(backdrop, FrameLayout.LayoutParams(-1, -1))
-        heading = text(28f, weight = 600).apply { gravity = Gravity.CENTER }
-        root.addView(heading, FrameLayout.LayoutParams(-1, -2, Gravity.TOP).apply { topMargin = dp(40) })
-
-        val body = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        val left = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
-            setPadding(dp(48), dp(84), dp(32), 0)
+        pageShade = View(this).apply {
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(0x28030a14, 0x00030a14, 0xb0030a14.toInt()))
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
+        root.addView(pageShade, FrameLayout.LayoutParams(-1, -1))
+        heading = text(30f, weight = 600).apply { maxLines = 2 }
+        root.addView(heading, FrameLayout.LayoutParams(dp(350), -2).apply {
+            leftMargin = dp(56); topMargin = dp(42)
+        })
+        val left = FrameLayout(this).apply { clipChildren = false; clipToPadding = false }
         icon = ImageView(this).apply {
             showIcon(this)
-            scaleType = ImageView.ScaleType.CENTER_CROP
+            scaleType = ImageView.ScaleType.FIT_CENTER
             clipRounded(dp(18).toFloat())
-            clipToOutline = true
         }
-        left.addView(icon, LinearLayout.LayoutParams(-1, dp(207)))
-        about = text(15f, Color.argb(150, 255, 255, 255)).apply {
-            gravity = Gravity.CENTER_HORIZONTAL
-            setLineSpacing(0f, 1.3f)
+        left.addView(icon, FrameLayout.LayoutParams(dp(140), dp(140), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply {
+            topMargin = dp(30)
+        })
+        val description = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        focusedTitle = text(19f, weight = 500).apply {
+            maxLines = 2; ellipsize = TextUtils.TruncateAt.END
         }
-        left.addView(about, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(26) })
-        showBackdrop()
-        body.addView(left, LinearLayout.LayoutParams(0, -1, 1f))
-
-        // Not clipped, so a focused row can grow past the list's edges.
-        list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
-        scroll = ScrollView(this).apply {
+        description.addView(focusedTitle, LinearLayout.LayoutParams(-1, -2))
+        about = text(14f, Color.argb(215, 255, 255, 255)).apply {
+            maxLines = 4; ellipsize = TextUtils.TruncateAt.END
+            setLineSpacing(dp(3).toFloat(), 1f)
+        }
+        description.addView(about, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
+        left.addView(description, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM).apply { bottomMargin = dp(72) })
+        back = text(16f, weight = 500).apply {
+            text = I18n.text(R.string.i18n_updateactivity_016); gravity = Gravity.CENTER
+            isFocusable = true; isClickable = true
+            setOnClickListener { if (page == Page.MAIN) finish() else show(Page.MAIN, opener) }
+        }
+        val backGlass = glass.control(back)
+        back.setOnFocusChangeListener { _, on ->
+            backGlass.focus(on)
+            back.tweenScale(if (on) 1.045f else 1f, 220)
+        }
+        left.addView(back, FrameLayout.LayoutParams(dp(112), dp(44), Gravity.BOTTOM))
+        root.addView(left, FrameLayout.LayoutParams(dp(344), -1).apply {
+            leftMargin = dp(56); topMargin = dp(120); bottomMargin = dp(34)
+        })
+        list = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            clipChildren = false; clipToPadding = false
+            setPadding(dp(16), dp(16), dp(16), dp(18))
+        }
+        scroll = object : ScrollView(this) {
+            override fun requestChildRectangleOnScreen(child: View, rectangle: Rect, immediate: Boolean) = false
+        }.apply {
             isVerticalScrollBarEnabled = false
-            clipToPadding = false
-            clipChildren = false
-            setPadding(dp(12), dp(16), dp(12), dp(60))
+            overScrollMode = View.OVER_SCROLL_NEVER
+            clipToPadding = true; clipChildren = true
+            isVerticalFadingEdgeEnabled = true
+            setFadingEdgeLength(dp(16))
             addView(list)
+            setOnScrollChangeListener { _, _, _, _, _ -> glass.refresh() }
         }
-        body.addView(scroll, LinearLayout.LayoutParams(0, -1, 1.05f).apply { marginEnd = dp(52) })
-        root.addView(body, FrameLayout.LayoutParams(-1, -1).apply { topMargin = dp(84) })
+        val viewport = FrameLayout(this).apply {
+            clipChildren = true; clipToPadding = true
+            addView(scroll, FrameLayout.LayoutParams(-1, -1))
+        }
+        scroll.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
+            v.clipBounds = Rect(0, 0, v.width, v.height)
+        }
+        root.addView(viewport, FrameLayout.LayoutParams(-1, -1).apply {
+            leftMargin = dp(438); rightMargin = dp(40); topMargin = dp(38); bottomMargin = dp(30)
+        })
+        root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> glass.refresh() }
         setContentView(root)
+        showBackdrop()
         show(Page.MAIN)
     }
 
     private fun show(p: Page, focusIndex: Int = 0) {
         page = p
+        glass.removeWithin(list)
         list.removeAllViews()
+        scroll.scrollTo(0, 0)
         when (p) {
             Page.MAIN -> main()
             Page.KEEP -> appPicker(I18n.text(R.string.i18n_settingsactivity_001), prefs.keep) { pkg, on ->
@@ -145,8 +204,10 @@ class SettingsActivity : Activity() {
         }
         list.post {
             val target = list.getChildAt(focusIndex.coerceIn(0, maxOf(list.childCount - 1, 0)))
-            (target?.takeIf { it.isFocusable } ?: (0 until list.childCount).map { list.getChildAt(it) }.firstOrNull { it.isFocusable })
-                ?.requestFocus()
+            val focus = target?.takeIf { it.isFocusable } ?: (0 until list.childCount)
+                .map { list.getChildAt(it) }.firstOrNull { it.isFocusable }
+            (focus ?: back).requestFocus()
+            focus?.let { reveal(it, immediate = true) }
         }
     }
 
@@ -155,6 +216,7 @@ class SettingsActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        backdropKey = null
         showBackdrop()
         if (page == Page.MAIN) show(Page.MAIN, opener)
     }
@@ -188,39 +250,73 @@ class SettingsActivity : Activity() {
 
     private fun showBackdrop() {
         val file = if (prefs.settingsBg) backdropFile(this) else null
-        val downloaded = if (prefs.settingsBg && file == null) OptionalAssets.file(this, OptionalAssets.backdrop) else null
-        bundledBackdrop = downloaded != null
-        val bmp = (file ?: downloaded)?.let {
-            android.graphics.BitmapFactory.decodeFile(it.path, android.graphics.BitmapFactory.Options().apply {
-                inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
-            })
+        val selected = file
+        val sw = resources.displayMetrics.widthPixels
+        val sh = resources.displayMetrics.heightPixels
+        val key = "${selected?.path}:${selected?.lastModified()}:${prefs.settingsBg}:${prefs.background}:$sw:$sh"
+        if (key == backdropKey) return
+        backdropKey = key
+        val revision = ++backdropRevision
+        artwork.execute {
+            val original = selected?.let { runCatching { decodeIcon(it, 1440) }.getOrNull() }
+            val source = original ?: SettingsBackdrop.load(this)
+            val width = 720
+            val height = (width.toLong() * sh / sw).toInt().coerceAtLeast(1)
+            val image = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(image)
+            val scale = maxOf(width.toFloat() / source.width, height.toFloat() / source.height) * if (original != null) 1.08f else 1f
+            val matrix = android.graphics.Matrix().apply {
+                setScale(scale, scale)
+                postTranslate(if (original != null) width - source.width * scale else (width - source.width * scale) / 2f,
+                    (height - source.height * scale) / 2f)
+            }
+            canvas.drawBitmap(source, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
+            // Match the actual crop and page scrim; never re-center the original artwork in the glass.
+            val shade = Paint().apply {
+                shader = android.graphics.LinearGradient(0f, 0f, 0f, height.toFloat(),
+                    intArrayOf(0x28030a14, 0x00030a14, 0xb0030a14.toInt()), null,
+                    android.graphics.Shader.TileMode.CLAMP)
+            }
+            val material = image.copy(Bitmap.Config.ARGB_8888, true)
+            if (original != null) Canvas(material).drawRect(0f, 0f, width.toFloat(), height.toFloat(), shade)
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed && revision == backdropRevision) {
+                    backdrop.setImageBitmap(image)
+                    pageShade.visibility = if (original != null) View.VISIBLE else View.GONE
+                    icon.visibility = if (original != null || resources.configuration.fontScale > 1.15f) View.INVISIBLE else View.VISIBLE
+                    scene = material
+                    glass.texture(material)
+                }
+            }
         }
-        backdrop.setImageBitmap(bmp)
-        placeBackdrop(backdrop)
-        icon.visibility = if (bmp != null) android.view.View.INVISIBLE else android.view.View.VISIBLE
-        // Below the TV in the picture, which reaches a little lower than the icon would.
-        (about.layoutParams as LinearLayout.LayoutParams).topMargin = dp(if (bmp != null) 62 else 26)
-        about.requestLayout()
     }
 
-    /**
-     * Fills the screen, 8% larger than needed and against the right edge: a subject in the left
-     * third of a 16:9 picture (where the icon would be) then sits over the description column.
-     */
-    private fun placeBackdrop(v: ImageView) {
-        val d = v.drawable ?: return
-        if (v.width == 0 || d.intrinsicWidth <= 0) return
-        // The bundled artwork sits further left, clear of the focused right-hand buttons.
-        val s = maxOf(v.width / d.intrinsicWidth.toFloat(), v.height / d.intrinsicHeight.toFloat()) * if (bundledBackdrop) 1.12f else 1.08f
-        v.imageMatrix = android.graphics.Matrix().apply {
-            setScale(s, s)
-            postTranslate(v.width - d.intrinsicWidth * s, (v.height - d.intrinsicHeight * s) / 2)
-        }
+    override fun onPause() {
+        activeDialog?.dismiss()
+        activeDialog = null
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        backdropRevision++
+        activeDialog?.dismiss()
+        glass.close()
+        artwork.shutdownNow()
+        super.onDestroy()
     }
 
     private fun showIcon(v: ImageView) {
         val own = customIcon(this)?.let { decodeIcon(it, dp(380)) }
-        if (own != null) v.setImageBitmap(own) else v.setImageResource(R.drawable.banner_settings)
+        glass.removeWithin(v)
+        if (own != null) {
+            v.setImageBitmap(own)
+            v.setPadding(0, 0, 0, 0)
+            v.background = null
+        } else {
+            glass.control(v, 32, content = true)
+            v.setImageResource(R.drawable.ic_gear)
+            v.setPadding(dp(42), dp(42), dp(42), dp(42))
+        }
     }
 
     private fun main() {
@@ -228,7 +324,7 @@ class SettingsActivity : Activity() {
         about.text = ""
 
         section(I18n.text(R.string.i18n_settingsactivity_004))
-        row(I18n.text(R.string.i18n_settingsactivity_005), I18n.text(R.string.i18n_settingsactivity_006), { I18n.text(R.string.i18n_settingsactivity_007) }) {
+        row(I18n.text(R.string.i18n_settingsactivity_005), I18n.text(R.string.i18n_settingsactivity_006), { "" }, chevron = true) {
             startActivity(Intent(this, UpdateActivity::class.java))
         }
         section(I18n.text(R.string.i18n_settingsactivity_008))
@@ -242,8 +338,7 @@ class SettingsActivity : Activity() {
             val opts = listOf(Prefs.CLOCK_CORNER, Prefs.CLOCK_LARGE, Prefs.CLOCK_OFF)
             prefs.clockStyle = opts[(opts.indexOf(prefs.clockStyle) + 1) % opts.size]
         }
-        optionalAssetRow(OptionalAssets.backdrop, R.string.download_default_backdrop)
-        if (backdropFile(this) != null || OptionalAssets.file(this, OptionalAssets.backdrop) != null) row(I18n.text(R.string.i18n_settingsactivity_018), I18n.text(R.string.i18n_settingsactivity_019), {
+        if (backdropFile(this) != null) row(I18n.text(R.string.i18n_settingsactivity_018), I18n.text(R.string.i18n_settingsactivity_019), {
             if (prefs.settingsBg) I18n.text(R.string.i18n_settingsactivity_020) else I18n.text(R.string.i18n_settingsactivity_021)
         }) {
             prefs.settingsBg = !prefs.settingsBg
@@ -255,10 +350,10 @@ class SettingsActivity : Activity() {
             prefs.ownIcon = !prefs.ownIcon
             showIcon(icon)
         }
-        row(I18n.text(R.string.i18n_settingsactivity_026), I18n.text(R.string.i18n_settingsactivity_027), { I18n.text(R.string.i18n_settingsactivity_028) }) {
+        row(I18n.text(R.string.i18n_settingsactivity_026), I18n.text(R.string.i18n_settingsactivity_027), { "" }, chevron = true) {
             startActivity(Intent(this, WallpaperActivity::class.java).putExtra("upload_avatar", true))
         }
-        row(I18n.text(R.string.i18n_settingsactivity_029), I18n.text(R.string.i18n_settingsactivity_030), { onOff(prefs.showAvatar) }) { prefs.showAvatar = !prefs.showAvatar }
+        row(I18n.text(R.string.i18n_settingsactivity_029), I18n.text(R.string.i18n_settingsactivity_030), { onOff(prefs.showAvatar) }, checked = { prefs.showAvatar }) { prefs.showAvatar = !prefs.showAvatar }
         row(I18n.text(R.string.i18n_settingsactivity_031), I18n.text(R.string.i18n_settingsactivity_032) +
             I18n.text(R.string.i18n_settingsactivity_033), {
             auto(prefs.focusStyle, prefs.focusTvos(this), "tvOS", I18n.text(R.string.i18n_settingsactivity_034))
@@ -275,7 +370,7 @@ class SettingsActivity : Activity() {
         // Weather is a self-contained optional card. No network traffic until opt-in.
         section(I18n.text(R.string.weather_settings))
         row(I18n.text(R.string.weather_settings), I18n.text(R.string.weather_settings_help),
-            { onOff(prefs.weatherEnabled) }) { prefs.weatherEnabled = !prefs.weatherEnabled }
+            { onOff(prefs.weatherEnabled) }, checked = { prefs.weatherEnabled }) { prefs.weatherEnabled = !prefs.weatherEnabled }
         row(I18n.text(R.string.weather_unit_settings), I18n.text(R.string.weather_unit_help),
             { if (prefs.weatherFahrenheit) "°F" else "°C" }) {
             prefs.weatherFahrenheit = !prefs.weatherFahrenheit
@@ -314,11 +409,15 @@ class SettingsActivity : Activity() {
             val opts = listOf(0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 10_000)
             prefs.wakeDelay = opts.firstOrNull { it > prefs.wakeDelay } ?: 0
         }
-        row(I18n.text(R.string.i18n_settingsactivity_057), I18n.text(R.string.i18n_settingsactivity_058), { onOff(prefs.introSound) }) { prefs.introSound = !prefs.introSound }
+        row(I18n.text(R.string.i18n_settingsactivity_057), I18n.text(R.string.i18n_settingsactivity_058), { onOff(prefs.introSound) }, checked = { prefs.introSound }) { prefs.introSound = !prefs.introSound }
         row(I18n.text(R.string.i18n_settingsactivity_059), I18n.text(R.string.i18n_settingsactivity_060), { "" }, chevron = true) {
             startActivity(Intent(this, HomeActivity::class.java)
                 .putExtra(Intro.EXTRA_PREVIEW, true)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+
+        row(I18n.text(R.string.welcome_preview), I18n.text(R.string.welcome_preview_help), { "" }, chevron = true) {
+            startActivity(Intent(this, HomeActivity::class.java).putExtra(Welcome.EXTRA_PREVIEW, true))
         }
 
         section(I18n.text(R.string.i18n_settingsactivity_061))
@@ -358,7 +457,7 @@ class SettingsActivity : Activity() {
             }.start()
         }
         row(I18n.text(R.string.i18n_settingsactivity_072), I18n.text(R.string.i18n_settingsactivity_073),
-            { onOff(prefs.frameScreensaver) }) { v ->
+            { onOff(prefs.frameScreensaver) }, checked = { prefs.frameScreensaver }) { v ->
             val on = !prefs.frameScreensaver
             val current = Settings.Secure.getString(contentResolver, "screensaver_components").orEmpty()
             val mine = "$packageName/${PhotoDream::class.java.name}"
@@ -404,7 +503,7 @@ class SettingsActivity : Activity() {
         }
 
         section(I18n.text(R.string.i18n_settingsactivity_087))
-        row(I18n.text(R.string.i18n_settingsactivity_088), I18n.text(R.string.i18n_settingsactivity_089), { onOff(prefs.cleanOnStandby) }) {
+        row(I18n.text(R.string.i18n_settingsactivity_088), I18n.text(R.string.i18n_settingsactivity_089), { onOff(prefs.cleanOnStandby) }, checked = { prefs.cleanOnStandby }) {
             prefs.cleanOnStandby = !prefs.cleanOnStandby
         }
         row(I18n.text(R.string.i18n_settingsactivity_090), I18n.text(R.string.i18n_settingsactivity_091), {
@@ -432,9 +531,9 @@ class SettingsActivity : Activity() {
                 Toast.makeText(this, I18n.text(R.string.i18n_settingsactivity_105), Toast.LENGTH_LONG).show()
         }
 
-        section("App")
+        section(I18n.text(R.string.settings_apps_group))
         row(I18n.text(R.string.i18n_settingsactivity_106), I18n.text(R.string.i18n_settingsactivity_107),
-            { onOff(prefs.recentFirst) }) { prefs.recentFirst = !prefs.recentFirst }
+            { onOff(prefs.recentFirst) }, checked = { prefs.recentFirst }) { prefs.recentFirst = !prefs.recentFirst }
         row(I18n.text(R.string.i18n_settingsactivity_108), I18n.text(R.string.i18n_settingsactivity_109), { I18n.text(R.string.i18n_settingsactivity_110, prefs.hidden.size) }, chevron = true) { show(Page.HIDDEN) }
         row(I18n.text(R.string.i18n_settingsactivity_111), I18n.text(R.string.i18n_settingsactivity_112), { I18n.text(R.string.i18n_settingsactivity_113, prefs.removed.size) }, chevron = true) {
             show(Page.REMOVED)
@@ -456,20 +555,18 @@ class SettingsActivity : Activity() {
             val secure = Guard.hasSecureSettings(this)
             val next = HomeInstallGuide.nextStep(
                 android.os.Build.MANUFACTURER, android.os.Build.BRAND, native, bound, secure)
-            android.app.AlertDialog.Builder(this)
-                .setTitle(I18n.text(R.string.install_home_check_title))
-                .setMessage(I18n.text(R.string.install_home_check_status,
-                    native.toString(), bound.toString(), secure.toString()) + "\n\n" + I18n.text(next))
-                .setNeutralButton(I18n.text(R.string.install_home_guide_open)) { _, _ ->
+            dialog(I18n.text(R.string.install_home_check_title),
+                I18n.text(R.string.install_home_check_status,
+                    native.toString(), bound.toString(), secure.toString()) + "\n\n" + I18n.text(next),
+                secondary = I18n.text(R.string.install_home_guide_open), secondaryAction = {
                     runCatching {
                         startActivity(Intent(Intent.ACTION_VIEW,
                             android.net.Uri.parse("https://tigris-tv.pages.dev/#install")))
                     }
-                }
-                .setPositiveButton(android.R.string.ok, null).show()
+                })
         }
         row(I18n.text(R.string.i18n_settingsactivity_122), I18n.text(R.string.i18n_settingsactivity_123),
-            { if (!prefs.guard) I18n.text(R.string.i18n_settingsactivity_124) else if (HomeGuardService.isRunning) I18n.text(R.string.i18n_settingsactivity_125) else I18n.text(R.string.i18n_settingsactivity_126) }) { v ->
+            { if (!prefs.guard) I18n.text(R.string.i18n_settingsactivity_124) else if (HomeGuardService.isRunning) I18n.text(R.string.i18n_settingsactivity_125) else I18n.text(R.string.i18n_settingsactivity_126) }, checked = { prefs.guard }) { v ->
             val on = !prefs.guard
             v.text = I18n.text(R.string.i18n_settingsactivity_127)
             Thread {
@@ -480,7 +577,7 @@ class SettingsActivity : Activity() {
                 }
             }.start()
         }
-        if (Guard.isXiaomi() || prefs.keepAdb) row(I18n.text(R.string.i18n_settingsactivity_132), I18n.text(R.string.i18n_settingsactivity_133), { onOff(prefs.keepAdb) }) { v ->
+        if (Guard.isXiaomi() || prefs.keepAdb) row(I18n.text(R.string.i18n_settingsactivity_132), I18n.text(R.string.i18n_settingsactivity_133), { onOff(prefs.keepAdb) }, checked = { prefs.keepAdb }) { v ->
             val on = !prefs.keepAdb
             v.text = I18n.text(R.string.i18n_settingsactivity_134)
             Thread {
@@ -491,7 +588,10 @@ class SettingsActivity : Activity() {
         }
         row(I18n.text(R.string.i18n_settingsactivity_136), I18n.text(R.string.i18n_settingsactivity_137), { "" }, chevron = true) { runCatching { startActivity(TvControls(this).settingsIntent()) } }
         row(I18n.text(R.string.i18n_settingsactivity_138), I18n.text(R.string.i18n_settingsactivity_139),
-            { I18n.text(R.string.i18n_settingsactivity_140) + packageManager.getPackageInfo(packageName, 0).versionName }) {}
+            { packageManager.getPackageInfo(packageName, 0).versionName ?: "" }, chevron = true) {
+            dialog(I18n.text(R.string.i18n_settingsactivity_138),
+                I18n.text(R.string.settings_about, packageManager.getPackageInfo(packageName, 0).versionName ?: ""))
+        }
     }
 
     private fun appPicker(title: String, selected: Set<String>, includeHidden: Boolean = false, toggle: (String, Boolean) -> Unit) {
@@ -500,7 +600,9 @@ class SettingsActivity : Activity() {
         val apps = if (includeHidden) repo.allApps().sortedBy { it.label } else repo.allApps().filter { !repo.isSystem(it.pkg) }.sortedBy { it.label }
         val sel = selected.toMutableSet()
         for (a in apps) {
-            row(a.label, null, { if (a.pkg in sel) "✓" else "" }) { v ->
+            val drawable = runCatching { packageManager.getActivityIcon(a.component) }.getOrNull()
+            row(a.label, null, { if (a.pkg in sel) "✓" else "" }, checked = { a.pkg in sel },
+                checkbox = true, appIcon = drawable) { v ->
                 val on = a.pkg !in sel
                 if (on) sel += a.pkg else sel -= a.pkg
                 toggle(a.pkg, on)
@@ -513,12 +615,16 @@ class SettingsActivity : Activity() {
     private fun removedApps() {
         heading.text = I18n.text(R.string.i18n_settingsactivity_143)
         about.text = I18n.text(R.string.i18n_settingsactivity_144)
-        if (prefs.removed.isEmpty()) row(I18n.text(R.string.i18n_settingsactivity_145), null, { "" }) {}
+        if (prefs.removed.isEmpty()) {
+            information(I18n.text(R.string.i18n_settingsactivity_145), I18n.text(R.string.settings_removed_empty))
+            about.text = I18n.text(R.string.settings_removed_empty)
+        }
         for (pkg in prefs.removed.sorted()) {
             val label = try {
                 packageManager.getApplicationInfo(pkg, PackageManager.MATCH_UNINSTALLED_PACKAGES).loadLabel(packageManager).toString()
             } catch (e: Exception) { pkg }
-            row(label, null, { I18n.text(R.string.i18n_settingsactivity_146) }) { v ->
+            row(label, null, { I18n.text(R.string.i18n_settingsactivity_146) },
+                appIcon = runCatching { packageManager.getApplicationIcon(pkg) }.getOrNull()) { v ->
                 v.text = I18n.text(R.string.i18n_settingsactivity_147)
                 Thread {
                     val ok = LocalAdb.shell(applicationContext, "cmd package install-existing $pkg")?.contains("installed") == true
@@ -529,91 +635,192 @@ class SettingsActivity : Activity() {
         }
     }
 
-    /** Uses the TV keyboard. Search only on explicit user request. */
+    private fun dialog(title: String, message: String? = null, body: View? = null,
+                       compact: Boolean = false, primary: String = getString(android.R.string.ok),
+                       secondary: String = getString(android.R.string.cancel),
+                       secondaryAction: (() -> Unit)? = null, confirm: () -> Boolean = { true }) {
+        activeDialog?.dismiss()
+        activeDialog = SettingsDialog(this, scene ?: Backgrounds.render("graphite"), title,
+            message, body, compact, primary, confirm, secondary, secondaryAction).also { it.show() }
+    }
+
+    /** Search only after the user selects Search; the platform owns the TV keyboard. */
     private fun selectWeatherCity(onChosen: (Weather.City) -> Unit) {
         val input = EditText(this).apply {
             isSingleLine = true
-            hint = I18n.text(R.string.weather_search_city)
+            hint = I18n.text(R.string.settings_city_short)
+            textSize = 18f
+            setTextColor(Color.WHITE)
+            setHintTextColor(IDLE_VALUE)
+            background = rounded(Color.argb(45,255,255,255), dp(12).toFloat())
             setText(prefs.weatherCity)
             setSelection(text.length)
-            setPadding(dp(20), dp(12), dp(20), dp(12))
+            setPadding(dp(16), dp(12), dp(16), dp(12))
         }
-        android.app.AlertDialog.Builder(this)
-            .setTitle(I18n.text(R.string.weather_choose_city))
-            .setView(input)
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(I18n.text(R.string.weather_search_city)) { _, _ ->
+        dialog(I18n.text(R.string.weather_choose_city), body = input, compact = true,
+            primary = I18n.text(R.string.settings_search), confirm = {
                 val query = input.text.toString().trim()
-                if (query.length < 2) return@setPositiveButton
-                Toast.makeText(this, I18n.text(R.string.weather_search_city), Toast.LENGTH_SHORT).show()
-                Thread {
-                    val cities = runCatching { Weather.search(query) }.getOrNull()
-                    runOnUiThread {
-                        if (isFinishing || isDestroyed) return@runOnUiThread
-                        when {
-                            cities == null -> Toast.makeText(this, I18n.text(R.string.weather_city_error), Toast.LENGTH_LONG).show()
-                            cities.isEmpty() -> Toast.makeText(this, I18n.text(R.string.weather_city_none), Toast.LENGTH_LONG).show()
-                            else -> android.app.AlertDialog.Builder(this)
-                                .setTitle(I18n.text(R.string.weather_choose_city))
-                                .setItems(cities.map { it.name }.toTypedArray()) { _, which ->
-                                    onChosen(cities[which])
+                if (query.length < 2) {
+                    input.error = I18n.text(R.string.settings_city_minimum)
+                    input.requestFocus()
+                    false
+                } else {
+                    val app = applicationContext
+                    Thread {
+                        val cities = runCatching { Weather.search(query) }.getOrNull()
+                        runOnUiThread {
+                            if (!isFinishing && !isDestroyed) when {
+                                cities == null -> Toast.makeText(app, I18n.text(R.string.weather_city_error), Toast.LENGTH_LONG).show()
+                                cities.isEmpty() -> Toast.makeText(app, I18n.text(R.string.weather_city_none), Toast.LENGTH_LONG).show()
+                                else -> {
+                                    val choices = LinearLayout(this).apply {
+                                        orientation = LinearLayout.VERTICAL
+                                        clipChildren = false
+                                    }
+                                    cities.forEach { city ->
+                                        val option = text(17f, weight = 500).apply {
+                                            text = city.name
+                                            gravity = Gravity.CENTER_VERTICAL
+                                            setPadding(dp(16), 0, dp(16), 0)
+                                            isFocusable = true; isClickable = true
+                                            background = rounded(Color.argb(28,255,255,255), dp(14).toFloat())
+                                            setOnFocusChangeListener { v, on ->
+                                                v.background = rounded(Color.argb(if (on) 75 else 28,255,255,255), dp(14).toFloat())
+                                                v.tweenScale(if (on) 1.025f else 1f, 200)
+                                            }
+                                            setOnClickListener {
+                                                onChosen(city)
+                                                activeDialog?.dismiss()
+                                            }
+                                        }
+                                        choices.addView(option, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(10) })
+                                    }
+                                    dialog(I18n.text(R.string.weather_choose_city), body = choices)
                                 }
-                                .setNegativeButton(android.R.string.cancel, null)
-                                .show()
+                            }
                         }
-                    }
-                }.start()
-            }.show()
-    }
-
-    /** A small grey group title above a run of rows. */
-    private fun section(title: String) {
-        val first = list.childCount == 0
-        list.addView(text(14f, Color.argb(120, 255, 255, 255), weight = 500).apply { text = title },
-            LinearLayout.LayoutParams(-2, -2).apply {
-                marginStart = dp(18); topMargin = if (first) 0 else dp(22); bottomMargin = dp(8)
+                    }.start()
+                    true
+                }
             })
     }
 
-    /**
-     * One settings row; [value] is re-read after each click, [desc] shows under the icon while
-     * the row is focused, and [chevron] marks a row that opens another screen.
-     */
-    private fun row(label: String, desc: String?, value: () -> String, chevron: Boolean = false, onClick: (TextView) -> Unit) {
-        val r = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            isFocusable = true
-            isClickable = true
-            setPadding(dp(20), 0, dp(if (chevron) 14 else 20), 0)
+    private fun section(title: String) {
+        val first = list.childCount == 0
+        list.addView(text(13f, Color.argb(185,255,255,255), weight = 500).apply { text = title },
+            LinearLayout.LayoutParams(-1, -2).apply {
+                marginStart = dp(8); topMargin = if (first) 0 else dp(22); bottomMargin = dp(12)
+            })
+    }
+
+    /** Reveal the entire scaled row with a safety inset on all four sides. */
+    private fun reveal(row: View, immediate: Boolean = false) {
+        scroll.post {
+            if (isFinishing || isDestroyed || row.parent !== list) return@post
+            val rect = Rect(0, 0, row.width, row.height)
+            list.offsetDescendantRectToMyCoords(row, rect)
+            val edge = dp(16)
+            val target = when {
+                rect.top < scroll.scrollY + edge -> rect.top - edge
+                rect.bottom > scroll.scrollY + scroll.height - edge -> rect.bottom - scroll.height + edge
+                else -> scroll.scrollY
+            }.coerceIn(0, (list.height - scroll.height).coerceAtLeast(0))
+            if (immediate) scroll.scrollTo(0, target) else scroll.smoothScrollTo(0, target)
+        }
+    }
+
+    /** One focus target per row; explicit switch/checkbox semantics and bounded value width. */
+    private fun row(label: String, desc: String?, value: () -> String, chevron: Boolean = false,
+                    checked: (() -> Boolean)? = null, checkbox: Boolean = false,
+                    appIcon: Drawable? = null, onClick: (TextView) -> Unit) {
+        val r = object : LinearLayout(this) {
+            override fun onInitializeAccessibilityNodeInfo(info: AccessibilityNodeInfo) {
+                super.onInitializeAccessibilityNodeInfo(info)
+                if (checked != null) {
+                    info.className = if (checkbox) "android.widget.CheckBox" else "android.widget.Switch"
+                    info.isCheckable = true
+                    info.isChecked = checked()
+                }
+            }
+        }.apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            isFocusable = true; isClickable = true
+            clipChildren = false; clipToPadding = false
+            setPadding(dp(20), dp(14), dp(20), dp(14))
+            minimumHeight = dp(56)
+        }
+        val material = glass.control(r, 20)
+        appIcon?.let { drawable ->
+            r.addView(ImageView(this).apply {
+                setImageDrawable(drawable); scaleType = ImageView.ScaleType.FIT_CENTER
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, LinearLayout.LayoutParams(dp(34), dp(34)).apply { marginEnd = dp(14) })
         }
         val l = text(17f, IDLE_TEXT, weight = 500).apply {
-            text = label
-            maxLines = 1
-            ellipsize = TextUtils.TruncateAt.END
+            text = label; maxLines = 2; ellipsize = TextUtils.TruncateAt.END
+            setLineSpacing(dp(2).toFloat(), 1f)
         }
-        val v = text(16f, IDLE_VALUE).apply { text = value() }
+        val v = text(14f, IDLE_VALUE).apply {
+            text = value(); maxLines = 2; ellipsize = TextUtils.TruncateAt.END
+            gravity = Gravity.END
+            maxWidth = dp(155)
+        }
         r.addView(l, LinearLayout.LayoutParams(0, -2, 1f))
-        r.addView(v, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(12) })
-        val arrow = if (chevron) text(24f, IDLE_VALUE, weight = 300).apply { text = "›" } else null
-        arrow?.let { r.addView(it, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(10); bottomMargin = dp(2) }) }
-        val idle = rounded(Color.argb(20, 255, 255, 255), dp(14).toFloat())
-        val focus = rounded(Color.WHITE, dp(14).toFloat())
-        r.background = idle
-        r.setOnFocusChangeListener { _, f ->
-            r.background = if (f) focus else idle
-            l.setTextColor(if (f) Color.BLACK else IDLE_TEXT)
-            v.setTextColor(if (f) FOCUS_VALUE else IDLE_VALUE)
-            arrow?.setTextColor(if (f) FOCUS_VALUE else IDLE_VALUE)
-            if (f && desc != null) about.text = desc
-            r.tweenScale(if (f) 1.03f else 1f, 160)
+        r.addView(v, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(14) })
+        val toggle = if (checked != null && !checkbox) UpdateSwitch(this) else null
+        toggle?.let { r.addView(it, LinearLayout.LayoutParams(dp(42), dp(26)).apply { marginStart = dp(14) }) }
+        val check = if (checkbox) text(20f, weight = 500).apply {
+            gravity = Gravity.CENTER; importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        } else null
+        check?.let { r.addView(it, LinearLayout.LayoutParams(dp(28), dp(28)).apply { marginStart = dp(12) }) }
+        if (chevron) r.addView(text(23f, IDLE_VALUE, weight = 300).apply {
+            text = "›"; importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(12) })
+        fun sync() {
+            val on = checked?.invoke()
+            if (on != null) {
+                toggle?.checked = on
+                check?.text = if (on) "✓" else ""
+                // Asynchronous status stays visible until the operation reports its real result.
+                v.visibility = if (checkbox || v.text.toString() == onOff(on)) View.GONE else View.VISIBLE
+            }
+            r.contentDescription = I18n.text(R.string.settings_row_value, label,
+                if (on != null) onOff(on) else v.text.toString())
+            glass.refresh()
+        }
+        v.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { sync() }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+        r.setOnFocusChangeListener { _, on ->
+            material.focus(on)
+            r.tweenScale(if (on) 1.035f else 1f, if (on) 260 else 200,
+                if (on) Motion.spring else Motion.ease)
+            if (on) {
+                focusedTitle.text = label
+                if (desc != null) about.text = desc
+                reveal(r)
+            }
         }
         r.setOnClickListener {
             if (page == Page.MAIN) opener = list.indexOfChild(r)
             onClick(v)
-            if (page == Page.MAIN && !v.text.startsWith(I18n.text(R.string.i18n_settingsactivity_150)) && !v.text.startsWith(I18n.text(R.string.i18n_settingsactivity_151))) v.text = value()
+            if (page == Page.MAIN && !v.text.startsWith(I18n.text(R.string.i18n_settingsactivity_150)) &&
+                !v.text.startsWith(I18n.text(R.string.i18n_settingsactivity_151))) v.text = value()
+            sync()
         }
-        list.addView(r, LinearLayout.LayoutParams(-1, dp(52)).apply { bottomMargin = dp(6) })
+        list.addView(r, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+        sync()
+    }
+
+    private fun information(title: String, message: String) {
+        list.addView(text(19f, weight = 500).apply { text = title },
+            LinearLayout.LayoutParams(-1, -2).apply { setMargins(dp(16), dp(30), dp(16), dp(12)) })
+        list.addView(text(14f, IDLE_VALUE).apply {
+            text = message; setLineSpacing(dp(4).toFloat(), 1f)
+        }, LinearLayout.LayoutParams(-1, -2).apply { marginStart = dp(16); marginEnd = dp(16) })
+        focusedTitle.text = title
     }
 
     private fun onOff(b: Boolean) = if (b) I18n.text(R.string.i18n_settingsactivity_152) else I18n.text(R.string.i18n_settingsactivity_153)

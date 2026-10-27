@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_page_description">Keep your TV up to date.\nAdd apps when you need them.</string>
+    <string name="update_auto_description">Updates installed apps only. Optional apps are never installed automatically.</string>
+    <string name="update_section_home">Tigris</string>
+    <string name="update_section_optional">Optional apps</string>
+    <string name="update_version_status">%1$s · %2$s</string>
+    <string name="update_working">Working…</string>
+    <string name="update_app_version">Tigris %1$s</string>
+    <string name="update_available_version">Update to %1$s</string>
+</resources>
