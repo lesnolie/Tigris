@@ -60,8 +60,12 @@ if [[ "$MODE" == full-* ]]; then
     curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/xiaomi_home.py -o "$TMP/xiaomi_home.py"
     curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/installation_strategy.py -o "$TMP/installation_strategy.py"
     curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/installation_strategies.json -o "$TMP/installation_strategies.json"
-    curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/vendor_install_guidance.py -o "$TMP/vendor_install_guidance.py"
-    curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/vendor_install_guidance.json -o "$TMP/vendor_install_guidance.json"
+    # The deployed main installer may still predate the research-only guidance module.
+    # Fetch optional dependencies only when its downloaded strategy code imports them.
+    if grep -q '^from vendor_install_guidance import' "$TMP/installation_strategy.py"; then
+      curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/vendor_install_guidance.py -o "$TMP/vendor_install_guidance.py"
+      curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/vendor_install_guidance.json -o "$TMP/vendor_install_guidance.json"
+    fi
   fi
   case "$MODE" in
     full-inspect) R_MODE=inspect ;;
