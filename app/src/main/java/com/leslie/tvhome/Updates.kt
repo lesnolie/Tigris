@@ -22,6 +22,31 @@ object Updates {
     private const val MIRACAST_CERT = "ea7f4568203d294bd37acac966d6d707f79147549d24c2244f58a6fbc27a6291"
     val executor = Executors.newSingleThreadExecutor()
     private const val CHANNEL = "software_updates"
+    private val transferring = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private fun stage(c: Context, p: Product, phase: String, message: String, percent: Int = -1) {
+        prefs(c).edit().putString(p.pkg + ".phase", phase).putString(p.pkg + ".status", message)
+            .putInt(p.pkg + ".progress", percent).apply()
+    }
+    fun pending(c: Context, p: Product): Boolean =
+        c.packageManager.packageInstaller.mySessions.any { it.appPackageName == p.pkg }
+
+    /** Only abandon this app's own sessions for the selected product, on explicit retry. */
+    fun cancelPending(c: Context, p: Product) {
+        check(p.pkg !in transferring) { I18n.text(R.string.update_transfer_busy) }
+        val installer = c.packageManager.packageInstaller
+        installer.mySessions.filter { it.appPackageName == p.pkg }.forEach { installer.abandonSession(it.sessionId) }
+        prefs(c).edit().remove(p.pkg + ".session").remove(p.pkg + ".confirmation")
+            .putString(p.pkg + ".phase", "idle").putInt(p.pkg + ".progress", -1)
+            .putString(p.pkg + ".status", I18n.text(R.string.update_cancelled)).apply()
+    }
+
+    fun confirm(c: Context, p: Product): Boolean {
+        val uri = prefs(c).getString(p.pkg + ".confirmation", null) ?: return false
+        return runCatching {
+            check(pending(c, p))
+            c.startActivity(Intent.parseUri(uri, 0).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }.isSuccess
+    }
     fun prefs(c: Context) = c.getSharedPreferences("software_updates", Context.MODE_PRIVATE)
     fun installed(c: Context, p: Product) = runCatching { c.packageManager.getPackageInfo(p.pkg, 0).versionName ?: "0.0" }.getOrNull()
     fun schedule(c: Context) {
@@ -59,6 +84,9 @@ object Updates {
             val url = asset.getString("browser_download_url")
             check(url.startsWith("https://github.com/${p.repo}/releases/download/"))
             val status = when { current == null -> I18n.text(R.string.i18n_updates_004, version); update -> "$current → $version"; else -> I18n.text(R.string.i18n_updates_005, current, version) }
+            // An external upgrade can leave the old self-install session behind.
+            // Installed current-or-newer software no longer needs that pending session.
+            if (!update && p.pkg !in transferring && pending(c, p)) cancelPending(c, p)
             prefs(c).edit().putString(p.pkg + ".status", status).putBoolean(p.pkg + ".available", update)
                 .putString(p.pkg + ".url", url).putString(p.pkg + ".version", version)
                 .putString(p.pkg + ".digest", asset.optString("digest"))
@@ -79,11 +107,21 @@ object Updates {
     }
     private fun hex(bytes: ByteArray) = bytes.joinToString("") { "%02x".format(it) }
     fun install(c: Context, p: Product) {
+        check(transferring.add(p.pkg)) { I18n.text(R.string.update_transfer_busy) }
+        try { performInstall(c, p) }
+        catch (e: Exception) {
+            stage(c, p, if (pending(c, p)) "pending" else "failed", e.message ?: I18n.text(R.string.i18n_updates_024))
+            throw e
+        } finally { transferring.remove(p.pkg) }
+    }
+    private fun performInstall(c: Context, p: Product) {
         check(c.packageManager.canRequestPackageInstalls()) { I18n.text(R.string.i18n_updates_008) }
         val sp = prefs(c)
-        val existing = sp.getInt(p.pkg + ".session", -1)
-        if (existing >= 0 && c.packageManager.packageInstaller.getSessionInfo(existing) != null)
-            error(I18n.text(R.string.i18n_updates_009))
+        if (pending(c, p)) {
+            if (UpdateActivity.visible && confirm(c, p)) return
+            error(I18n.text(R.string.update_pending_recovery))
+        }
+        sp.edit().remove(p.pkg + ".session").remove(p.pkg + ".confirmation").apply()
         check(sp.getBoolean(p.pkg + ".available", false)) { I18n.text(R.string.i18n_updates_010) }
         val file = File(c.cacheDir, p.pkg + "-update.apk")
         try {
@@ -91,15 +129,20 @@ object Updates {
             check(url.startsWith("https://github.com/${p.repo}/releases/download/"))
             val size = sp.getLong(p.pkg + ".size", 0)
             check(size in 1..250_000_000L) { I18n.text(R.string.i18n_updates_011) }
+            stage(c, p, "download", I18n.text(R.string.update_download_percent, 0), 0)
             val con = connection(url)
             try {
                 con.inputStream.use { input -> file.outputStream().use { out ->
-                    val buffer = ByteArray(65536); var total = 0L
-                    while (true) { val n = input.read(buffer); if (n < 0) break; total += n
-                        check(total <= size) { I18n.text(R.string.i18n_updates_012) }; out.write(buffer, 0, n) }
-                    check(total == size) { I18n.text(R.string.i18n_updates_013) }
+                    try {
+                        UpdateDownload.copy(input, out, size) { percent ->
+                            stage(c, p, "download", I18n.text(R.string.update_download_percent, percent), percent)
+                        }
+                    } catch (e: IllegalStateException) {
+                        error(I18n.text(R.string.update_download_failed))
+                    }
                 } }
             } finally { con.disconnect() }
+            stage(c, p, "verify", I18n.text(R.string.update_verifying))
             val digest = sp.getString(p.pkg + ".digest", "").orEmpty()
             if (digest.startsWith("sha256:")) {
                 val md = MessageDigest.getInstance("SHA-256")
@@ -145,8 +188,10 @@ object Updates {
             val installer = pm.packageInstaller
             val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
                 setAppPackageName(p.pkg)
+                setSize(file.length())
                 if (Build.VERSION.SDK_INT >= 31) setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
             }
+            stage(c, p, "stage", I18n.text(R.string.update_staging))
             val id = installer.createSession(params)
             sp.edit().putInt(p.pkg + ".session", id).apply()
             try {
@@ -155,9 +200,9 @@ object Updates {
                     val intent = Intent(c, UpdateResult::class.java).putExtra("product", p.pkg)
                     val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
                     val pending = PendingIntent.getBroadcast(c, id, intent, flags)
+                    stage(c, p, "pending", I18n.text(R.string.i18n_updates_022))
                     session.commit(pending.intentSender)
                 }
-                sp.edit().putString(p.pkg + ".status", I18n.text(R.string.i18n_updates_022)).apply()
             } catch (e: Exception) { installer.abandonSession(id); sp.edit().remove(p.pkg + ".session").apply(); throw e }
         } finally { file.delete() }
     }
@@ -192,14 +237,24 @@ class UpdateResult : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val p = Updates.products.find { it.pkg == intent.getStringExtra("product") } ?: return
         val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+        val sessionId = intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1)
+        val expected = Updates.prefs(context).getInt(p.pkg + ".session", -1)
+        // A cancelled session may deliver its result after the replacement session starts.
+        if (sessionId < 0 || sessionId != expected) return
         if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
             val confirmation = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT) ?: return
             confirmation.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            Updates.prefs(context).edit().putString(p.pkg + ".confirmation", confirmation.toUri(0))
+                .putString(p.pkg + ".phase", "pending").putInt(p.pkg + ".progress", -1)
+                .putString(p.pkg + ".status", I18n.text(R.string.update_pending_recovery)).apply()
             Updates.notify(context, p, I18n.text(R.string.i18n_updates_025), confirmation)
             if (UpdateActivity.visible) runCatching { context.startActivity(confirmation) }
         } else {
             val message = if (status == PackageInstaller.STATUS_SUCCESS) I18n.text(R.string.i18n_updates_026) else I18n.text(R.string.i18n_updates_027, intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE))
-            Updates.prefs(context).edit().remove(p.pkg + ".session").putString(p.pkg + ".status", message).putBoolean(p.pkg + ".available", false).apply()
+            Updates.prefs(context).edit().remove(p.pkg + ".session").remove(p.pkg + ".confirmation")
+                .putString(p.pkg + ".phase", if (status == PackageInstaller.STATUS_SUCCESS) "done" else "failed")
+                .putInt(p.pkg + ".progress", -1).putString(p.pkg + ".status", message)
+                .putBoolean(p.pkg + ".available", status != PackageInstaller.STATUS_SUCCESS).apply()
             Updates.notify(context, p, message)
         }
     }

@@ -43,6 +43,7 @@
     background: var(--tint); color: #fff; font: inherit; font-weight: 600; text-align: center;
   }
   .primary[disabled] { opacity: .6; }
+  select, input[type=search] { padding: 12px; border: 0; border-radius: 10px; background: var(--card); color: var(--label); font: inherit; max-width: 100%; }
   textarea {
     width: 100%; min-height: 110px; padding: 12px; border: 0; border-radius: 12px; resize: vertical;
     background: var(--card); color: var(--label); font: 15px/1.4 ui-monospace, Menlo, monospace;
@@ -73,6 +74,27 @@
 <h2 data-i18n="wallpaper">Home Screen Wallpaper</h2>
 <div class="chips" id="backgrounds"></div>
 
+<h2 data-i18n="liveWallpaper">Video Wallpaper</h2>
+<label class="primary"><span data-i18n="uploadWallpaper">Upload a wallpaper video · up to 4K</span><input type="file" id="wallpaperFile" accept="video/*" hidden></label>
+<p class="hint" data-i18n="liveHint"></p>
+<p class="hint" id="videoProgress" aria-live="polite"></p>
+<p class="hint" id="videoHint"></p>
+<button id="deleteVideo" data-i18n="delete" hidden>Delete</button>
+
+<h2 data-i18n="wallhavenTitle">Wallhaven · image wallpapers</h2>
+<p class="hint" data-i18n="wallhavenHint"></p>
+<p><input type="search" id="wallhavenQuery" maxlength="150" data-i18n-placeholder="wallhavenQuery" aria-label="Wallhaven keywords"></p>
+<div class="chips">
+<select id="wallhavenCategories" aria-label="Wallhaven category">
+<option value="100" data-i18n="wallhavenGeneral">General</option><option value="010" data-i18n="wallhavenAnime">Anime</option><option value="001" data-i18n="wallhavenPeople">People</option><option value="111" data-i18n="wallhavenAll">All categories</option>
+</select>
+<select id="wallhavenSorting" aria-label="Wallhaven sort">
+<option value="toplist" data-i18n="wallhavenTop">Monthly top</option><option value="random" data-i18n="wallhavenRandom">Random</option><option value="date_added" data-i18n="wallhavenLatest">Latest</option>
+</select>
+<select id="wallhavenResolution" aria-label="Wallhaven minimum resolution"><option value="3840x2160">4K · 3840 × 2160</option><option value="1920x1080">1080p · 1920 × 1080</option></select>
+</div>
+<p><button class="primary" id="wallhavenSave" data-i18n="wallhavenSave">Apply Wallhaven filters</button></p>
+
 <h2 data-i18n="saver">Screen Saver</h2>
 <div class="seg" id="saver">
   <button data-mode="photos" data-i18n="photos">Photos</button>
@@ -88,14 +110,18 @@
 </div>
 <p style="margin-top:12px"><label class="primary" id="pickIntro"><span data-i18n="uploadIntro">Upload welcome video</span><input type="file" id="introFile" accept="video/*" hidden></label></p>
 <p class="hint" id="introHint"></p>
+<button class="primary" id="defaultIntro" data-i18n="downloadIntro"></button>
+<p class="hint" data-i18n="assetHint"></p>
 <div class="seg" id="introSource" style="margin-top:12px">
-  <button data-source="video" data-i18n="introVideo">Built-in / uploaded video</button>
+  <button data-source="video" data-i18n="introVideo">Downloaded / uploaded video</button>
   <button data-source="wordmark" data-i18n="introWordmark">Tigris wordmark</button>
 </div>
 
 <h2 data-i18n="settingsBackdrop">Settings Background</h2>
 <label class="primary" id="pickBackdrop"><span data-i18n="uploadBackdrop">Upload Settings background</span><input type="file" id="backdropFile" accept="image/*" hidden></label>
 <p class="hint" id="backdropHint"></p>
+<button class="primary" id="defaultBackdrop" data-i18n="downloadBackdrop"></button>
+<p class="hint" data-i18n="assetHint"></p>
 
 <h2 id="avatar" data-i18n="avatar">Profile Picture</h2>
 <label class="primary"><span data-i18n="uploadAvatar">Upload profile picture</span><input type="file" id="avatarFile" accept="image/*" hidden></label>
@@ -134,7 +160,9 @@ function toast(msg) {
 async function post(path, data) {
   const r = await fetch(base + path, { method: 'POST', body: new URLSearchParams(data) });
   if (!r.ok) throw new Error(await r.text());
-  render(await r.json());
+  const result = await r.json();
+  render(result);
+  return result;
 }
 
 function photos(el, source, names) {
@@ -151,11 +179,19 @@ function photos(el, source, names) {
 
 function render(s) {
   state = s;
+  $('videoHint').textContent = s.wallpaperVideo ? t('videoSaved', (s.wallpaperVideo / 1048576).toFixed(1)) : t('videoEmpty');
+  $('deleteVideo').hidden = !s.wallpaperVideo;
+  for (const [id, key] of [['wallhavenQuery', 'query'], ['wallhavenCategories', 'categories'], ['wallhavenSorting', 'sorting'], ['wallhavenResolution', 'resolution']]) {
+    if (document.activeElement !== $(id)) $(id).value = s.wallhaven[key];
+  }
+  for (const [id, field, label] of [['defaultIntro', 'defaultIntro', 'downloadIntro'], ['defaultBackdrop', 'defaultBackdrop', 'downloadBackdrop']]) {
+    if (!$(id).disabled) $(id).textContent = s[field] ? t('assetRemove') : t(label);
+  }
   const bg = $('backgrounds'); bg.innerHTML = '';
   for (const o of [...s.sources, ...s.themes]) {
     const b = document.createElement('button'); b.textContent = sourceLabel(o.id, o.label);
     b.setAttribute('aria-pressed', s.background === o.id);
-    b.onclick = () => post('api/background', { id: o.id }).then(() => toast(t('changedTo', sourceLabel(o.id, o.label))));
+    b.onclick = () => post('api/background', { id: o.id }).then(() => toast(t('changedTo', sourceLabel(o.id, o.label)))).catch(err => toast(err.message));
     bg.append(b);
   }
   document.querySelectorAll('#saver button').forEach(b => {
@@ -199,6 +235,56 @@ function render(s) {
   photos($('mine'), 'mine', s.mine);
   photos($('custom'), 'custom', s.custom);
 }
+
+$('deleteVideo').onclick = () => post('api/wallpaper/video/delete', {}).then(() => toast(t('deleted'))).catch(err => toast(err.message));
+$('wallpaperFile').onchange = async e => {
+  const input = e.target;
+  const file = input.files[0]; if (!file) return;
+  if (file.size > 1073741824 || !file.size) { toast(t('videoTooLarge')); input.value = ''; return; }
+  input.disabled = true;
+  $('deleteVideo').disabled = true;
+  $('videoProgress').textContent = t('uploading');
+  try {
+    const s = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', base + 'api/wallpaper/video');
+      xhr.timeout = 1800000;
+      xhr.upload.onprogress = event => {
+        if (event.lengthComputable) $('videoProgress').textContent = t('uploading') + ' ' + Math.round(event.loaded * 100 / event.total) + '%';
+      };
+      xhr.onload = () => {
+        if (xhr.status < 200 || xhr.status >= 300) return reject(new Error(xhr.responseText || t('offline')));
+        try { resolve(JSON.parse(xhr.responseText)); } catch (err) { reject(err); }
+      };
+      xhr.onerror = xhr.ontimeout = () => reject(new Error(t('offline')));
+      xhr.send(file);
+    });
+    render(s);
+    $('videoProgress').textContent = t('videoSuccess');
+  } catch (err) { $('videoProgress').textContent = t('uploadFailed', err.message); }
+  finally { input.disabled = false; $('deleteVideo').disabled = false; input.value = ''; }
+};
+
+for (const [id, asset, field] of [['defaultIntro', 'intro', 'defaultIntro'], ['defaultBackdrop', 'backdrop', 'defaultBackdrop']]) {
+  $(id).onclick = async () => {
+    const button = $(id);
+    button.disabled = true;
+    button.textContent = t('assetWorking');
+    try { await post('api/assets', { id: asset, action: state[field] ? 'delete' : 'download' }); toast(t('assetDone')); }
+    catch (err) { toast(err.message); }
+    finally { button.disabled = false; if (state) render(state); }
+  };
+}
+$('wallhavenSave').onclick = async () => {
+  const button = $('wallhavenSave');
+  button.disabled = true;
+  button.textContent = t('assetWorking');
+  try {
+    const result = await post('api/wallhaven', { query: $('wallhavenQuery').value, categories: $('wallhavenCategories').value, sorting: $('wallhavenSorting').value, resolution: $('wallhavenResolution').value });
+    toast(result.ok ? t('saved') : t('wallhavenFailed'));
+  } catch (err) { toast(err.message); }
+  finally { button.disabled = false; button.textContent = t('wallhavenSave'); }
+};
 
 $('file').onchange = async e => {
   const files = [...e.target.files]; if (!files.length) return;

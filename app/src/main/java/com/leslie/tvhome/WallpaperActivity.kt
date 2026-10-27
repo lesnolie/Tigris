@@ -78,7 +78,7 @@ class WallpaperActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val grid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
-        val keys = listOf(VideoWallpaper.AERIAL) + Wallpapers.SOURCES + Backgrounds.THEMES.keys
+        val keys = VideoWallpaper.SOURCES + Wallpapers.SOURCES + Backgrounds.THEMES.keys
         for (row in keys.chunked(4)) {
             val r = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; clipChildren = false }
             for (k in row) {
@@ -94,7 +94,7 @@ class WallpaperActivity : Activity() {
             addView(text(30f, bold = true).apply { text = I18n.text(R.string.i18n_wallpaperactivity_001) })
             addView(text(15f, Color.argb(160, 255, 255, 255)).apply { text = I18n.text(R.string.i18n_wallpaperactivity_002) },
                 LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(8); bottomMargin = dp(22) })
-            addView(grid)
+            addView(android.widget.ScrollView(this@WallpaperActivity).apply { clipToPadding = false; addView(grid) }, LinearLayout.LayoutParams(-1, 0, 1f))
         }
         qr = ImageView(this).apply {
             background = rounded(Color.WHITE, dp(14).toFloat())
@@ -127,6 +127,7 @@ class WallpaperActivity : Activity() {
 
     override fun onStart() {
         super.onStart()
+        stopGeneration++
         stopLater.removeCallbacks(stop)
         address.text = I18n.text(R.string.i18n_wallpaperactivity_005)
         io.execute {
@@ -166,6 +167,12 @@ class WallpaperActivity : Activity() {
 
     /** Runs on [io]. */
     private fun loadPreviews() {
+        for (s in VideoWallpaper.SOURCES) {
+            main.post { cards[s]?.apply {
+                label.text = VideoWallpaper.label(s)
+                emptyText(I18n.text(if (s == VideoWallpaper.AERIAL) R.string.live_wallpaper_stream else R.string.live_wallpaper_upload))
+            } }
+        }
         for (s in Wallpapers.SOURCES) {
             val files = Wallpapers(this, s).files()
             val bmp = files.firstOrNull()?.let { BitmapFactory.decodeFile(it.path, BitmapFactory.Options().apply { inSampleSize = 8 }) }
@@ -178,14 +185,6 @@ class WallpaperActivity : Activity() {
             }
             main.post { cards[s]?.apply { image.setImageBitmap(bmp); this.label.text = label; emptyText(empty) } }
         }
-        val aerialPreview = Backgrounds.render("blue")
-        main.post {
-            cards[VideoWallpaper.AERIAL]?.apply {
-                image.setImageBitmap(aerialPreview)
-                label.text = I18n.text(R.string.live_wallpaper_aerial)
-                emptyText(null)
-            }
-        }
         for ((k, v) in Backgrounds.THEMES) {
             val bmp: Bitmap = Backgrounds.render(k)
             main.post { cards[k]?.apply { image.setImageBitmap(bmp); label.text = v.first; emptyText(null) } }
@@ -193,6 +192,10 @@ class WallpaperActivity : Activity() {
     }
 
     private fun pick(key: String) {
+        if (key == VideoWallpaper.LOCAL && MediaFiles.wallpaper(this) == null) {
+            Toast.makeText(this, I18n.text(R.string.live_wallpaper_upload), Toast.LENGTH_LONG).show()
+            return
+        }
         if (key == Wallpapers.MINE || key == Wallpapers.CUSTOM) {
             if (Wallpapers(this, key).files().isEmpty()) {
                 Toast.makeText(this, if (key == Wallpapers.MINE) I18n.text(R.string.i18n_wallpaperactivity_010) else I18n.text(R.string.i18n_wallpaperactivity_011), Toast.LENGTH_LONG).show()
@@ -210,6 +213,17 @@ class WallpaperActivity : Activity() {
 
     companion object {
         private val stopLater = Handler(Looper.getMainLooper())
-        private val stop = Runnable { Thread { PhoneServer.stop() }.start() }
+        private var stopGeneration = 0
+        private val stop: Runnable = object : Runnable {
+            override fun run() {
+                val generation = stopGeneration
+                Thread {
+                    val stopped = PhoneServer.stop()
+                    stopLater.post {
+                        if (!stopped && generation == stopGeneration) stopLater.postDelayed(this, 60_000)
+                    }
+                }.start()
+            }
+        }
     }
 }

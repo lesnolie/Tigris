@@ -1,56 +1,60 @@
-# Tigris focused improvements: installation, video glass, and 5/6 Dock
+# Tigris development integration: v2.0.11 baseline + three priorities
 
-Development branch only; no main merge, release, or production deployment.
+**Status:** development branch only. Main is the existing v2.0.11 release. Do not release, deploy, merge a PR or modify main without user approval.
 
-## Product scope
+## Baseline preservation
 
-Only two ongoing priorities: **tvOS-like appearance and interaction** and **easier installation/HOME takeover**. Vendor installation is separate from runtime vendor capabilities and brand-neutral features.
+This developer merge tree starts from the *entire* v2.0.11 main file tree and reapplies only the required improvements. It keeps:
+- original signed-release versionCode 17/versionName 2.0.11 (do not offer debug/test APK as an upgrade);
+- `MediaFiles.kt`, phone-side MP4 upload and local video wallpaper selection;
+- Wallhaven, optional wallpapers/intro media, and the current updater progress/retry UI;
+- the website's host OS / TV system selectors and the current installation mechanism;
+- Guard and Standard flavor behavior and the same package identity.
 
-## 1. Firmware-aware installation (code completed; hardware coverage pending)
+Version increments and public APK naming are release-maintainer decisions, *not* part of this integration.
 
-- `tools/installation_strategies.json` selects Sony, TCL/FFalcon, Xiaomi/Redmi, Skyworth/Coocaa, Hisense/Vidda, OPPO, XGIMI, Konka, LeTV or safe generic Android policy.
-- `tools/vendor_install_guidance.json` contains upstream case studies; only read-only information, no firmware changes authorized by that material.
-- `install.sh` classifies PackageManager install failures (TCL verifier, wrong certificate, SDK/ABI, system restrictions) and gives different next steps without uninstalling or modifying OEM components.
-- `HomeInstallGuide.kt` shows next steps from the TV's Home check screen, and links to the official installation instructions.
-- Website one-line install guide exposes the per-platform policy and has a **single** APK-only limitations notice next to download links. Standard/Guard and hardware confirmation are not conflated.
-- Existing Sony native HOME and TCL Guard/T-Cast executors remain unchanged.
-- Open work: no authorized ADB on a TV means this host cannot claim automatic Home takeover. Confirm Tcl T-Cast, physical HOME, reboot, wake, and restore with the affected user's real firmware.
+## 1. Easier installation
 
-## 2. Aerial video wallpaper glass ANR fix (code completed; full Android build/TV test pending)
+- Ten vendor-family policies are registered, including safe read-only routes for unverified firmware.
+- Host install error messages distinguish TCL verifier refusal, signing conflicts, Android/ABI limits and authorization restrictions; do not uninstall existing user data.
+- TV Settings HOME inspection offers brand-aware next-step text and a link to the installation guide, not a claim of real HOME takeover.
+- README Chinese and English, website and flavor name distinguish:
+  - **Standard**: declares HOME; first choice on Sony/stock Android TV and other firmware allowing third-party launchers.
+  - **Compatibility Guard**: declares NO HOME; use only where the firmware blocks Standard, especially affected TCL/FFalcon builds, and separately authorize Guard.
+  - Xiaomi/Redmi MIUI/HyperOS: start with Standard and test physical HOME; PatchWall may ignore it; Guard is conditional and firmware-specific.
+  - Other Android brands: safe Standard install plus diagnostics; no blanket certification.
+  - LG webOS: IPK preview only; Samsung Tizen and native VIDAA: Android APK unsupported.
+- The **published APK filenames remain** `Tigris-v2.0.11.apk` and `Tigris-guard-v2.0.11.apk`. The Android application label of the development Guard build is `Tigris · 兼容守护版` / `Tigris · Guard Mode`.
+- The website displays the **official v2.0.11 installer** separately from the *unreleased* dev-only extended vendor research. Unknown mechanisms may not be auto-solved.
 
-On this development branch, the new `VideoWallpaper.kt` integrates Apple Aerial wallpaper playback into Home. It **never calls TextureView.getBitmap**. Instead:
+## 2. Video wallpaper performance
 
-- Android `PixelCopy.request(Surface, Bitmap, callback, Handler)` enqueues a GPU snapshot with callback on a dedicated `HandlerThread`; UI input is never synchronously held for a video readback.
-- Only a 320px or 480px frame is captured at most every 1000ms or 500ms according to runtime device class.
-- An in-flight guard prevents parallel CPU glass bakes. Generation tokens discard late results after an app pause/background change.
-- Copy failure retries slowly, after repeated failures backs off to 10 seconds; a missing callback times out after 3 seconds and releases the temporary Surface.
-- On failure, the video can keep playing with cached/static glass. Wallpaper source changes cancel previous video and return to standard photo/gradient rendering.
+- Replaced synchronous `TextureView.getBitmap()` sampling with bounded `PixelCopy.request` on a dedicated callback thread.
+- Keeps local video upload (uses `MediaFiles.wallpaper(ctx)`), Apple aerial streams, and the unchanged main HomeActivity asynchronous glass bake integration.
+- Limits copy dimensions and retry frequency, guards in-flight work and stale callbacks, and releases temporary Surfaces on stop/timeout.
+- Must confirm on Android 9 Sony / low-end devices that PixelCopy succeeds with the actual SurfaceTexture producer. If unsupported it should degrade to static/cached glass without blocking UI.
+- Main Glass / ControlCenter / UpdateActivity improvements remain untouched.
 
-**Test on real TVs**: Sony Android 9 with Aerial video for at least 10 minutes; 5/6 Dock; rapid repeated D-pad/Home; control center; sleep/wake; videos unavailable; repeat after switching back to a static wallpaper. Verify no input-dispatch ANR (especially the Issue #53 trace), measure frame latency and repeat on a higher-performance TV. Source `VideoWallpaper.kt` was selectively added to this older development branch; this is **not a merge of newer main**. Feature parity with newer main (e.g. mobile upload of custom video) must be reconciled separately before a release.
+## 3. Dock 5 / 6 icons
 
-## 3. Five/six Dock (code completed; TV focus/visual test pending)
+- Optional 6 columns; default 5 remains unchanged.
+- Dock and app grid use the same column math, bottom anchoring, reorder/folder persistence and dimension-keyed tile shadow cache.
+- Returning from Settings recreates only when the chosen count changes.
 
-- Existing users retain 5 columns; six is an opt-in Home Setting and is reversible.
-- Home grid and Dock share one count, maintaining first-row icon-label hiding and D-pad column math.
-- Changing the setting recreates the Activity after returning Home, retaining the existing app order and folder preferences.
-- Dock bottom alignment and tile widths scale with the selected count; shadow bitmaps are cached per tile size.
-- Pure Kotlin smoke checked: 1920px/112px side/56px gap gives tile widths 294px (5) and 236px (6); return to 5 and async frame-generation behavior works.
+## Validation and stop conditions
 
-**Test on real TVs**: five to six and back without losing folder/order state, 1080p and 4K display metrics, both standard and Guard flavors, D-pad from Dock into second row and top-right controls, last incomplete row, app drag/reorder, focus zoom/sheens, Top Shelf, Control Center, video/static wallpaper backgrounds.
+This is **source integration**, not an Android hardware certification. In the current environment, full Gradle Android SDK and connected TV hardware cannot be run; do not report such tests as passing unless CI says so.
 
-## Verification boundary
+Check both flavors and website after branch update:
 
-The new files and reference checks are present in the development branch. Pure Kotlin geometry and frame-state smoke checks passed in a standalone Kotlin runtime.
-
-**Full Android Gradle compilation, Android lint, website build, automation against a TV, and hardware regression are not yet confirmed**. Do not call the three changes production ready until these pass. Test commands from project checkout:
-
-```sh
+```bash
 python3 -m unittest discover -s tools -p 'test_*.py' -v
 bash tools/test-install.sh
-bash ./gradlew :app:testStandardDebugUnitTest :app:testGuardDebugUnitTest
-bash ./gradlew :app:assembleStandardRelease :app:assembleGuardRelease
-bash ./gradlew :app:lintStandardRelease :app:lintGuardRelease
+bash ./gradlew testStandardDebugUnitTest testGuardDebugUnitTest assembleStandardDebug assembleGuardDebug
+bash ./gradlew lintStandardRelease lintGuardRelease
 cd website && npm ci && npm run build
 ```
 
-No device packages or firmware were modified by this task. No PR was merged and no formal build was published.
+On actual TV validate: Standard/Guard manifest flavors, install/upgrade without uninstall, physical Home, reboot, standby and cleanup; 5/6 Dock focus/reorder/folders; Aerial and uploaded local video glass; rapid D-pad and Control Center; offline/failed PixelCopy fallback. Explicitly record **untested** when no physical result is available.
+
+Do not publish APK or merge into main until tests and user authorization.

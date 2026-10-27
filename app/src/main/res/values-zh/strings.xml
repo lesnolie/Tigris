@@ -14,4 +14,5 @@
     <string name="install_home_next_permission">Tigris 不是当前默认 HOME，守护权限也未就绪。请按电视型号完成授权的 ADB 或手动安装步骤。</string>
     <string name="install_home_next_generic">该固件尚未确认 Tigris 是默认 HOME 或守护已绑定。请先使用官网安装指南和只读设备诊断，不要直接禁用原厂桌面。</string>
     <string name="install_home_guide_open">查看安装指南</string>
+    <string name="app_name_guard">Tigris · 兼容守护版</string>
 </resources>

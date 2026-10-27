@@ -14,4 +14,5 @@
     <string name="install_home_next_permission">Tigris is not the detected HOME and the required Guard permission is missing. Follow your TV model’s authorized ADB or manual setup instructions.</string>
     <string name="install_home_next_generic">This firmware does not currently report Tigris as native HOME or a connected Guard. Use the official installation guide and a read-only device diagnosis first.</string>
     <string name="install_home_guide_open">Installation guide</string>
+    <string name="app_name_guard">Tigris · Guard Mode</string>
 </resources>

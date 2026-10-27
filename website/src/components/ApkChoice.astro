@@ -1,0 +1,24 @@
+---
+import type { Locale } from "../data/lang";
+import { apkChoices } from "../data/apk-choice";
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const zh = locale === "zh";
+---
+<div class="table-wrap apk-choice reveal">
+  <h3>{zh ? "按电视系统选择安装包（正式版 v2.0.11）" : "Choose the APK by TV and firmware (official v2.0.11)"}</h3>
+  <p>{zh
+    ? "标准版文件：Tigris-v2.0.11.apk；兼容守护版文件：Tigris-guard-v2.0.11.apk。Guard 是不声明 HOME 的兼容模式，不代表全部 TCL 必须使用。"
+    : "Standard file: Tigris-v2.0.11.apk; Compatibility Guard file: Tigris-guard-v2.0.11.apk. Guard declares no HOME role and is not required by every TCL device."}</p>
+  <table>
+    <thead><tr><th>{zh ? "电视 / 系统" : "TV / system"}</th><th>{zh ? "选哪个" : "Recommended build"}</th><th>{zh ? "区别与限制" : "Why / limitations"}</th></tr></thead>
+    <tbody>{apkChoices.map(x => <tr>
+      <th scope="row">{zh ? x.zh : x.en}</th>
+      <td>{zh ? x.zhBuild : x.enBuild}</td>
+      <td>{zh ? x.zhWhy : x.enWhy}</td>
+    </tr>)}</tbody>
+  </table>
+  <p>{zh
+    ? "安装成功不等于 Home 接管。先在电视上打开另一个应用再按实体 Home，并测试重启、唤醒、清理内存。尚在开发分支的 6 图标 Dock、异步视频取帧和更多机型诊断不包含在 v2.0.11 的 APK 中。"
+    : "APK installation is not HOME takeover. Open another app, press the physical Home key and test reboot, wake and memory cleanup. The six-icon Dock, asynchronous frame capture and expanded device guidance are development-only and not part of official v2.0.11."}</p>
+</div>

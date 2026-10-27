@@ -1,5 +1,9 @@
 # Tigris
 
+> **Current official release: v2.0.11.** Standard, Compatibility Guard and LG webOS IPK are different builds. Consult the device matrix below. Development-branch improvements are not released.
+
+> **Hisense installation success (user report, 2026-10-26):** A user successfully installed Tigris on a Hisense TV using WorkBuddy. Model, OS/firmware and Tigris version were not supplied. This is an installation success case only, not certification of all Hisense/native VIDAA TVs or verification of physical Home, cold boot, wake or ad removal.
+
 > **LG webOS 测试包 / Developer preview:** [webos-v0.1.0-preview.1](https://github.com/lesnolie/Tigris/releases/tag/webos-v0.1.0-preview.1) · [IPK 安装、启动、更新和卸载 / Setup guide](https://github.com/lesnolie/Tigris/blob/main/docs/webos-preview-install.md)。已提供打包 IPK，无需自行构建；未做实机测试，不是稳定版，不接管 Home。Prebuilt IPK available; hardware untested, no Home takeover.
 
 > **Shared installation checks:** [Brand troubleshooting, USB installation and verification](docs/installation-compatibility.md). AI and manual installation use `tools/check-install.py`. Test Home before applying firmware workarounds; report untested remote Home, wake and boot as unverified.
@@ -27,11 +31,27 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 Earlier versions were tested by the maintainer on Sony BRAVIA XR-55A80J (Android TV 12). This does not constitute physical-device validation of v2.0.9. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.9 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.9)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.9/Tigris-v2.0.9.apk) · [Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.9/Tigris-guard-v2.0.9.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.9/SHA256SUMS-v2.0.9.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.11 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.11)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.11/Tigris-v2.0.11.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.11/Tigris-guard-v2.0.11.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.11/SHA256SUMS-v2.0.11.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
 ▶ [Watch the 42-second film](https://tigris-tv.pages.dev/#film) (with audio)
+
+## Which APK should I install? Check the TV OS and firmware
+
+> **Latest official release: v2.0.11.** The APK filenames remain `Tigris-v2.0.11.apk` (Standard) and `Tigris-guard-v2.0.11.apk` (Compatibility Guard). Guard describes the launcher mode: **not every TCL needs it, and it is not a universal Xiaomi workaround**. Six-icon Dock, asynchronous video sampling and expanded vendor diagnostics on this development branch **have not shipped**.
+
+| TV / platform | First choice | When to use another build | Important limits |
+|---|---|---|---|
+| Sony BRAVIA Android TV | **Standard** | Evaluate Guard only after firmware-specific HOME detection shows a real blocker | Some firmware uses a stock HOME alias or special registration |
+| Stock Android TV / Google TV, general Android boxes | **Standard** | Only assess Guard after confirming HOME selection is blocked | APK installed does not verify physical Home, boot or wake |
+| TCL / FFalcon Android TV | **Inspect first**. Use Standard when accepted; use **Compatibility Guard** on firmware that rejects launcher APKs | If `INSTALL_FAILED_VERIFICATION_FAILURE` occurs, use an official Guard package and an authorized on-TV T-Cast installation where supported | Guard declares **no HOME role**, and may need manufacturer-specific autostart and accessibility permissions |
+| Xiaomi / Redmi MIUI TV / HyperOS TV | **Try Standard first** | When PatchWall ignores HOME, diagnose the exact firmware; Guard is only a conditional workaround | Do not disable PatchWall, Settings or other essential system components |
+| Skyworth / Coocaa, Hisense / Vidda, OPPO, XGIMI, Konka, LeTV **running Android 9+** | **Standard as the safe starting point**, then inspect device firmware | Guard only for verified firmware limitations | No blanket brand-level takeover certification |
+| LG **webOS** | **No Android APK**. Separate [webOS IPK developer preview](https://github.com/lesnolie/Tigris/releases/tag/webos-v0.1.0-preview.1) | Neither Standard nor Guard | Developer Mode; hardware unverified and no HOME takeover |
+| Samsung **Tizen**, Hisense **native VIDAA** | **No supported Android APK** | Neither | Do not run Android ADB installer commands |
+
+**Verification:** After installing, open another app and press the physical Home key; check reboot, standby/wake and long-press Home cleanup separately. If Home does not return to Tigris, keep the stock launcher enabled and use the [brand install and recovery guide](docs/installation-compatibility.md). Preserve the existing APK signing identity and user data; **do not uninstall merely to bypass installation restrictions**.
 
 ## Screenshots
 
@@ -72,14 +92,6 @@ Please [open a structured TV compatibility report](https://github.com/lesnolie/T
 | 创维酷开 85P3DMAX | Android 11 | 2.0.2 / Custom fork | Installed and launched (reported) | Open | [#15](https://github.com/lesnolie/Tigris/issues/15) |
 | 雷鸟 75S545C | Android 9 | V2.0.2 / Guard | Installed and launched (reported) | Open | [#14](https://github.com/lesnolie/Tigris/issues/14) |
 <!-- TV_COMPATIBILITY_AUTO_END -->
-
-> **Installing the APK alone is not a verified HOME takeover.** Physical Home may still return to the stock
-> launcher, including after boot, wake or memory cleanup. APK-only installation does not grant ADB privileges
-> or remove firmware advertising. Open another app and press the physical Home key to test, then follow the
-> firmware-specific instructions when needed. Some TCL/FFalcon or Xiaomi/Redmi devices need a different
-> flavor and installation route. Never disable the stock launcher as an APK-install shortcut.
->
-> The development branch includes an opt-in five/six-column Dock, **not yet shipped in any official APK**.
 
 ## Install with an AI coding agent
 

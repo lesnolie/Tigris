@@ -26,7 +26,6 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
-import java.io.File
 
 /**
  * Shared tvOS aerial/local video wallpaper. Video decoding stays in the hardware
@@ -155,7 +154,7 @@ internal class VideoWallpaper(
     }
 
     fun start(source: String) {
-        val file = File(ctx.filesDir, "wallpaper-video.mp4").takeIf { it.isFile && it.length() > 0 }
+        val file = MediaFiles.wallpaper(ctx)
         val nextKey = if (source == LOCAL) "$source:${file?.lastModified()}:${file?.length()}" else source
         if (key == nextKey) return
         stop()
@@ -278,5 +277,6 @@ internal class VideoWallpaper(
         const val LOCAL = "video_local"
         const val AERIAL = "video_aerial"
         val SOURCES = listOf(LOCAL, AERIAL)
+        fun label(source: String) = I18n.text(if (source == LOCAL) R.string.live_wallpaper_local else R.string.live_wallpaper_aerial)
     }
 }

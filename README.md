@@ -1,5 +1,9 @@
 # Tigris
 
+> **当前正式版：v2.0.11。** 标准版、兼容守护版 Guard 和 LG webOS IPK 不能混用；请先看下方按机型分类的选择表。开发分支改动尚未发布。
+
+> **海信安装成功案例（用户反馈，2026-10-26）：** 用户通过 WorkBuddy 在海信电视上成功安装 Tigris。未提供型号、系统/固件及 Tigris 版本；仅收录为安装成功案例，不推断所有海信或原生 VIDAA 兼容，也不作为实体 Home、冷启动、待机唤醒或广告清理的验证结论。
+
 > **LG webOS 测试包 / Developer preview:** [webos-v0.1.0-preview.1](https://github.com/lesnolie/Tigris/releases/tag/webos-v0.1.0-preview.1) · [IPK 安装、启动、更新和卸载 / Setup guide](https://github.com/lesnolie/Tigris/blob/main/docs/webos-preview-install.md)。已提供打包 IPK，无需自行构建；未做实机测试，不是稳定版，不接管 Home。Prebuilt IPK available; hardware untested, no Home takeover.
 
 > **统一安装验收 / Shared compatibility rules:** [按品牌排查、遥控器/U 盘安装、电脑检查与四项验收](docs/installation-compatibility.md). AI 与手动安装使用同一个 `tools/check-install.py`；先验证 Home，失败才处理品牌限制。APK 安装不等于桌面接管，未测项目必须标记未验证。
@@ -26,13 +30,29 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.9 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.9)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.9/Tigris-v2.0.9.apk) · [TCL / 雷鸟守护版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.9/Tigris-guard-v2.0.9.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.9/SHA256SUMS-v2.0.9.txt)）
+- 最新正式版：**[v2.0.11 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.11)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.11/Tigris-v2.0.11.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.11/Tigris-guard-v2.0.11.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.11/SHA256SUMS-v2.0.11.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
 ▶ [观看 42 秒宣传片](https://tigris-tv.pages.dev/#film)（在官网播放，有声音）
 
 ---
+
+## 下载哪个安装包？按电视系统和固件选择
+
+> **正式版为 v2.0.11。** 安装包名称沿用 `Tigris-v2.0.11.apk`（标准版）和 `Tigris-guard-v2.0.11.apk`（兼容守护版）。名称中的 *Guard* 指运行方式，**不是所有 TCL 必装或小米通用的破解包**。当前分支的六图标 Dock、异步视频取帧与跨品牌诊断属于**尚未发布**的代码改进。
+
+| 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
+|---|---|---|---|
+| Sony BRAVIA Android TV | **标准版** | 原生 HOME 被固件阻拦，确认守护可用后才研究 Guard | 个别固件存在 HOME alias、注册提示和实体键问题 |
+| 原生 Android TV / Google TV、通用安卓盒子 | **标准版** | 真实检测发现标准 HOME 被系统拒绝时，才评估 Guard | APK 装好不代表 Home、冷启动和待机均成功 |
+| TCL / 雷鸟 / FFalcon Android | **先检测**，普通机型优先标准版；**拒绝带 HOME 的 APK 的固件用兼容守护版 Guard** | 遇 `INSTALL_FAILED_VERIFICATION_FAILURE`，用官方 Guard 包及机型允许的电视端多屏互动 / T-Cast 安装 | Guard **不声明 HOME**，需按机型授权自启动、无障碍/守护；部分固件仍无法完整接管 |
+| 小米 / Redmi（MIUI TV / HyperOS TV） | **优先尝试标准版** | 如果 PatchWall 阻止接管，先做固件诊断；Guard 仅在对应机制可用且获授权后尝试 | 不禁用 PatchWall、系统设置或其他关键组件 |
+| 创维 / 酷开、海信 / Vidda、OPPO、极米、康佳、乐视等 **Android 9+** | **标准版作为安全起点**，按真实固件诊断 | 只有证据表明该固件需要 Guard 才改用 | 各品牌/机芯差异大；无对应实机证据时不宣称 HOME 接管通过 |
+| LG **webOS** | **不能使用 Android APK**；仅提供 [webOS 独立 IPK 预览包](https://github.com/lesnolie/Tigris/releases/tag/webos-v0.1.0-preview.1) | 不适用 Guard 或标准版 | Developer Mode 安装；无实机认证，不接管 HOME |
+| Samsung **Tizen**、海信**原生 VIDAA** | **无兼容的 Android APK 安装方式** | 不适用 | 请勿执行 Android ADB 安装命令 |
+
+**如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
 
 ## 1. 展示与功能
 
@@ -79,7 +99,7 @@
 
 ## LG webOS 专区（独立平台 · 开发预览版）
 
-> **状态：** Android APK 仍不能安装到 LG webOS。仓库已新增独立 `webos/` 源码、**非 Root 模块**和**已有 Root 用户的高级模块**、天气卡片，以及面向 webOS 的构建/安装脚本。**尚无已发布的 LG 正式 IPK；尚未实机验证 HOME 键接管。** 不要将下面的源码预览安装说明误认为正式版下载。
+> **状态：** Android APK 仍不能安装到 LG webOS。仓库已新增独立 `webos/` 源码、**非 Root 模块**和**已有 Root 用户的高级模块**、天气卡片，以及面向 webOS 的构建/安装脚本。**已有独立 webOS 开发预览 IPK；尚未实机验证 HOME 键接管，不是正式稳定版。** 不要将下面的源码预览安装说明误认为正式版下载。
 
 - **无需 Root：** LG Developer Mode + Key Server 配对，安装普通 Tigris webOS 应用；应用启动、遥控器操作、Luna API 和 HDMI 输入源以实际固件权限为准。默认**不拦截 Home**，可通过电视自带 LG Quick Access 绑定数字键快速打开。
 - **已有 Root：** 可以额外检测现有 Homebrew / Root 能力；Tigris **不会 Root、刷机或静默修改系统**。系统级 Home Helper 需要独立验证与恢复功能后才可启用，目前不包含在开发预览包中。
@@ -139,13 +159,6 @@ Windows 可在 PowerShell 执行 `ares-*` 指令；一行 Shell 脚本需要 mac
 详细说明与英文版：**[LG webOS 独立安装指南](webos/README.md)** · **[AI 与 Home Helper 安全预检规范](docs/WEBOS_AI_INSTALL.md)** · **[官网 webOS 专区](https://tigris-tv.pages.dev/webos/)**。
 
 ---
-
-> **直接 APK 安装提示：** 安装成功不等于成功接管 HOME。不同固件按实体 Home 可能仍返回原厂桌面，
-> 开机/唤醒/清理内存后也可能失效；不会自动获得 ADB 权限或清理系统广告。请安装后打开其他
-> 应用，再按实体 Home 实测，失败时使用下方按品牌/固件的安装流程。TCL/雷鸟与小米等受限固件
-> 可能需要不同的包和专用步骤；不可直接停用原厂 HOME。
->
-> 开发分支新增 Dock 5/6 列可配置功能，**尚未发布为正式 APK**，不会影响当前已发布版本。
 
 ## 2. 安装指南
 

@@ -29,7 +29,16 @@ object LiquidGlass {
      * refracts; the rim itself is a thin line lit from the top left and tinted
      * by what is behind it.
      */
-    fun bake(source: Bitmap, screenW: Int, screenH: Int, rect: Rect, radius: Float, overlay: Drawable? = null): Bitmap {
+    fun bake(
+        source: Bitmap,
+        screenW: Int,
+        screenH: Int,
+        rect: Rect,
+        radius: Float,
+        overlay: Drawable? = null,
+        frostStrength: Float = 1f,
+        glassOpacity: Float = 1f,
+    ): Bitmap {
         val w = rect.width()
         val h = rect.height()
         // Match Canvas round-rect geometry for capsules, including when the requested radius exceeds half the short side.
@@ -64,6 +73,10 @@ object LiquidGlass {
         val hw = w / 2f
         val hh = h / 2f
         val rimW = 2.2f
+        val frost = frostStrength.coerceIn(0f, 1f)
+        val opacity = glassOpacity.coerceIn(0f, 1f)
+        val transmission = 1f - 0.14f * frost
+        val lift = 30f * frost
         for (j in 0 until h) {
             val py = j + 0.5f
             for (i in 0 until w) {
@@ -95,7 +108,7 @@ object LiquidGlass {
                 // A little milky and a little more saturated than what is behind.
                 val luma = r * 0.3f + g * 0.59f + b * 0.11f
                 r = luma + (r - luma) * 1.2f; g = luma + (g - luma) * 1.2f; b = luma + (b - luma) * 1.2f
-                r = r * 0.86f + 30f; g = g * 0.86f + 30f; b = b * 0.86f + 30f
+                r = r * transmission + lift; g = g * transmission + lift; b = b * transmission + lift
 
                 // Specular rim: strongest where it faces the light (top left), a softer
                 // reflection on the opposite side, tinted by the colour behind it.
@@ -110,7 +123,7 @@ object LiquidGlass {
                     val k = (1f - depth / zone) * 0.16f * max(facing, 0f)
                     r += (255f - r) * k; g += (255f - g) * k; b += (255f - b) * k
                 }
-                out[j * w + i] = Color.argb((a * 255).toInt(), clamp(r), clamp(g), clamp(b))
+                out[j * w + i] = Color.argb((a * opacity * 255).toInt(), clamp(r), clamp(g), clamp(b))
             }
         }
         return Bitmap.createBitmap(out, w, h, Bitmap.Config.ARGB_8888)

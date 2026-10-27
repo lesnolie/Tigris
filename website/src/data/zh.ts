@@ -126,12 +126,12 @@ export const zh = {
       packages: [
         {
           name: "标准版 APK",
-          use: "索尼 BRAVIA、原生 Android TV / Google TV、小米 / Redmi、海信等大多数电视。在 Releases 页面选择 Tigris-vX.Y.Z.apk。",
+          use: "Android 9+ 首先尝试：Sony BRAVIA、原生 Android TV / Google TV、小米 / Redmi 及可运行 Android 的其他电视。文件 Tigris-vX.Y.Z.apk；成功安装不代表实体 Home 已接管。",
           href: brand.apk,
         },
         {
-          name: "守护版 APK",
-          use: "不声明桌面，供 TCL / 雷鸟等拒绝安装桌面 APK 的固件。在 Releases 页面选择 Tigris-guard-vX.Y.Z.apk，并通过「多屏互动」推送。",
+          name: "兼容守护版（Guard）APK",
+          use: "主要针对 TCL / 雷鸟等拒绝标准 HOME APK 的 Android 固件；不声明 HOME，安装后需授权守护。文件仍是 Tigris-guard-vX.Y.Z.apk，部分 TCL 需用电视「多屏互动」推送。不是所有 TCL 都必须使用。",
           href: brand.apkGuard,
         },
       ],
@@ -339,9 +339,9 @@ adb -s 192.168.x.x:5555 shell appops set com.leslie.tvhome SYSTEM_ALERT_WINDOW a
       },
       agent: {
         title: "让 AI 帮你安装（推荐）",
-        body: "不熟悉命令行也可以：把下面这句话连同仓库链接发给 Codex、Claude Code 这类能执行命令的 Agent，它会先确认品牌和 IP，再按 AGENTS.md 安装、验证，并保留原桌面的恢复方案。",
+        body: "不熟悉命令行也可以：把下面这句话发给 WorkBuddy、Codex、Claude Code 等能在电脑执行命令的 Agent。它应先确认电视系统与 IP，再读取统一策略、安装验收，并保留恢复方案。",
         prompt:
-          "请帮我把开源电视桌面 Tigris 装到我的电视，并设为开机进入的桌面。\n电视 IP：<电视IP>\n保持 ADB 常开：要\n\n请先完整阅读 https://tigris-tv.pages.dev/agent.md（备用：https://raw.githubusercontent.com/lesnolie/Tigris/main/AGENTS.md），再在我的电脑上亲自运行命令。需要电视端操作时提醒我。保留现有配置，不要自动卸载。\n最后贴出以下命令的原始输出：\n- adb shell \"cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME\"\n- adb shell settings get secure enabled_accessibility_services\n- 按主页键后 adb shell \"dumpsys window | grep mCurrentFocus\"",
+          "请帮我安装 Tigris。电视 IP：<电视IP>。先阅读 https://tigris-tv.pages.dev/agent.md（备用：https://raw.githubusercontent.com/lesnolie/Tigris/main/AGENTS.md）。先确认电视是 Android、webOS 还是其他系统；非 Android 不执行 ADB/APK。Android 使用 v2.0.9 或更新源码中的 tools/install-plan.py 先检测，再按统一策略执行安装。保留已有配置、安装包类型和原桌面，不自动卸载、禁用系统组件或开启保持 ADB。需要电视端授权时提醒我。分别报告 APK 安装、模拟 Home、实体 Home、开机、待机和恢复结果；未测项目写未验证，不承诺去广告。",
         note: "过程中电视会弹出两三次确认框，需要你用遥控器选择「允许」。TCL 上会弹出「多屏互动：正在发起应用推送」，选择「同意」即可。",
       },
       safety:

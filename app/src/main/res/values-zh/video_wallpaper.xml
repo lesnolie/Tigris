@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="live_wallpaper_aerial">Apple 航拍 · 4K</string>
-    <string name="live_wallpaper_failed">视频暂时无法播放，已显示静态背景；请检查网络或视频格式</string>
-</resources>

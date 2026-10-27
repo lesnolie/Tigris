@@ -82,16 +82,44 @@ class Wallpapers(private val ctx: Context, private val source: String = BING) {
      * Blocking; reads the source's list again if it is older than ~a day, and downloads one picture
      * if there is none yet, so a newly picked source shows something straight away.
      */
-    fun refresh(force: Boolean = false) {
-        if (source == MINE) return
-        // One at a time per source: the home screen, the frame and the phone page may all ask.
+    fun refresh(force: Boolean = false): Boolean {
+        if (source == MINE) return true
+        var ok = true
         synchronized(lock) {
             val q = readQueue()
-            if (force || q == null || System.currentTimeMillis() - q.optLong("made") > 20 * 3_600_000L) {
-                runCatching { queueFile.writeText(list().toString()) }.onFailure { Log.w("Wallpapers", "list failed", it) }
+            val signature = if (source == WALLHAVEN) wallhavenUrl() else ""
+            if (force || q == null || q.optString("query") != signature || System.currentTimeMillis() - q.optLong("made") > 20 * 3_600_000L) {
+                val now = System.currentTimeMillis()
+                // Bound failed or repeated manual API requests; cached photos remain usable.
+                if (source == WALLHAVEN && now - (ATTEMPTS[source] ?: 0L) < 60_000) ok = false
+                else {
+                    ATTEMPTS[source] = now
+                    ok = runCatching {
+                        val next = list().put("query", signature)
+                        if (source == WALLHAVEN) check(next.getJSONArray("items").length() > 0) { "No matching wallpapers" }
+                        queueFile.writeText(next.toString())
+                    }.onFailure { Log.w("Wallpapers", "list failed", it) }.isSuccess
+                }
             }
         }
         if (files().isEmpty()) download()
+        return ok
+    }
+
+    private fun wallhavenUrl(): String = Prefs(ctx).let {
+        WallhavenApi.search(it.wallhavenQuery, it.wallhavenCategories, it.wallhavenSorting, it.wallhavenResolution)
+    }
+
+    private fun listWallhaven(items: JSONArray) {
+        val data = JSONObject(get(wallhavenUrl()).decodeToString()).getJSONArray("data")
+        for (i in 0 until data.length()) {
+            val item = data.getJSONObject(i)
+            val url = item.optString("path")
+            val id = item.optString("id")
+            if (item.optString("purity") != "sfw" || item.optLong("file_size") > MAX_DOWNLOAD ||
+                !url.startsWith("https://w.wallhaven.cc/") || !id.matches(Regex("[a-z0-9]{6}"))) continue
+            items.put(item(url, "Wallhaven · https://wallhaven.cc/w/$id").put("name", "wh-$id.jpg"))
+        }
     }
 
     private fun readQueue(): JSONObject? = runCatching { JSONObject(queueFile.readText()) }.getOrNull()
@@ -101,6 +129,7 @@ class Wallpapers(private val ctx: Context, private val source: String = BING) {
         val items = JSONArray()
         when (source) {
             BING -> listBing(items)
+            WALLHAVEN -> listWallhaven(items)
             ANIME -> if (runCatching { listAnime(items, day) }.onFailure { Log.w("Wallpapers", "wallhaven", it) }.isFailure ||
                 items.length() == 0) listLinks(feeds(ANIME_BACKUP, day), items)
             CUSTOM -> listLinks(Prefs(ctx).customWallUrls.lines(), items)
@@ -257,16 +286,27 @@ class Wallpapers(private val ctx: Context, private val source: String = BING) {
             c.readTimeout = 15000
             c.instanceFollowRedirects = false
             c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 12) Tigris")
-            val code = c.responseCode
-            if (code in 300..399) {
-                u = URL(URL(u), c.getHeaderField("Location") ?: error("redirect without Location")).toString()
-                c.disconnect()
-                return@repeat
-            }
-            if (code !in 200..299) error("HTTP $code")
-            if (c.contentLengthLong > MAX_DOWNLOAD) error("too large")
-            val bytes = c.inputStream.use { it.readBytes() }
-            return bytes to c.contentType
+            try {
+                val code = c.responseCode
+                if (code in 300..399) {
+                    u = URL(URL(u), c.getHeaderField("Location") ?: error("redirect without Location")).toString()
+                    return@repeat
+                }
+                if (code !in 200..299) error("HTTP $code")
+                if (c.contentLengthLong > MAX_DOWNLOAD) error("too large")
+                val bytes = c.inputStream.use { input ->
+                    val output = java.io.ByteArrayOutputStream()
+                    val buffer = ByteArray(8192)
+                    while (true) {
+                        val n = input.read(buffer)
+                        if (n < 0) break
+                        check(output.size().toLong() + n <= MAX_DOWNLOAD) { "too large" }
+                        output.write(buffer, 0, n)
+                    }
+                    output.toByteArray()
+                }
+                return bytes to c.contentType
+            } finally { c.disconnect() }
         }
         error("too many redirects")
     }
@@ -387,8 +427,9 @@ class Wallpapers(private val ctx: Context, private val source: String = BING) {
         const val SCENERY = "scenery"
         const val FRESH = "fresh"
         const val ART = "art"
+        const val WALLHAVEN = "wallhaven"
         private const val ANIME_BACKUP = "anime-backup"
-        val SOURCES = listOf(BING, SCENERY, FRESH, ANIME, ART, MINE, CUSTOM)
+        val SOURCES = listOf(BING, SCENERY, FRESH, ANIME, ART, WALLHAVEN, MINE, CUSTOM)
 
         /** Hosts to the captions the photo frame shows under their pictures. */
         private val CAPTIONS get() = mapOf("360.cn" to I18n.text(R.string.i18n_wallpapers_001), "wallhaven.cc" to "Wallhaven", "alcy.cc" to I18n.text(R.string.i18n_wallpapers_002),
@@ -423,12 +464,14 @@ class Wallpapers(private val ctx: Context, private val source: String = BING) {
         fun trimExcept(ctx: Context, keep: String) {
             for (s in SOURCES) if (s != keep && s != MINE && s != CUSTOM) Wallpapers(ctx, s).files().drop(1).forEach { it.delete() }
         }
+        private val ATTEMPTS = java.util.concurrent.ConcurrentHashMap<String, Long>()
         private val LOCKS = java.util.concurrent.ConcurrentHashMap<String, Any>()
         private const val PER_LINK = 6
         private const val MAX_DOWNLOAD = 15L * 1024 * 1024
         private val IMAGE_URL = Regex("""https?://[^\s"'<>()\\]+?\.(?:jpe?g|png|webp)(?:\?[^\s"'<>()\\]*)?""", RegexOption.IGNORE_CASE)
 
         fun label(source: String) = when (source) {
+            WALLHAVEN -> "Wallhaven"
             ANIME -> I18n.text(R.string.i18n_wallpapers_004)
             SCENERY -> I18n.text(R.string.i18n_wallpapers_005)
             FRESH -> I18n.text(R.string.i18n_wallpapers_006)

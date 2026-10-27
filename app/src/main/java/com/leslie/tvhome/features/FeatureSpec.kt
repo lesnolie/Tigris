@@ -50,5 +50,12 @@ object Features {
         lifecycle = "ControlCenter reads adapter off the UI thread; owner releases views",
         testMethod = "Both-flavor build; physical input switch and return HOME",
     )
-    val all = listOf(weather, liquidGlass, dock, hdmi)
+    val videoWallpaper = FeatureSpec(
+        id = "video-wallpaper", name = "Video wallpaper", purpose = "Uploaded 4K video or Apple aerial home background",
+        capabilities = emptySet(), settings = setOf("background"), defaultEnabled = false,
+        permissions = setOf("android.permission.INTERNET"), fallback = "Static graphite backdrop on missing video/network/decoder error",
+        lifecycle = "HomeActivity releases playback on pause, screen off, intro and destroy; no background service",
+        testMethod = "Transfer tests, both-flavor builds; hardware 4K playback, pause/wake, crop, upload failure and offline fallback",
+    )
+    val all = listOf(weather, liquidGlass, dock, hdmi, videoWallpaper)
 }
