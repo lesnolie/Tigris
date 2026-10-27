@@ -104,6 +104,12 @@ class UpdateActivity : Activity() {
         if (!::options.isInitialized) return
         options.post {
             if (isFinishing || isDestroyed) return@post
+            // Header / footer actions are outside the scrolling card list.
+            var ancestor: View? = view
+            while (ancestor != null && ancestor !== column) {
+                ancestor = ancestor.parent as? View
+            }
+            if (ancestor !== column) return@post
             val rect = Rect(0, 0, view.width, view.height)
             column.offsetDescendantRectToMyCoords(view, rect)
             val edge = dp(14)
@@ -388,9 +394,8 @@ class UpdateActivity : Activity() {
         Thread {
             val prefs = Prefs(this)
             val photo = if (Wallpapers.isPhoto(prefs.background)) {
-                Wallpapers(this, Wallpapers.sourceFor(prefs.background)).let {
-                    it.current()?.let(it::forHome)
-                }
+                val walls = Wallpapers(this, Wallpapers.sourceFor(prefs.background))
+                walls.current()?.let { walls.forHome(it) }
             } else null
             val source = photo ?: Backgrounds.render(
                 if (Wallpapers.isPhoto(prefs.background)) "green" else prefs.background
