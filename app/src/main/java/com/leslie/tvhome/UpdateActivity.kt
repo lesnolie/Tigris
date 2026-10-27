@@ -146,6 +146,10 @@ class UpdateActivity : Activity() {
             text = I18n.text(R.string.i18n_updateactivity_006)
             setPadding(0, dp(24), 0, 0)
         })
+        info.addView(text(15f, Color.argb(215,255,255,255)).apply {
+            text = I18n.text(R.string.optional_apps_help)
+            setPadding(0, dp(20), 0, 0)
+        })
         content.addView(info, LinearLayout.LayoutParams(0, -2, 0.46f).apply { marginEnd = dp(36) })
         column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; clipChildren = false; clipToPadding = false
@@ -195,19 +199,7 @@ class UpdateActivity : Activity() {
             runCatching { startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))) }
                 .onFailure { Toast.makeText(this, I18n.text(R.string.i18n_updateactivity_012), Toast.LENGTH_LONG).show() }
         }
-        var optionalHeadingAdded = false
         for (p in Updates.products) {
-            if (p.optional && !optionalHeadingAdded) {
-                optionalHeadingAdded = true
-                column.addView(text(19f, weight = 600).apply {
-                    text = I18n.text(R.string.optional_apps_section)
-                    setPadding(dp(10), dp(14), dp(10), dp(4))
-                })
-                column.addView(text(14f, Color.argb(204, 255, 255, 255)).apply {
-                    text = I18n.text(R.string.optional_apps_help)
-                    setPadding(dp(10), dp(4), dp(10), dp(16))
-                })
-            }
             button(I18n.text(R.string.i18n_updateactivity_013, p.name)) { work {
                 if (Updates.installed(applicationContext, p) == null) {
                     // The third-party APK is never fetched until the user presses this button.
