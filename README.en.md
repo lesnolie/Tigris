@@ -73,6 +73,14 @@ Please [open a structured TV compatibility report](https://github.com/lesnolie/T
 | 雷鸟 75S545C | Android 9 | V2.0.2 / Guard | Installed and launched (reported) | Open | [#14](https://github.com/lesnolie/Tigris/issues/14) |
 <!-- TV_COMPATIBILITY_AUTO_END -->
 
+> **Installing the APK alone is not a verified HOME takeover.** Physical Home may still return to the stock
+> launcher, including after boot, wake or memory cleanup. APK-only installation does not grant ADB privileges
+> or remove firmware advertising. Open another app and press the physical Home key to test, then follow the
+> firmware-specific instructions when needed. Some TCL/FFalcon or Xiaomi/Redmi devices need a different
+> flavor and installation route. Never disable the stock launcher as an APK-install shortcut.
+>
+> The development branch includes an opt-in five/six-column Dock, **not yet shipped in any official APK**.
+
 ## Install with an AI coding agent
 
 You can also **install manually** using the APKs above. An agent is optional; it can help with ADB setup, default-home selection and vendor-specific features.
