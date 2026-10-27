@@ -30,7 +30,12 @@ class VendorGuidanceTests(unittest.TestCase):
             ("Sony", "sony-native", "legacy"),
             ("TCL", "tcl-compatible", "legacy"),
             ("Xiaomi", "xiaomi-diagnostic", "apk-only"),
-            ("Skyworth", "generic-android", "apk-only"),
+            ("Skyworth", "coocaa-diagnostic", "apk-only"),
+            ("Hisense", "hisense-android-diagnostic", "apk-only"),
+            ("OPPO", "oppo-diagnostic", "apk-only"),
+            ("XGIMI", "xgimi-diagnostic", "apk-only"),
+            ("Konka", "konka-diagnostic", "apk-only"),
+            ("LeEco", "letv-diagnostic", "apk-only"),
         ]:
             plan = select(self.sample(brand))
             self.assertEqual(plan["strategy"]["id"], ident)
