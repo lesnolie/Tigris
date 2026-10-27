@@ -25,7 +25,10 @@ class UpdateActivity : Activity() {
     private val progressBars = mutableMapOf<String, ProgressBar>()
     private val launchButtons = mutableMapOf<String, TextView>()
     private val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
-        if (!isDestroyed && ::status.isInitialized) renderStatus()
+        // Installer progress is written from a worker; never update TV focus/UI off the main thread.
+        runOnUiThread {
+            if (!isFinishing && !isDestroyed && ::status.isInitialized) renderStatus()
+        }
     }
     private val surfaces = mutableListOf<FrostGlass>()
     override fun onCreate(state: Bundle?) { super.onCreate(state); show() }
