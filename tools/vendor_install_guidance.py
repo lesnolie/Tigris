@@ -44,6 +44,17 @@ def guidance_for(device):
         return {"status": "identity_conflict", "paths": sorted(row["path"] for row in choices),
                 "read_only": True, "hardware_verified": False, "mutations": []}
     chosen = choices[0] if choices else next(row for row in rows if row["id"] == "generic")
+    matching_examples = []
+    for example in chosen.get("examples", []):
+        expected = example.get("match", {})
+        if expected and all(
+            str(device.get(field, "")).strip().casefold() == str(value).strip().casefold()
+            for field, value in expected.items()
+        ):
+            matching_examples.append({
+                "id": example["id"], "summary": example["summary"],
+                "source": example["source"], "evidence": "upstream_sample_only",
+            })
     # Diagnostic signals are based on sample reports, not proof the current TV
     # has the same firmware policy. Do not implicitly execute vendor commands.
     return {
@@ -54,6 +65,7 @@ def guidance_for(device):
         "inspect_before_any_change": chosen["inspect"],
         "safe_fallback": chosen["fallback"],
         "sources": chosen["upstream"],
+        "matching_upstream_examples": matching_examples,
         "read_only": True,
         "hardware_verified": False,
         "mutations": [],
