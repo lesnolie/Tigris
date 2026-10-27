@@ -2,7 +2,10 @@
 
 ## Module development boundaries / 模块开发边界
 
-Read [the bilingual module guide](docs/modules.md) before extending modules.
+Read [the bilingual module guide](docs/modules.md) and the
+[cross-vendor Aerial installation study](docs/aerial-cross-vendor-install-study.md)
+before extending installation strategies. Third-party sample behavior is diagnostic
+evidence only, not permission to change the user's firmware.
 Host installation belongs in `tools/` and `install.sh`; TV capabilities belong in
 `tv/TvControls.kt` and `TvAdapter`; shared features belong in the runtime, never in
 brand installers. Preserve existing preference keys, visuals, Sony native HOME and
