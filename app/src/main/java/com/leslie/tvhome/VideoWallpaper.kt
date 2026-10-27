@@ -69,6 +69,7 @@ internal class VideoWallpaper(
     private var aspect = 16f / 9f
     private var captureGeneration = 0L
     private var pendingCapture = false
+    private var captureStartedAt = 0L
     private var failedCopies = 0
     private var nextCaptureAt = 0L
     private val lowEnd by lazy { Device.isLowEnd(ctx) }
@@ -78,6 +79,13 @@ internal class VideoWallpaper(
         override fun run() {
             if (player == null) return
             val now = SystemClock.uptimeMillis()
+            // Vendor PixelCopy can swallow callbacks. Never hold the busy flag forever.
+            if (pendingCapture && now - captureStartedAt > 3_000L) {
+                captureGeneration++
+                pendingCapture = false
+                failedCopies++
+                nextCaptureAt = now + 5_000L
+            }
             if (!pendingCapture && now >= nextCaptureAt && texture.alpha > 0f &&
                 texture.isAvailable && canSample() && texture.width > 0 && texture.height > 0
             ) {
@@ -99,9 +107,13 @@ internal class VideoWallpaper(
         val width = minOf(if (lowEnd) 320 else 480, texture.width)
         val height = (width.toLong() * texture.height / texture.width).toInt().coerceAtLeast(1)
         val bitmap = runCatching { Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888) }
-            .getOrNull() ?: return
+            .getOrNull() ?: run {
+                nextCaptureAt = now + 10_000L
+                return
+            }
         val generation = captureGeneration
         pendingCapture = true
+        captureStartedAt = now
         nextCaptureAt = now + if (lowEnd) 1_000L else 500L
         val surface = Surface(surfaceTexture)
         try {
