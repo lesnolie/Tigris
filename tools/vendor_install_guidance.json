@@ -48,6 +48,32 @@
         "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/tcl-mt5879-cn.md",
         "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/tcl-m7221-cn.md",
         "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/tcl-mt9655-cn.md"
+      ],
+      "examples": [
+        {
+          "id": "tcl-mt5879-example",
+          "match": {
+            "board_platform": "mt5879"
+          },
+          "summary": "Aerial reported verifier-based APK restriction and TCL autostart AppOps on one MT5879 line",
+          "source": "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/tcl-mt5879-cn.md"
+        },
+        {
+          "id": "tcl-m7221-example",
+          "match": {
+            "board_platform": "m7221"
+          },
+          "summary": "Aerial reported a separate boot launcher property on Android 8; Tigris Android 9 minimum still applies",
+          "source": "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/tcl-m7221-cn.md"
+        },
+        {
+          "id": "tcl-mt9655-example",
+          "match": {
+            "board_platform": "mt9655"
+          },
+          "summary": "Aerial reported TLS-only ADB access and device-side Guard install without HOME authorization",
+          "source": "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/tcl-mt9655-cn.md"
+        }
       ]
     },
     {
@@ -73,6 +99,24 @@
         "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/xiaomi-mitv-mftr0.md",
         "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/xiaomi-mitv-mftp0.md",
         "https://github.com/wangrongding/tv-fresh"
+      ],
+      "examples": [
+        {
+          "id": "xiaomi-mftr0-example",
+          "match": {
+            "model": "MiTV-MFTR0"
+          },
+          "summary": "Aerial reported PatchWall allowlist and standby process stops; inspect, do not generalize to other firmware",
+          "source": "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/xiaomi-mitv-mftr0.md"
+        },
+        {
+          "id": "xiaomi-mftp0-example",
+          "match": {
+            "model": "MiTV-MFTP0"
+          },
+          "summary": "Aerial reported a low-RAM Android 9 listener limitation; observed model does not prove current listener status",
+          "source": "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/xiaomi-mitv-mftp0.md"
+        }
       ]
     },
     {
@@ -119,6 +163,16 @@
       "fallback": "APK-only and inspect first. A firmware-scoped property trial requires a fresh permission and exact-value rollback, never execute from a brand match.",
       "upstream": [
         "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/hisense-vidaa.md"
+      ],
+      "examples": [
+        {
+          "id": "hisense-vidaa-android-example",
+          "match": {
+            "model": "VIDAA_TV"
+          },
+          "summary": "Some Android-based VIDAA_TV builds expose a distinct HOME-routing system property",
+          "source": "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/hisense-vidaa.md"
+        }
       ]
     },
     {
@@ -140,6 +194,16 @@
       "fallback": "APK-only safe path and explicit limitations. Never spoof a system/other app package name or disable stock HOME automatically.",
       "upstream": [
         "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/oppo-coloros-tv.md"
+      ],
+      "examples": [
+        {
+          "id": "oppo-coloros-k9-example",
+          "match": {
+            "product_name": "OPPOCNM652"
+          },
+          "summary": "Aerial reported restricted launcher identity and vendor HOME category on this ColorOS TV family",
+          "source": "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/oppo-coloros-tv.md"
+        }
       ]
     },
     {
