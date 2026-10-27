@@ -67,6 +67,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private lateinit var scene: FrameLayout
     private lateinit var backdrop: FrameLayout
     private lateinit var bg: ImageView
+    private lateinit var videoWallpaper: VideoWallpaper
+    private val videoGlassFrames = VideoGlassFrames()
     private lateinit var header: FrameLayout
     private lateinit var weatherCard: TextView
     private var weatherLoading = false
@@ -280,6 +282,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         control.destroy()
         intro?.finish()
         runCatching { unregisterReceiver(screenOn) }
+        videoWallpaper.destroy()
+        videoGlassFrames.invalidate()
         io.shutdown()
         net.shutdown()
         super.onDestroy()
@@ -296,6 +300,12 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         scene.addView(backdrop, match())
         bg = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
         backdrop.addView(bg, match())
+        videoWallpaper = VideoWallpaper(this, backdrop,
+            canSample = {
+                resumed && prefs.background in VideoWallpaper.SOURCES &&
+                    !shelfShown && !control.isOpen && !videoGlassFrames.busy
+            },
+            onFrame = ::onVideoFrame)
 
         val dm = resources.displayMetrics
         sw = dm.widthPixels
@@ -522,6 +532,11 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val key = if (Wallpapers.isPhoto(theme)) "$theme:${photo?.name}" else theme
         if (key == shownBackground) return
         shownBackground = key
+        if (theme in VideoWallpaper.SOURCES) {
+            videoWallpaper.start(theme)
+            return
+        }
+        videoWallpaper.stop()
         io.execute {
             val bmp = photo?.let { Wallpapers(this, Wallpapers.sourceFor(theme)).forHome(it) } ?: Backgrounds.render(if (Wallpapers.isPhoto(theme)) "green" else theme)
             val glass = LiquidGlass.bake(bmp, sw, sh, dockRect, dockRadius).also { it.prepareToDraw() }
@@ -550,6 +565,34 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                 }
                 bgPhoto = next
                 root.postDelayed({ if (!isDestroyed) control.refreshGlass() }, 1250)
+            }
+        }
+    }
+
+    /** CPU glass work is off the UI thread; late frames can never replace another wallpaper. */
+    private fun onVideoFrame(bitmap: Bitmap?) {
+        if (bitmap == null) {
+            videoGlassFrames.invalidate()
+            return
+        }
+        val ticket = videoGlassFrames.begin() ?: return
+        net.execute {
+            val output = runCatching {
+                val glass = LiquidGlass.bake(bitmap, sw, sh, dockRect, dockRadius)
+                    .also { it.prepareToDraw() }
+                val blurred = Wallpapers.blurred(bitmap, darken = 0.22f)
+                glass to blurred
+            }.getOrNull()
+            main.post {
+                val latest = videoGlassFrames.finish(ticket)
+                if (latest && output != null && !isDestroyed && resumed &&
+                    prefs.background in VideoWallpaper.SOURCES
+                ) {
+                    homeDock = output.first
+                    scrollGlass.texture(output.second)
+                    if (!shelfShown) setDock(output.first, 250)
+                    if (control.isOpen) control.refreshGlass()
+                }
             }
         }
     }
@@ -715,7 +758,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     /** An opaque wallpaper base prevents transitional scene alpha from baking black into glass. */
     fun drawGlassScene(canvas: Canvas): Boolean {
-        val bitmap = (bgPhoto as? BitmapDrawable)?.bitmap ?: return false
+        val bitmap = videoWallpaper.frame ?: (bgPhoto as? BitmapDrawable)?.bitmap ?: return false
         val scale = maxOf(scene.width.toFloat() / bitmap.width, scene.height.toFloat() / bitmap.height)
         val left = (scene.width - bitmap.width * scale) / 2f
         val top = (scene.height - bitmap.height * scale) / 2f
@@ -1135,6 +1178,10 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         intro?.finish()
         if (!getSystemService(android.os.PowerManager::class.java).isInteractive) armWakeIntro()
         resumed = false
+        if (prefs.background in VideoWallpaper.SOURCES) {
+            videoWallpaper.stop()
+            shownBackground = null
+        }
         prefs.homeInFront = false
         main.removeCallbacks(idleFrame)
         main.removeCallbacks(ticker)
