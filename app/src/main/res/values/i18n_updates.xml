@@ -20,7 +20,7 @@
     <string name="i18n_updates_018" formatted="false">No newer version, nothing to install</string>
     <string name="i18n_updates_019" formatted="false">Package signature missing</string>
     <string name="i18n_updates_020" formatted="false">Different signature: can\'t upgrade keeping settings; the old version was not uninstalled</string>
-    <string name="i18n_updates_021" formatted="false">Untrusted casting signature</string>
+    <string name="i18n_updates_021" formatted="false">Untrusted optional app signature</string>
     <string name="i18n_updates_022" formatted="false">Install submitted; you may need to confirm on the TV</string>
     <string name="i18n_updates_023" formatted="false">Software update</string>
     <string name="i18n_updates_024" formatted="false">Update failed</string>
