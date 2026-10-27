@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="optional_hgtv_name">HGTV short dramas</string>
+    <string name="optional_apps_help">Optional TV apps · MiracastReceiver (casting) and HGTV (short dramas) are separate third-party applications. Nothing is downloaded or installed until you select Install. Installed apps appear in your app grid and can be placed in the Dock. Automatic updates apply only to apps already installed.</string>
+    <string name="optional_app_open">Open %1$s</string>
+    <string name="optional_app_not_installed">This app is not installed yet</string>
+    <string name="optional_missing_digest">The third-party APK is missing a verified SHA-256 release digest. Installation was stopped.</string>
+</resources>
