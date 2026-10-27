@@ -5,4 +5,6 @@
     <string name="wallpaper_name">Wallpaper</string>
     <string name="guard_name">Home Screen Guardian</string>
     <string name="guard_description">Brings the home screen back when the built-in launcher takes over. Only checks which app is in front; it does not read screen content.</string>
+    <string name="dock_columns_title">Dock icons per row</string>
+    <string name="dock_columns_description">Choose 5 or 6 icons in the Dock. The app grid uses the same column count. Applies when you return Home.</string>
 </resources>
