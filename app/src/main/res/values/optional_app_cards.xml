@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="optional_apps_subtitle">Only install what you choose. Your apps, your Dock.</string>
+    <string name="optional_category_home">Home screen · Tigris</string>
+    <string name="optional_category_cast">Screen casting · optional</string>
+    <string name="optional_category_drama">Short dramas · optional</string>
+    <string name="optional_status_not_installed">Not installed · get when you want</string>
+    <string name="optional_action_get">Get</string>
+    <string name="optional_action_open">Open</string>
+    <string name="optional_action_update">Update</string>
+    <string name="optional_action_current">Up to date</string>
+    <string name="optional_action_downloading">Downloading</string>
+    <string name="optional_action_verifying">Installing…</string>
+    <string name="optional_action_waiting">Installing…</string>
+    <string name="optional_action_confirm">Continue</string>
+    <string name="optional_action_retry">Retry</string>
+    <string name="optional_auto_update">Auto-update installed apps</string>
+</resources>
