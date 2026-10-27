@@ -16,10 +16,12 @@ import java.util.concurrent.Executors
 
 /** Checks official stable releases; APK identity and signature are verified before installation. */
 object Updates {
-    data class Product(val name: String, val repo: String, val pkg: String)
-    val products get() = listOf(Product(I18n.text(R.string.i18n_updates_001), "lesnolie/Tigris", "com.leslie.tvhome"),
-        Product(I18n.text(R.string.i18n_updates_002), "weekdayjast/MiracastReceiver", "com.weekd.miracastreceiver"))
-    private const val MIRACAST_CERT = "ea7f4568203d294bd37acac966d6d707f79147549d24c2244f58a6fbc27a6291"
+    data class Product(val name: String, val repo: String, val pkg: String, val optional: Boolean = false)
+    val products get() = listOf(
+        Product(I18n.text(R.string.i18n_updates_001), "lesnolie/Tigris", "com.leslie.tvhome"),
+        Product(I18n.text(R.string.i18n_updates_002), "weekdayjast/MiracastReceiver", OptionalAppPolicy.MIRACAST_PKG, true),
+        Product(I18n.text(R.string.optional_hgtv_name), "pan8664716/HGTV", OptionalAppPolicy.HGTV_PKG, true)
+    )
     val executor = Executors.newSingleThreadExecutor()
     private const val CHANNEL = "software_updates"
     private val transferring = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
@@ -79,7 +81,8 @@ object Updates {
                 val preferred = ReleaseAssetNames.select(version, !home, items.map { it.getString("name") })
                 items.firstOrNull { it.getString("name") == preferred }
             } else {
-                items.firstOrNull { it.getString("name").endsWith("-universal.apk") }
+                val selected = OptionalAppPolicy.selectApk(p.pkg, version, items.map { it.getString("name") })
+                items.firstOrNull { it.getString("name") == selected }
             } ?: error(I18n.text(R.string.i18n_updates_003))
             val url = asset.getString("browser_download_url")
             check(url.startsWith("https://github.com/${p.repo}/releases/download/"))
@@ -123,6 +126,8 @@ object Updates {
         }
         sp.edit().remove(p.pkg + ".session").remove(p.pkg + ".confirmation").apply()
         check(sp.getBoolean(p.pkg + ".available", false)) { I18n.text(R.string.i18n_updates_010) }
+        val releaseDigest = sp.getString(p.pkg + ".digest", "").orEmpty()
+        check(OptionalAppPolicy.validDigest(p.pkg, releaseDigest)) { I18n.text(R.string.optional_missing_digest) }
         val file = File(c.cacheDir, p.pkg + "-update.apk")
         try {
             val url = sp.getString(p.pkg + ".url", "")!!
@@ -143,7 +148,7 @@ object Updates {
                 } }
             } finally { con.disconnect() }
             stage(c, p, "verify", I18n.text(R.string.update_verifying))
-            val digest = sp.getString(p.pkg + ".digest", "").orEmpty()
+            val digest = releaseDigest
             if (digest.startsWith("sha256:")) {
                 val md = MessageDigest.getInstance("SHA-256")
                 file.inputStream().use { input -> val bytes = ByteArray(65536)
@@ -181,7 +186,8 @@ object Updates {
                 }
                 check(UpdateSignerPolicy.sameSigner(signatures, installedSignatures)) { I18n.text(R.string.i18n_updates_020) }
             } else {
-                check(UpdateSignerPolicy.matchesPinned(signatures, p.pkg == products[1].pkg, MIRACAST_CERT)) {
+                val trusted = OptionalAppPolicy.trustedCertificate(p.pkg)
+                check(trusted != null && UpdateSignerPolicy.matchesPinned(signatures, p.optional, trusted)) {
                     I18n.text(R.string.i18n_updates_021)
                 }
             }
@@ -222,7 +228,9 @@ class UpdateJob : JobService() {
             try {
                 Updates.check(this)
                 if (Updates.prefs(this).getBoolean("auto", false)) for (p in Updates.products) {
-                    if (Updates.installed(this, p) != null && Updates.prefs(this).getBoolean(p.pkg + ".available", false)) {
+                    if (OptionalAppPolicy.mayAutoUpdate(p.pkg, Updates.installed(this, p) != null) &&
+                        Updates.installed(this, p) != null &&
+                        Updates.prefs(this).getBoolean(p.pkg + ".available", false)) {
                         runCatching { Updates.install(this, p) }.onFailure { Updates.notify(this, p, it.message ?: I18n.text(R.string.i18n_updates_024)) }
                     }
                 }
