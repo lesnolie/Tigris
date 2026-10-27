@@ -6,6 +6,32 @@
 
 所有品牌目标相同：用 Tigris 代替厂商桌面、减少系统广告、保持电视核心功能和恢复能力；但每种固件的具体处理不同。当前新增电脑端 `TV=<IP> bash install.sh full-plan`，读取固件和 HOME 竞争信息。小米广告候选仅可在逐个确认和备份后处理，**不承诺所有广告已消除或 HOME 已彻底替换**。Sony / TCL / 创维 / 海信不会运行小米禁用命令。详见 [完整替换开发与使用指南](full-replacement.md)。
 
+## 直接 APK 安装后的用户体验与下一步
+
+直接下载安装 **Standard / Guard APK** 并不自动变更系统默认 HOME、清理固件广告或授予 ADB 权限。
+即使 APK 能打开，实体 Home、冷启动、待机唤醒、长按 Home 清理内存后仍可能回到原厂桌面，
+或出现短暂原厂桌面闪现。Standard 声明 HOME，但有些厂商会忽略；Guard 不声明 HOME。
+TCL / 雷鸟可能需要多屏互动或机型专用包，MIUI / HyperOS 可能需要额外的 HOME 机制检测。
+Android APK 无法用于 webOS、Tizen 等非 Android 电视。
+
+1. 安装后先打开 Tigris，再打开其他应用，最后按**实体遥控器 Home**。
+2. 若稳定返回 Tigris，继续由用户自行测试待机与重启，标记结果；不要因为“已安装”跳过验收。
+3. 若返回原厂桌面，保持原厂 HOME 启用，优先运行只读检查，再按匹配的品牌/固件策略处理。
+4. 未开启 ADB 的用户可以继续正常打开 Tigris，但无法声称完整接管或广告清理。
+
+## 从其他开源 TV 项目借鉴的安装体验（仅作为研究建议）
+
+- [Aerial](https://github.com/pengchujin/aerial-tv)：在 APK 安装后提供主屏幕接管引导；
+  根据真实安装失败原因提示标准版/Guard/电视端安装，提供升级二维码和可恢复的诊断入口。
+  适合借鉴**用户可见的下一步**，不是照抄厂商权限操作。
+- [Clean Your TV](https://github.com/Gathin23/cleanyourtv)：逐台识别 HOME 所属应用，
+  防止禁用当前唯一可用 HOME，保存并提供恢复信息；可借鉴安装前检查与恢复设计。
+- [tv-fresh](https://github.com/wangrongding/tv-fresh)：MIUI TV 的固件特征、广告组件和
+  HOME 冲突实测材料，可帮助拓展**精确固件证据**；其中禁用 PatchWall/Settings 的步骤不允许自动通用化。
+
+改进顺序：优先做电视端直接 APK 安装后的「检查 HOME / 获取适用安装步骤」引导，
+再完善按错误码选择安装方式和简洁的机型安装报告；不是继续堆叠一条万能命令。
+
 ## 两个手动入口
 
 **只用遥控器 / U 盘**：从官方 [Releases](https://github.com/lesnolie/Tigris/releases) 下载标准 APK（有 HOME 安装限制的固件用 Guard 兼容包），使用电视允许的方式安装并打开。如果系统提供默认桌面选择器，选择 Tigris；打开其他应用后按遥控器 Home。仍回原厂桌面时，进入 Tigris 设置 → 安装与 Home 检查 / 桌面守护。应用仍可打开，完整接管可能需要 ADB 或专用适配；U 盘安装不会自动授予系统权限。
