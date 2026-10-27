@@ -108,11 +108,11 @@ internal class VideoWallpaper(
             PixelCopy.request(surface, bitmap, { result ->
                 surface.release()
                 main.post {
-                    pendingCapture = false
                     if (generation != captureGeneration || player == null) {
                         bitmap.recycle()
                         return@post
                     }
+                    pendingCapture = false
                     if (result == PixelCopy.SUCCESS) {
                         failedCopies = 0
                         frame = bitmap
@@ -145,7 +145,7 @@ internal class VideoWallpaper(
         if (source == LOCAL && file == null) { fail(); return }
         films = if (source == LOCAL) listOf(listOf(android.net.Uri.fromFile(file!!).toString())) else {
             val hevc = MediaQuality.hevcDecoderPresent()
-            val uhd = MediaQuality.canDecode4kHevc()
+            val uhd = MediaQuality.uhdAerial(ctx)
             Aerials.all(ctx).shuffled().map { MediaQuality.aerialCandidates(it.url, it.hevc, uhd, hevc) }
         }
         if (films.isEmpty()) { fail(); return }
