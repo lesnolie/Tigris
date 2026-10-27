@@ -5,4 +5,6 @@
     <string name="wallpaper_name">壁纸</string>
     <string name="guard_name">主屏幕守护</string>
     <string name="guard_description">电视自带的桌面跑到前面时，把主屏幕切回来。只看哪个 App 在前台，不读取屏幕内容。</string>
+    <string name="dock_columns_title">Dock 图标数量</string>
+    <string name="dock_columns_description">选择 Dock 每行 5 或 6 个图标，应用列表也使用相同列数；返回桌面后生效。</string>
 </resources>
