@@ -2,6 +2,8 @@
 import json
 from pathlib import Path
 
+from vendor_install_guidance import guidance_for
+
 
 def registry():
     data = json.loads(Path(__file__).with_name("installation_strategies.json").read_text(encoding="utf-8"))
@@ -35,6 +37,7 @@ def select(device, platform="android", strategies=None):
         return {"status": "diagnostic_only", "reason": "conflicting_rules",
                 "matches": sorted(s["id"] for s in winners)}
     return {"status": "planned", "strategy": winners[0], "identity": device,
+            "vendor_guidance": guidance_for(device),
             "evidence_level": "observed_identity_inferred_strategy",
             "hardware_verified": False, "automatic_package_changes": [],
             "results": {key: "unverified" for key in winners[0]["verification"]}}
