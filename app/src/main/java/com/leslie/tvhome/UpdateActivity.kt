@@ -23,6 +23,7 @@ class UpdateActivity : Activity() {
     private lateinit var options: ScrollView
     private var busy = false
     private val progressBars = mutableMapOf<String, ProgressBar>()
+    private val launchButtons = mutableMapOf<String, TextView>()
     private val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
         if (!isDestroyed && ::status.isInitialized) renderStatus()
     }
@@ -95,6 +96,11 @@ class UpdateActivity : Activity() {
         }
     }
     private fun renderStatus() {
+        launchButtons.forEach { (pkg, action) ->
+            val available = Updates.installed(this, Updates.products.first { it.pkg == pkg }) != null
+            action.isEnabled = available
+            action.alpha = if (available) 1f else 0.48f
+        }
         val sp = Updates.prefs(this)
         progressBars.forEach { (pkg, bar) ->
             val phase = sp.getString(pkg + ".phase", "idle")
@@ -189,8 +195,26 @@ class UpdateActivity : Activity() {
             runCatching { startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName"))) }
                 .onFailure { Toast.makeText(this, I18n.text(R.string.i18n_updateactivity_012), Toast.LENGTH_LONG).show() }
         }
+        var optionalHeadingAdded = false
         for (p in Updates.products) {
-            button(I18n.text(R.string.i18n_updateactivity_013, p.name)) { work { Updates.install(applicationContext, p) } }
+            if (p.optional && !optionalHeadingAdded) {
+                optionalHeadingAdded = true
+                column.addView(text(19f, weight = 600).apply {
+                    text = I18n.text(R.string.optional_apps_section)
+                    setPadding(dp(10), dp(14), dp(10), dp(4))
+                })
+                column.addView(text(14f, Color.argb(204, 255, 255, 255)).apply {
+                    text = I18n.text(R.string.optional_apps_help)
+                    setPadding(dp(10), dp(4), dp(10), dp(16))
+                })
+            }
+            button(I18n.text(R.string.i18n_updateactivity_013, p.name)) { work {
+                if (Updates.installed(applicationContext, p) == null) {
+                    // The third-party APK is never fetched until the user presses this button.
+                    Updates.check(applicationContext)
+                }
+                Updates.install(applicationContext, p)
+            } }
             button(I18n.text(R.string.update_continue_product, p.name)) {
                 if (!Updates.confirm(this, p)) Toast.makeText(this, I18n.text(R.string.update_no_confirmation), Toast.LENGTH_LONG).show()
             }
@@ -201,11 +225,18 @@ class UpdateActivity : Activity() {
                     if (Updates.prefs(this).getBoolean(p.pkg + ".available", false)) Updates.install(applicationContext, p)
                 }
             }
-        }
-        button(I18n.text(R.string.i18n_updateactivity_014)) {
-            val pm = packageManager; val pkg = Updates.products[1].pkg
-            val intent = pm.getLeanbackLaunchIntentForPackage(pkg) ?: pm.getLaunchIntentForPackage(pkg)
-            if (intent == null) Toast.makeText(this, I18n.text(R.string.i18n_updateactivity_015), Toast.LENGTH_LONG).show() else startActivity(intent)
+            if (p.optional) {
+                val open = button(I18n.text(R.string.optional_app_open, p.name)) {
+                    val intent = packageManager.getLeanbackLaunchIntentForPackage(p.pkg)
+                        ?: packageManager.getLaunchIntentForPackage(p.pkg)
+                    if (intent == null) {
+                        Toast.makeText(this, I18n.text(R.string.optional_app_not_installed), Toast.LENGTH_LONG).show()
+                    } else startActivity(intent)
+                }
+                launchButtons[p.pkg] = open
+                open.isEnabled = Updates.installed(this, p) != null
+                open.alpha = if (open.isEnabled) 1f else 0.48f
+            }
         }
         button(I18n.text(R.string.i18n_updateactivity_016)) { finish() }
         // A final bottom margin would add a non-row scroll offset and break the edge alignment.
