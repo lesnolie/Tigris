@@ -60,6 +60,8 @@ if [[ "$MODE" == full-* ]]; then
     curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/xiaomi_home.py -o "$TMP/xiaomi_home.py"
     curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/installation_strategy.py -o "$TMP/installation_strategy.py"
     curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/installation_strategies.json -o "$TMP/installation_strategies.json"
+    curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/vendor_install_guidance.py -o "$TMP/vendor_install_guidance.py"
+    curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/vendor_install_guidance.json -o "$TMP/vendor_install_guidance.json"
   fi
   case "$MODE" in
     full-inspect) R_MODE=inspect ;;
