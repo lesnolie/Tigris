@@ -178,9 +178,10 @@ class WallpaperActivity : Activity() {
             }
             main.post { cards[s]?.apply { image.setImageBitmap(bmp); this.label.text = label; emptyText(empty) } }
         }
+        val aerialPreview = Backgrounds.render("blue")
         main.post {
             cards[VideoWallpaper.AERIAL]?.apply {
-                image.setImageBitmap(Backgrounds.render("blue"))
+                image.setImageBitmap(aerialPreview)
                 label.text = I18n.text(R.string.live_wallpaper_aerial)
                 emptyText(null)
             }
