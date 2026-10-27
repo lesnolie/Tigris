@@ -91,7 +91,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private val io = Executors.newSingleThreadExecutor()
     private val sheets = ArrayList<Sheet>()
 
-    private val cols = 5
+    private var cols = DockLayout.DEFAULT_COLUMNS
     private var tileW = 0
     private var tileH = 0
     private var rowPitch = 0
@@ -202,6 +202,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         Tween.readScale(this)
         prefs = Prefs(this)
         repo = AppRepo(this)
+        cols = prefs.dockColumns
         buildViews()
         control = ControlCenter(this, root)
         // Covers the screen before its first frame, so the home screen is never seen ahead of it.
@@ -302,11 +303,12 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         // Proportions measured from a 1920×1080 tvOS 26 screenshot.
         val side = (sw * 0.0583f).toInt()          // 112 px
         val gap = (sw * 0.0292f).toInt()           // 56 px
-        tileW = (sw - side * 2 - gap * (cols - 1)) / cols
+        tileW = DockLayout.tileWidth(sw, side, gap, cols)
         tileH = tileW * 9 / 16
         rowPitch = (sh * 0.2463f).toInt()          // 266 px
         // The dock sits at the bottom; only the top edge of the next row peeks out below it.
-        firstRowY = (sh * 0.744f).toInt()          // 804 px; next row just peeks above the bottom edge
+        val originalTileH = DockLayout.tileWidth(sw, side, gap, DockLayout.DEFAULT_COLUMNS) * 9 / 16
+        firstRowY = DockLayout.dockTop((sh * 0.744f).toInt(), originalTileH, tileH)
         expandedRowY = (sh * 0.36f).toInt()
 
         // The dock hugs the first row: a focused tile (scaled 1.12) nearly touches its edges.
@@ -1107,6 +1109,9 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     override fun onResume() {
         super.onResume()
+        // Apply the Dock setting only after returning from Settings: rebuild geometry,
+        // keep the saved app order/folders and avoid changing the default five-tile UI.
+        if (cols != prefs.dockColumns) { recreate(); return }
         avatar.visibility = if (prefs.showAvatar) View.VISIBLE else View.GONE
         avatar.setPortrait(SettingsActivity.avatarFile(this)?.let { SettingsActivity.decodeIcon(it, 96) })
         adapter.tvosFocus = prefs.focusTvos(this)
