@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="live_wallpaper_aerial">Apple aerials · 4K</string>
+    <string name="live_wallpaper_failed">Video unavailable. Showing a static background; check your connection or media format.</string>
+</resources>
