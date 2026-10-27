@@ -34,15 +34,6 @@ const dl = locale === "zh" ? "打开 Releases" : "Open Releases";
     </div>
 
     <ApkLimits locale={locale} />
-    <div class="prereq reveal" role="note">
-      <strong>{locale === "zh" ? "直接安装 APK ≠ 替换电视主屏幕。" : "Installing an APK does not necessarily replace your TV Home."}</strong>
-      <p>{locale === "zh"
-        ? "APK 能打开，也可能按 Home 返回原厂桌面；开机、待机唤醒或清理内存后也可能失效。直接 APK 安装不会自动清理系统广告或授予 ADB 权限。TCL / 雷鸟部分机型需要守护版或特殊安装方式；小米 / Redmi 可能需要固件专用 HOME 诊断。"
-        : "The app may open normally yet the physical Home button may return to the factory launcher; takeover may also fail after boot, standby or memory cleanup. APK-only installation does not remove firmware ads or grant ADB permissions. Some TCL / FFalcon TVs require Guard or vendor-specific installation; Xiaomi / Redmi may need firmware-specific HOME diagnostics."}</p>
-      <p>{locale === "zh"
-        ? "安装后先打开其他应用，再按实体遥控器 Home 验证是否稳定返回 Tigris。失败时请继续使用下面的品牌安装步骤或 AI 安装；不要直接停用原厂桌面。Android APK 不支持 webOS / Tizen。"
-        : "After installation, open another app and press the physical Home button to verify Tigris stays in front. If it does not, follow the brand-specific steps or AI installation below. Do not disable the stock launcher. Android APKs do not work on webOS or Tizen."}</p>
-    </div>
     <div class="prereq reveal">{s.prereq}</div>
 
     <div class="agent-card reveal">
