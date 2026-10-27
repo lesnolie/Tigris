@@ -69,6 +69,7 @@ internal class VideoWallpaper(
     private var aspect = 16f / 9f
     private var captureGeneration = 0L
     private var pendingCapture = false
+    private var captureSurface: Surface? = null
     private var captureStartedAt = 0L
     private var failedCopies = 0
     private var nextCaptureAt = 0L
@@ -81,6 +82,8 @@ internal class VideoWallpaper(
             val now = SystemClock.uptimeMillis()
             // Vendor PixelCopy can swallow callbacks. Never hold the busy flag forever.
             if (pendingCapture && now - captureStartedAt > 3_000L) {
+                captureSurface?.release()
+                captureSurface = null
                 captureGeneration++
                 pendingCapture = false
                 failedCopies++
@@ -116,10 +119,12 @@ internal class VideoWallpaper(
         captureStartedAt = now
         nextCaptureAt = now + if (lowEnd) 1_000L else 500L
         val surface = Surface(surfaceTexture)
+        captureSurface = surface
         try {
             PixelCopy.request(surface, bitmap, { result ->
                 surface.release()
                 main.post {
+                    if (captureSurface === surface) captureSurface = null
                     if (generation != captureGeneration || player == null) {
                         bitmap.recycle()
                         return@post
@@ -141,6 +146,7 @@ internal class VideoWallpaper(
             }, copyHandler)
         } catch (_: Exception) {
             surface.release()
+            if (captureSurface === surface) captureSurface = null
             bitmap.recycle()
             pendingCapture = false
             failedCopies++
@@ -242,6 +248,8 @@ internal class VideoWallpaper(
 
     private fun clearFrame() {
         captureGeneration++
+        captureSurface?.release()
+        captureSurface = null
         pendingCapture = false
         frame = null
         onFrame(null)
