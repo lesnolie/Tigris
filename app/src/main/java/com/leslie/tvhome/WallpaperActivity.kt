@@ -78,7 +78,7 @@ class WallpaperActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val grid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
-        val keys = Wallpapers.SOURCES + Backgrounds.THEMES.keys
+        val keys = listOf(VideoWallpaper.AERIAL) + Wallpapers.SOURCES + Backgrounds.THEMES.keys
         for (row in keys.chunked(4)) {
             val r = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; clipChildren = false }
             for (k in row) {
@@ -177,6 +177,13 @@ class WallpaperActivity : Activity() {
                 else -> I18n.text(R.string.i18n_wallpaperactivity_009)
             }
             main.post { cards[s]?.apply { image.setImageBitmap(bmp); this.label.text = label; emptyText(empty) } }
+        }
+        main.post {
+            cards[VideoWallpaper.AERIAL]?.apply {
+                image.setImageBitmap(Backgrounds.render("blue"))
+                label.text = I18n.text(R.string.live_wallpaper_aerial)
+                emptyText(null)
+            }
         }
         for ((k, v) in Backgrounds.THEMES) {
             val bmp: Bitmap = Backgrounds.render(k)
