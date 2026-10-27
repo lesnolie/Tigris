@@ -7,13 +7,15 @@ const limits = zh ? [
   "部分系统拒绝标准版；TCL / 雷鸟部分固件需要 Guard 守护版和特殊推送，小米 / Redmi 可能需要额外 HOME 诊断。",
   "APK 不会自动清理广告，也不会自动获得 ADB（电脑调试连接）或系统权限；后台启动和无障碍守护仍可能被系统限制。",
   "只适用于兼容的 Android 电视，不适用于 LG webOS、Samsung Tizen。Android 版本、CPU 架构、签名或升级兼容性不符会导致安装失败。",
-  "使用官方签名包覆盖升级。不要为解决签名冲突直接卸载旧版，否则设置、布局和文件夹可能丢失。保存安装前状态，以便恢复原桌面。"
+  "使用官方签名包覆盖升级。不要为解决签名冲突直接卸载旧版，否则设置、布局和文件夹可能丢失。保存安装前状态，以便恢复原桌面。",
+  "安装后打开另一个应用，再按实体遥控器 Home；成功后还要检查重启、唤醒和长按 Home 清理内存。失败时按下方机型指南继续，不要直接禁用原厂桌面。"
 ] : [
   "A successful install may only add an app: remote Home, reboot or standby/wake may still return to the factory launcher.",
   "Some systems reject Standard. Some TCL / FFalcon firmware needs Guard and special push installation; Xiaomi / Redmi may need additional HOME diagnostics.",
   "An APK does not automatically remove ads or grant ADB (computer debugging) or system privileges. Background launch and accessibility Guard may remain restricted.",
   "Compatible Android TVs only, not LG webOS or Samsung Tizen. Android version, CPU architecture, signing or upgrade incompatibilities can prevent installation.",
-  "Update in place with officially signed APKs. Never uninstall merely to bypass a signing conflict: settings, layouts and folders may be lost. Save the original state for launcher recovery."
+  "Update in place with officially signed APKs. Never uninstall merely to bypass a signing conflict: settings, layouts and folders may be lost. Save the original state for launcher recovery.",
+  "After installing, open another app and press the physical Home button. Then check reboot, wake and memory cleanup. Follow the model-specific guide if Home returns to the factory launcher; do not disable it."
 ];
 ---
 <aside class="prereq apk-limits" aria-label={zh ? "直接 APK 安装限制" : "Direct APK limitations"}>
