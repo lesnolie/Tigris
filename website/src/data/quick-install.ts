@@ -23,11 +23,11 @@ export function quickCommand(shell: "powershell" | "posix", mode: "plan" | "exec
   const repo = "https://github.com/lesnolie/Tigris.git";
   if (shell === "powershell") return `$tv = "192.168.1.20:5555"
 $tigrisDir = Join-Path $env:TEMP ("tigris-" + [guid]::NewGuid().ToString("N"))
-git clone --depth 1 --branch v2.0.12 ${repo} $tigrisDir
+git clone --depth 1 --branch v2.0.13 ${repo} $tigrisDir
 if ($LASTEXITCODE -ne 0) { throw "Tigris source download failed" }
 python (Join-Path $tigrisDir "tools/install-plan.py") --platform android --serial $tv${flag}`;
   return `TV="192.168.1.20:5555"
 TIGRIS_DIR=$(mktemp -d) &&
-git clone --depth 1 --branch v2.0.12 ${repo} "$TIGRIS_DIR" &&
+git clone --depth 1 --branch v2.0.13 ${repo} "$TIGRIS_DIR" &&
 python3 "$TIGRIS_DIR/tools/install-plan.py" --platform android --serial "$TV"${flag}`;
 }

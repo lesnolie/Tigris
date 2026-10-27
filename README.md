@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.12 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.12)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.12/Tigris-v2.0.12.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.12/Tigris-guard-v2.0.12.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.12/SHA256SUMS-v2.0.12.txt)）
+- 最新正式版：**[v2.0.13 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.13)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.13/Tigris-v2.0.13.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.13/Tigris-guard-v2.0.13.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.13/SHA256SUMS-v2.0.13.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **正式版为 v2.0.12。** 安装包名称沿用 `Tigris-v2.0.12.apk`（标准版）和 `Tigris-guard-v2.0.12.apk`（兼容守护版）。名称中的 *Guard* 指运行方式，**不是所有 TCL 必装或小米通用的破解包**。本版支持可选 5/6 图标 Dock、异步视频取帧及按固件诊断的安装策略；除 Dock 外的新能力仍需更多真实机型反馈。
+> **正式版为 v2.0.13。** 安装包名称沿用 `Tigris-v2.0.13.apk`（标准版）和 `Tigris-guard-v2.0.13.apk`（兼容守护版）。名称中的 *Guard* 指运行方式，**不是所有 TCL 必装或小米通用的破解包**。本版支持可选 5/6 图标 Dock、异步视频取帧及按固件诊断的安装策略；除 Dock 外的新能力仍需更多真实机型反馈。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
@@ -36,6 +36,15 @@
 | Samsung **Tizen**、海信**原生 VIDAA** | **无兼容的 Android APK 安装方式** | 不适用 | 请勿执行 Android ADB 安装命令 |
 
 **如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
+
+## v2.0.13：投屏和 HGTV 按需安装
+
+在 Tigris 电视端打开 **主屏幕设置 → 应用、投屏与更新**，可选择安装两个独立应用：
+
+- **MiracastReceiver 投屏**：连接 [官方 GitHub Releases](https://github.com/weekdayjast/MiracastReceiver/releases)，未安装前不下载；安装后可直接打开、更新。
+- **HGTV 红果短剧**：连接 [pan8664716/HGTV Releases](https://github.com/pan8664716/HGTV/releases)，用户主动选择才下载与安装。HGTV 是第三方客户端，使用非官方内容接口；内容平台变更可能影响功能。
+
+**应用与更新**现在采用三张 tvOS 风格应用卡片，每个应用仅显示「获取 / 打开 / 更新」等当前适用的操作；下载进度、继续安装、失败重试按需出现。两者均**不包含在 Tigris APK**、不会被自动首次安装或预先塞进 Dock；安装成功后会像普通应用一样出现在应用列表，可以自行移动到 Dock。安装前检查 SHA-256 和已知发布签名，不匹配则停止，不清除已有应用数据。自动更新仅作用于已安装的应用。更多说明见 [软件更新和可选安装](docs/updater.md)。
 
 ## 1. 展示与功能
 
@@ -489,6 +498,8 @@ adb -s 192.168.1.20:5555 uninstall com.leslie.tvhome
 <!-- TV_COMPATIBILITY_AUTO_START -->
 | 品牌与型号 | Android | Tigris / 安装包 | 安装结果 | Issue 状态 | 来源 |
 |---|---|---|---|---|---|
+| Sony BRAVIA 4K GB（BRAVIA_ATV2_CN，国行，2017 平台） | Android 9 (API 28) | v2.0.11 / 标准版 | 已安装且能启动（自报） | 未关闭 | [#53](https://github.com/lesnolie/Tigris/issues/53) |
+| GOOJODOQ HY300 Pro+ | Android 14 | v2.0.9 / 标准版 | 已安装且能启动（自报） | 未关闭 | [#47](https://github.com/lesnolie/Tigris/issues/47) |
 | 创维酷开 85P3DMAX | Android 11 | 2.0.2 / 自定义 Fork | 已安装且能启动（自报） | 未关闭 | [#15](https://github.com/lesnolie/Tigris/issues/15) |
 | 雷鸟 75S545C | Android 9 | V2.0.2 / 守护版 | 已安装且能启动（自报） | 未关闭 | [#14](https://github.com/lesnolie/Tigris/issues/14) |
 <!-- TV_COMPATIBILITY_AUTO_END -->

@@ -4,8 +4,8 @@
     <string name="i18n_settingsactivity_002" formatted="false">Hidden apps</string>
     <string name="i18n_settingsactivity_003" formatted="false">Home Screen Settings</string>
     <string name="i18n_settingsactivity_004" formatted="false">Software</string>
-    <string name="i18n_settingsactivity_005" formatted="false">Software updates &amp; casting</string>
-    <string name="i18n_settingsactivity_006" formatted="false">Check for new Tigris and MiracastReceiver versions, install the casting component, or turn on automatic updates.</string>
+    <string name="i18n_settingsactivity_005" formatted="false">Apps, casting &amp; updates</string>
+    <string name="i18n_settingsactivity_006" formatted="false">Update Tigris, or install MiracastReceiver casting and HGTV short dramas on demand. No bundled APKs.</string>
     <string name="i18n_settingsactivity_007" formatted="false">Open</string>
     <string name="i18n_settingsactivity_008" formatted="false">Appearance</string>
     <string name="i18n_settingsactivity_009" formatted="false">Time format</string>

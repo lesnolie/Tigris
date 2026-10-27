@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="optional_hgtv_name">HGTV 红果短剧</string>
+    <string name="optional_apps_help">可选电视应用：MiracastReceiver（投屏）和 HGTV（短剧）都是独立第三方 App。只有你主动选择安装后才下载 APK，不会在首次使用 Tigris 时自动安装。安装后会显示在应用列表，可自行移动到 Dock；自动更新只作用于已经安装的应用。</string>
+    <string name="optional_app_open">打开 %1$s</string>
+    <string name="optional_app_not_installed">请先按需安装此应用</string>
+    <string name="optional_missing_digest">第三方 APK 缺少有效的 SHA-256 发布校验值，已停止安装。</string>
+</resources>

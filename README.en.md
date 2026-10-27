@@ -14,7 +14,7 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeover fixes and video optimizations still need model-level verification. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.12 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.12)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.12/Tigris-v2.0.12.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.12/Tigris-guard-v2.0.12.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.12/SHA256SUMS-v2.0.12.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.13 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.13)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.13/Tigris-v2.0.13.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.13/Tigris-guard-v2.0.13.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.13/SHA256SUMS-v2.0.13.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -22,7 +22,7 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 ## Which APK should I install? Check the TV OS and firmware
 
-> **Latest official release: v2.0.12.** The APK filenames remain `Tigris-v2.0.12.apk` (Standard) and `Tigris-guard-v2.0.12.apk` (Compatibility Guard). Guard describes the launcher mode: **not every TCL needs it, and it is not a universal Xiaomi workaround**. This release adds configurable five/six-icon Dock, asynchronous video sampling and firmware-aware installation guidance. Only Dock has user hardware testing so far; other changes await reports.
+> **Latest official release: v2.0.13.** The APK filenames remain `Tigris-v2.0.13.apk` (Standard) and `Tigris-guard-v2.0.13.apk` (Compatibility Guard). Guard describes the launcher mode: **not every TCL needs it, and it is not a universal Xiaomi workaround**. This release adds configurable five/six-icon Dock, asynchronous video sampling and firmware-aware installation guidance. Only Dock has user hardware testing so far; other changes await reports.
 
 | TV / platform | First choice | When to use another build | Important limits |
 |---|---|---|---|
@@ -35,6 +35,15 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 | Samsung **Tizen**, Hisense **native VIDAA** | **No supported Android APK** | Neither | Do not run Android ADB installer commands |
 
 **Verification:** After installing, open another app and press the physical Home key; check reboot, standby/wake and long-press Home cleanup separately. If Home does not return to Tigris, keep the stock launcher enabled and use the [brand install and recovery guide](docs/installation-compatibility.md). Preserve the existing APK signing identity and user data; **do not uninstall merely to bypass installation restrictions**.
+
+## v2.0.13: Optional casting and HGTV (install on demand)
+
+From Tigris on the TV, open **Home Settings → Apps, casting & updates** to opt in to two independent applications:
+
+- **MiracastReceiver casting** — downloads an official [GitHub Release](https://github.com/weekdayjast/MiracastReceiver/releases) only after the user requests installation.
+- **HGTV short dramas** — downloads an official [HGTV Release](https://github.com/pan8664716/HGTV/releases) only when requested. HGTV is an independent third-party client relying on unofficial content interfaces; upstream changes can affect playback.
+
+The redesigned **Apps & Updates** screen presents one tvOS-style card per app with just one contextual action (Get, Open or Update); download progress and Retry only appear when needed. Neither APK is bundled with Tigris, auto-installed for new users, or pinned to the Dock by default. Once installed, each becomes a normal launcher app and may be moved to the Dock. The installer checks release SHA-256 and a documented signing identity, and refuses incompatible upgrades instead of deleting app data. Automatic updates apply only to already installed apps. [Policy and limitations](docs/updater.md).
 
 ## Screenshots
 
@@ -72,6 +81,8 @@ Please [open a structured TV compatibility report](https://github.com/lesnolie/T
 <!-- TV_COMPATIBILITY_AUTO_START -->
 | TV model | Android | Tigris / APK | Installation result | Issue state | Source |
 |---|---|---|---|---|---|
+| Sony BRAVIA 4K GB（BRAVIA_ATV2_CN，国行，2017 平台） | Android 9 (API 28) | v2.0.11 / Standard | Installed and launched (reported) | Open | [#53](https://github.com/lesnolie/Tigris/issues/53) |
+| GOOJODOQ HY300 Pro+ | Android 14 | v2.0.9 / Standard | Installed and launched (reported) | Open | [#47](https://github.com/lesnolie/Tigris/issues/47) |
 | 创维酷开 85P3DMAX | Android 11 | 2.0.2 / Custom fork | Installed and launched (reported) | Open | [#15](https://github.com/lesnolie/Tigris/issues/15) |
 | 雷鸟 75S545C | Android 9 | V2.0.2 / Guard | Installed and launched (reported) | Open | [#14](https://github.com/lesnolie/Tigris/issues/14) |
 <!-- TV_COMPATIBILITY_AUTO_END -->

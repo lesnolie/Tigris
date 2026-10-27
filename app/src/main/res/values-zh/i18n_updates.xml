@@ -20,7 +20,7 @@
     <string name="i18n_updates_018" formatted="false">没有更高版本，无需安装</string>
     <string name="i18n_updates_019" formatted="false">缺少安装包签名</string>
     <string name="i18n_updates_020" formatted="false">签名不同，无法保留配置升级；未卸载旧版</string>
-    <string name="i18n_updates_021" formatted="false">不受信任的投屏签名</string>
+    <string name="i18n_updates_021" formatted="false">不受信任的第三方应用签名</string>
     <string name="i18n_updates_022" formatted="false">安装已提交，可能需要在电视上确认</string>
     <string name="i18n_updates_023" formatted="false">软件更新</string>
     <string name="i18n_updates_024" formatted="false">更新失败</string>

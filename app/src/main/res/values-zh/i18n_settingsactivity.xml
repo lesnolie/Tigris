@@ -4,8 +4,8 @@
     <string name="i18n_settingsactivity_002" formatted="false">隐藏的 App</string>
     <string name="i18n_settingsactivity_003" formatted="false">主屏幕设置</string>
     <string name="i18n_settingsactivity_004" formatted="false">软件</string>
-    <string name="i18n_settingsactivity_005" formatted="false">软件更新与投屏</string>
-    <string name="i18n_settingsactivity_006" formatted="false">检查 Tigris 和 MiracastReceiver 的新版本，安装投屏组件或开启自动更新。</string>
+    <string name="i18n_settingsactivity_005" formatted="false">应用、投屏与更新</string>
+    <string name="i18n_settingsactivity_006" formatted="false">更新 Tigris，或按需安装 MiracastReceiver 投屏和 HGTV 短剧，不预装第三方 APK。</string>
     <string name="i18n_settingsactivity_007" formatted="false">打开</string>
     <string name="i18n_settingsactivity_008" formatted="false">外观</string>
     <string name="i18n_settingsactivity_009" formatted="false">时间格式</string>
