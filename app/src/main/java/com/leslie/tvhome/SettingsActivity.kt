@@ -197,6 +197,8 @@ class SettingsActivity : Activity() {
             startActivity(Intent(this, UpdateActivity::class.java))
         }
         section(I18n.text(R.string.i18n_settingsactivity_008))
+        row(I18n.text(R.string.dock_columns_title), I18n.text(R.string.dock_columns_description),
+            { prefs.dockColumns.toString() }) { prefs.dockColumns = DockLayout.next(prefs.dockColumns) }
         row(I18n.text(R.string.i18n_settingsactivity_009), I18n.text(R.string.i18n_settingsactivity_010),
             { if (prefs.clock24) I18n.text(R.string.i18n_settingsactivity_011) else I18n.text(R.string.i18n_settingsactivity_012) }) { prefs.clock24 = !prefs.clock24 }
         row(I18n.text(R.string.i18n_settingsactivity_013), I18n.text(R.string.i18n_settingsactivity_014), {
