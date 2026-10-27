@@ -37,6 +37,15 @@
 
 **如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
 
+## 可选电视应用：投屏和 HGTV（按需安装）
+
+在 Tigris 电视端打开 **主屏幕设置 → 应用、投屏与更新**，可选择安装两个独立应用：
+
+- **MiracastReceiver 投屏**：连接 [官方 GitHub Releases](https://github.com/weekdayjast/MiracastReceiver/releases)，未安装前不下载；安装后可直接打开、更新。
+- **HGTV 红果短剧**：连接 [pan8664716/HGTV Releases](https://github.com/pan8664716/HGTV/releases)，用户主动选择才下载与安装。HGTV 是第三方客户端，使用非官方内容接口；内容平台变更可能影响功能。
+
+两者均**不包含在 Tigris APK**、不会被自动首次安装或预先塞进 Dock；安装成功后会像普通应用一样出现在应用列表，可以自行移动到 Dock。安装前检查 SHA-256 和已知发布签名，不匹配则停止，不清除已有应用数据。自动更新仅作用于已安装的应用。更多说明见 [软件更新和可选安装](docs/updater.md)。
+
 ## 1. 展示与功能
 
 ![主屏幕](docs/screenshots/home.jpg)
