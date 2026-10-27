@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feat/xiaomi-home-diagnostics
     paths:
       - 'app/**'
       - 'install.sh'
