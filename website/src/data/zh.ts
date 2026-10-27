@@ -341,7 +341,7 @@ adb -s 192.168.x.x:5555 shell appops set com.leslie.tvhome SYSTEM_ALERT_WINDOW a
         title: "让 AI 帮你安装（推荐）",
         body: "不熟悉命令行也可以：把下面这句话发给 WorkBuddy、Codex、Claude Code 等能在电脑执行命令的 Agent。它应先确认电视系统与 IP，再读取统一策略、安装验收，并保留恢复方案。",
         prompt:
-          "请帮我安装 Tigris。电视 IP：<电视IP>。先阅读 https://tigris-tv.pages.dev/agent.md（备用：https://raw.githubusercontent.com/lesnolie/Tigris/main/AGENTS.md）。先确认电视是 Android、webOS 还是其他系统；非 Android 不执行 ADB/APK。Android 使用 v2.0.9 或更新源码中的 tools/install-plan.py 先检测，再按统一策略执行安装。保留已有配置、安装包类型和原桌面，不自动卸载、禁用系统组件或开启保持 ADB。需要电视端授权时提醒我。分别报告 APK 安装、模拟 Home、实体 Home、开机、待机和恢复结果；未测项目写未验证，不承诺去广告。",
+          "请帮我安装 Tigris。电视 IP：<电视IP>。先阅读 https://tigris-tv.pages.dev/agent.md（备用：https://raw.githubusercontent.com/lesnolie/Tigris/main/AGENTS.md）。先确认电视是 Android、webOS 还是其他系统；非 Android 不执行 ADB/APK。Android 使用当前正式版源码中的 tools/install-plan.py 先检测，再按统一策略执行安装。保留已有配置、安装包类型和原桌面，不自动卸载、禁用系统组件或开启保持 ADB。需要电视端授权时提醒我。分别报告 APK 安装、模拟 Home、实体 Home、开机、待机和恢复结果；未测项目写未验证，不承诺去广告。",
         note: "过程中电视会弹出两三次确认框，需要你用遥控器选择「允许」。TCL 上会弹出「多屏互动：正在发起应用推送」，选择「同意」即可。",
       },
       safety:

@@ -30,8 +30,8 @@ for locale, name in (("zh", "index.html"), ("en", "en/index.html")):
     assert "--platform android --serial 192.168.1.20:5555" in text
     assert "python tools/install-plan.py" in text and "python3 tools/install-plan.py" in text
     assert "install.sh restore" in text and "--execute" in text
-    assert "v2.0.11" in text
-    assert "Tigris-guard-v2.0.11.apk" in text and "Tigris-v2.0.11.apk" in text
+    assert "v2.0.12" in text
+    assert "Tigris-guard-v2.0.12.apk" in text and "Tigris-v2.0.12.apk" in text
     assert ("兼容守护版" if locale == "zh" else "Compatibility Guard") in text
     assert "Sony" in text and "TCL" in text and "Redmi" in text
     assert 'id="install-host"' in html and 'id="install-system"' in html

@@ -1,22 +1,5 @@
 # Tigris
 
-> **Current official release: v2.0.11.** Standard, Compatibility Guard and LG webOS IPK are different builds. Consult the device matrix below. Development-branch improvements are not released.
-
-> **Hisense installation success (user report, 2026-10-26):** A user successfully installed Tigris on a Hisense TV using WorkBuddy. Model, OS/firmware and Tigris version were not supplied. This is an installation success case only, not certification of all Hisense/native VIDAA TVs or verification of physical Home, cold boot, wake or ad removal.
-
-> **LG webOS 测试包 / Developer preview:** [webos-v0.1.0-preview.1](https://github.com/lesnolie/Tigris/releases/tag/webos-v0.1.0-preview.1) · [IPK 安装、启动、更新和卸载 / Setup guide](https://github.com/lesnolie/Tigris/blob/main/docs/webos-preview-install.md)。已提供打包 IPK，无需自行构建；未做实机测试，不是稳定版，不接管 Home。Prebuilt IPK available; hardware untested, no Home takeover.
-
-> **Shared installation checks:** [Brand troubleshooting, USB installation and verification](docs/installation-compatibility.md). AI and manual installation use `tools/check-install.py`. Test Home before applying firmware workarounds; report untested remote Home, wake and boot as unverified.
-
-
-> **Installation and modules:** v2.0.9 includes shared host-side strategies and a [module extension guide](docs/modules.md). Xiaomi HOME and advertising behavior remain hardware-unverified. Ad candidates without exact-firmware review are blocked; existing brand paths are preserved.
-
-> **v2.0.9:** Shared installation strategies, firmware safety gates and feature extension contracts. Official signing and APK flavors are preserved with an increased version for in-place updates; settings and layouts are not cleared. Includes the 2.0.8 Android 9/10 signing compatibility fix. See [release notes](docs/releases/v2.0.9.md).
-
-> **v2.0.7 (October 25, 2026): this release has not been tested on physical TVs.** Shared installation checks plus code fixes for the Tigris home flash before the wake animation and an unbound guard after process recovery. Redmi X50 / MIUI and Xiaomi / Redmi users with these symptoms are invited to test. Firmware force-stop restrictions and stock-launcher flashes are not guaranteed to be resolved. See the [release notes](docs/releases/v2.0.7.md).
-
-Please test physical Home from another app, the home flash and animation on standby wake, guard recovery after long-press Home memory cleanup, and persistence after a reboot when convenient. Report your model, firmware / MIUI version, Standard or Guard build, animation mode and delay, and pass / fail / untested for each item in [Issues](https://github.com/lesnolie/Tigris/issues). Identify whether a flash shows Tigris or the stock launcher; a short video helps.
-
 <p align="center">
   <a href="https://tigris-tv.pages.dev/">
     <img src="website/public/img/favicon.svg" alt="Tigris website icon" width="112" />
@@ -29,9 +12,9 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 > The third project in the open-source Chinese Zodiac series: Tiger. *Tigris* means “tiger” in Latin and Greek.
 
-Earlier versions were tested by the maintainer on Sony BRAVIA XR-55A80J (Android TV 12). This does not constitute physical-device validation of v2.0.9. Other devices and firmware variants may require adjustments.
+Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeover fixes and video optimizations still need model-level verification. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.11 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.11)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.11/Tigris-v2.0.11.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.11/Tigris-guard-v2.0.11.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.11/SHA256SUMS-v2.0.11.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.12 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.12)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.12/Tigris-v2.0.12.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.12/Tigris-guard-v2.0.12.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.12/SHA256SUMS-v2.0.12.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -39,7 +22,7 @@ Earlier versions were tested by the maintainer on Sony BRAVIA XR-55A80J (Android
 
 ## Which APK should I install? Check the TV OS and firmware
 
-> **Latest official release: v2.0.11.** The APK filenames remain `Tigris-v2.0.11.apk` (Standard) and `Tigris-guard-v2.0.11.apk` (Compatibility Guard). Guard describes the launcher mode: **not every TCL needs it, and it is not a universal Xiaomi workaround**. Six-icon Dock, asynchronous video sampling and expanded vendor diagnostics on this development branch **have not shipped**.
+> **Latest official release: v2.0.12.** The APK filenames remain `Tigris-v2.0.12.apk` (Standard) and `Tigris-guard-v2.0.12.apk` (Compatibility Guard). Guard describes the launcher mode: **not every TCL needs it, and it is not a universal Xiaomi workaround**. This release adds configurable five/six-icon Dock, asynchronous video sampling and firmware-aware installation guidance. Only Dock has user hardware testing so far; other changes await reports.
 
 | TV / platform | First choice | When to use another build | Important limits |
 |---|---|---|---|
