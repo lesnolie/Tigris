@@ -198,7 +198,7 @@ if ! ad install -r "$TMP/$ASSET" >"$TMP/install-error.log" 2>&1; then
   INSTALL_REASON=$(cat "$TMP/install-error.log")
   case "$INSTALL_REASON" in
     *INSTALL_FAILED_VERIFICATION_FAILURE*)
-      fail "Firmware rejected the ADB installer. TCL/FFalcon models may accept the official Guard APK through the on-TV T-Cast (MultiScreen) confirmation. Download the Guard APK from official Releases, then run: python3 tools/tcast-push.py <TV-IP> <OFFICIAL-GUARD-APK>. This installs an app, not a verified HOME takeover. Do not disable the stock launcher." ;;
+      fail "Firmware rejected the ADB installer. TCL/FFalcon models may accept the official Guard APK through the on-TV T-Cast (MultiScreen) confirmation. Download the Guard APK from official Releases, then run: python3 tools/tcast-push.py 192.168.1.20 ./Tigris-guard.apk (replace IP and file path). This installs an app, not a verified HOME takeover. Do not disable the stock launcher." ;;
     *INSTALL_FAILED_UPDATE_INCOMPATIBLE*|*INSTALL_FAILED_SHARED_USER_INCOMPATIBLE*|*INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES*)
       fail "Signature conflict. Keep the existing Tigris installation and user settings. Use an official APK signed with the original key; do not uninstall to force an upgrade." ;;
     *INSTALL_FAILED_OLDER_SDK*|*INSTALL_FAILED_NO_MATCHING_ABIS*)
