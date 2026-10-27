@@ -61,7 +61,9 @@ class Tv:
     def device(self):
         keys = {"manufacturer": "ro.product.manufacturer", "brand": "ro.product.brand",
                 "model": "ro.product.model", "firmware": "ro.build.version.incremental",
-                "fingerprint": "ro.build.fingerprint", "sdk": "ro.build.version.sdk"}
+                "fingerprint": "ro.build.fingerprint", "sdk": "ro.build.version.sdk",
+                "board_platform": "ro.board.platform", "hardware": "ro.hardware",
+                "product_device": "ro.product.device", "product_name": "ro.product.name"}
         device = {key: self.adb("getprop", prop) for key, prop in keys.items()}
         if not device["sdk"].isdigit() or int(device["sdk"]) < 28:
             raise Failure("Android 9+ required; other OSes use separate platform installers")
