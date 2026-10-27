@@ -1,0 +1,223 @@
+{
+  "schema": 1,
+  "scope": "Evidence from other open-source TV projects is research, not Tigris hardware certification. Read-only guidance only.",
+  "records": [
+    {
+      "id": "sony",
+      "brands": [
+        "sony"
+      ],
+      "path": "existing_sony_native",
+      "mechanisms": [
+        "Android native HOME may work; some China firmware keeps a higher-priority stock HOME",
+        "Stock HOME activity-alias and actual window class can differ"
+      ],
+      "inspect": [
+        "HOME candidates and resolved component",
+        "Guard binding and stock HOME activity-alias",
+        "Physical remote Home and cold boot"
+      ],
+      "fallback": "Existing Standard HOME then verified Guard. No Sony adapter changes.",
+      "upstream": [
+        "https://github.com/lesnolie/Tigris/issues/53",
+        "https://github.com/lesnolie/Tigris/issues/45"
+      ]
+    },
+    {
+      "id": "tcl",
+      "brands": [
+        "tcl",
+        "ffalcon",
+        "iffalcon"
+      ],
+      "path": "tcl_install_verifier_and_home",
+      "mechanisms": [
+        "MT5879 verifier may refuse adb install and HOME-declaring APK; Guard and authorized T-Cast path",
+        "MT5879 firmware can block third-party autostart via APP_AUTO_START/APP_ASSOC_START",
+        "m7221 has separate boot property persist.sys.launcher.component; Aerial example runs Android 8, unsupported by current Tigris",
+        "MT9655 reports TLS-only ADB without on-TV pairing, so APK push may succeed without HOME takeover"
+      ],
+      "inspect": [
+        "ro.board.platform / ro.hardware / exact build fingerprint",
+        "Installer error code and ability to authorize ADB",
+        "Stock HOME resolver and actual remote behavior",
+        "Whether TCL appops and Guard are really active"
+      ],
+      "fallback": "Preserve Tigris existing TCL Standard/Guard/T-Cast route; choose alternate install only after actual verifier failure. Never automatically write boot properties.",
+      "upstream": [
+        "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/tcl-mt5879-cn.md",
+        "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/tcl-m7221-cn.md",
+        "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/tcl-mt9655-cn.md"
+      ]
+    },
+    {
+      "id": "xiaomi",
+      "brands": [
+        "xiaomi",
+        "redmi"
+      ],
+      "path": "xiaomi_home_allowlist_and_revive",
+      "mechanisms": [
+        "PatchWall firmware HOME allowlist may ignore successful preferred-home commands",
+        "Standby may force-stop apps and disconnect Guard; listener binding depends on low-RAM and Android version",
+        "Disabling PatchWall can expose a broken FallbackHome"
+      ],
+      "inspect": [
+        "Exact firmware fingerprint; MIUI/HyperOS evidence",
+        "PatchWall/FallbackHome presence and current resolver",
+        "Accessibility binding, listener availability and low-RAM status",
+        "Physical Home / wake / reboot"
+      ],
+      "fallback": "Use existing xiaomi_home.py read-only diagnostics and opt-in reversible probe; do not disable OEM HOME or introduce an unverified sync adapter.",
+      "upstream": [
+        "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/xiaomi-mitv-mftr0.md",
+        "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/xiaomi-mitv-mftp0.md",
+        "https://github.com/wangrongding/tv-fresh"
+      ]
+    },
+    {
+      "id": "coocaa",
+      "brands": [
+        "skyworth",
+        "coocaa",
+        "tianci"
+      ],
+      "path": "coocaa_vendor_home_dispatch",
+      "mechanisms": [
+        "Some firmwares boot explicit DEFAULT_HOMEPAGE from vendor configuration rather than Android HOME",
+        "Some expose HOME.CC category or a home without any HOME intent",
+        "Some block background start and can force-stop third-party apps; Android 13 examples have black-screen/ANR"
+      ],
+      "inspect": [
+        "ro.build.version.incremental / ro.board.platform",
+        "HOME resolver versus actual cold-boot frontend",
+        "Existing original launcher, app focus and Guard binding"
+      ],
+      "fallback": "APK-only + read-only diagnosis until an exact firmware route and rollback are verified; never edit system XML or setprop as a generic workaround.",
+      "upstream": [
+        "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/skyworth-coocaa.md"
+      ]
+    },
+    {
+      "id": "hisense",
+      "brands": [
+        "hisense",
+        "vidaa",
+        "vidda"
+      ],
+      "path": "hisense_android_private_home",
+      "mechanisms": [
+        "On some Android-based VIDAA_TV builds, persist.vt.use_home_pkg controls hardware Home independently of Android HOME resolver",
+        "Cold boot may still be controlled by the OEM and start stock launcher",
+        "Native VIDAA is not an Android APK target"
+      ],
+      "inspect": [
+        "Verify this is Android SDK 28+ rather than native VIDAA",
+        "Read-only check of persist.vt.use_home_pkg where present",
+        "Physical Home, boot, Guard events and original value"
+      ],
+      "fallback": "APK-only and inspect first. A firmware-scoped property trial requires a fresh permission and exact-value rollback, never execute from a brand match.",
+      "upstream": [
+        "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/hisense-vidaa.md"
+      ]
+    },
+    {
+      "id": "oppo",
+      "brands": [
+        "oppo",
+        "oneplus"
+      ],
+      "path": "oppo_coloros_home_allowlist",
+      "mechanisms": [
+        "ColorOS TV K9 example limits which APK identities may declare HOME and requires a vendor category at boot",
+        "Guard may be installable even if Standard is rejected; no evidence that this always replaces HOME"
+      ],
+      "inspect": [
+        "ColorOS TV version and build",
+        "APK install rejection code",
+        "Authorized ADB and HOME candidate/resolver"
+      ],
+      "fallback": "APK-only safe path and explicit limitations. Never spoof a system/other app package name or disable stock HOME automatically.",
+      "upstream": [
+        "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/oppo-coloros-tv.md"
+      ]
+    },
+    {
+      "id": "xgimi",
+      "brands": [
+        "xgimi"
+      ],
+      "path": "xgimi_gmui_adb_access",
+      "mechanisms": [
+        "Some GMUI models hide ADB toggles; device-specific authorized enablement may be needed",
+        "Long Home can clean memory, causing fallback to stock launcher"
+      ],
+      "inspect": [
+        "Check whether ADB is authorized before installation",
+        "Actual HOME resolver, Guard status and physical long Home"
+      ],
+      "fallback": "APK-only / device-approved installer and manual ADB setup. Never turn on a hidden debug service without user authorization.",
+      "upstream": [
+        "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/xgimi-z7x.md"
+      ]
+    },
+    {
+      "id": "konka",
+      "brands": [
+        "konka",
+        "kktv"
+      ],
+      "path": "konka_native_installer",
+      "mechanisms": [
+        "Some Konka file managers reject third-party APK first installs while the system installer accepts in-app upgrades",
+        "HOME resolver may remain Konka, requiring Guard on selected firmwares"
+      ],
+      "inspect": [
+        "ADB availability and install error details",
+        "HOME/Guard binding and actual remote behavior",
+        "Official signing identity for in-place updates"
+      ],
+      "fallback": "APK-only diagnostic path; preserve installed package/user data, never uninstall to work around a signature mismatch.",
+      "upstream": [
+        "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/konka-kktv-u86v9.md"
+      ]
+    },
+    {
+      "id": "letv",
+      "brands": [
+        "letv",
+        "leeco",
+        "leshi"
+      ],
+      "path": "letv_eui_anti_takeover_loop",
+      "mechanisms": [
+        "Some eUI builds repeatedly stop third-party launchers; aggressive Guard revival may steal focus from a different app"
+      ],
+      "inspect": [
+        "Look for repeated process kills/revivals in a limited time window",
+        "Confirm current foreground is stock HOME before Guard attempts takeover"
+      ],
+      "fallback": "APK-only until actual guard activity can be verified; avoid unconditional takeover on unknown foreground windows.",
+      "upstream": [
+        "https://github.com/pengchujin/aerial-tv/blob/main/docs/ARCHITECTURE.md"
+      ]
+    },
+    {
+      "id": "generic",
+      "brands": [],
+      "path": "generic_android_safe",
+      "mechanisms": [
+        "Standard HOME when Android allows it; some boxes/projectors modify HOME resolution or ADB availability"
+      ],
+      "inspect": [
+        "Exact Android SDK and fingerprint",
+        "HOME candidates and resolver",
+        "APK installation, actual physical Home and boot/wake"
+      ],
+      "fallback": "Use existing generic Android APK-only route; never infer vendor privileges from brand labels.",
+      "upstream": [
+        "https://github.com/pengchujin/aerial-tv/blob/main/docs/ARCHITECTURE.md"
+      ]
+    }
+  ]
+}
