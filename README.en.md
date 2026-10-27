@@ -36,6 +36,15 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 **Verification:** After installing, open another app and press the physical Home key; check reboot, standby/wake and long-press Home cleanup separately. If Home does not return to Tigris, keep the stock launcher enabled and use the [brand install and recovery guide](docs/installation-compatibility.md). Preserve the existing APK signing identity and user data; **do not uninstall merely to bypass installation restrictions**.
 
+## Optional TV apps: casting and HGTV (install on demand)
+
+From Tigris on the TV, open **Home Settings → Apps, casting & updates** to opt in to two independent applications:
+
+- **MiracastReceiver casting** — downloads an official [GitHub Release](https://github.com/weekdayjast/MiracastReceiver/releases) only after the user requests installation.
+- **HGTV short dramas** — downloads an official [HGTV Release](https://github.com/pan8664716/HGTV/releases) only when requested. HGTV is an independent third-party client relying on unofficial content interfaces; upstream changes can affect playback.
+
+Neither APK is bundled with Tigris, auto-installed for new users, or pinned to the Dock by default. Once installed, each becomes a normal launcher app and may be moved to the Dock. The installer checks release SHA-256 and a documented signing identity, and refuses incompatible upgrades instead of deleting app data. Automatic updates apply only to already installed apps. [Policy and limitations](docs/updater.md).
+
 ## Screenshots
 
 ![Home screen](docs/screenshots/home.jpg)
