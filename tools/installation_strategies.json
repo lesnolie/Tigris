@@ -329,6 +329,165 @@
       "validation": "automated_only"
     },
     {
+      "id": "xgimi-diagnostic",
+      "platform": "android",
+      "brands": [
+        "xgimi"
+      ],
+      "priority": 80,
+      "fingerprints": [],
+      "min_sdk": 28,
+      "executor": "apk-only",
+      "apk": "standard",
+      "name": {
+        "zh": "极米 GMUI 设备诊断",
+        "en": "XGIMI GMUI device diagnostics"
+      },
+      "guidance": {
+        "zh": "检查实际 ADB 授权和长按 Home 的清理行为。",
+        "en": "Check ADB authorization and physical Home cleanup behavior."
+      },
+      "preconditions": [
+        "authorized_adb",
+        "saved_original_home",
+        "official_signature"
+      ],
+      "detection": [
+        "manufacturer",
+        "brand",
+        "model",
+        "sdk",
+        "fingerprint",
+        "home_candidates",
+        "home_resolver"
+      ],
+      "home": "read_only_diagnostics",
+      "verification": [
+        "apk",
+        "adb_home",
+        "physical_home",
+        "boot",
+        "standby_wake",
+        "memory_cleanup",
+        "hdmi",
+        "restore"
+      ],
+      "failure": "stop_keep_data_and_original_launcher",
+      "recovery": "install.sh restore with original snapshot",
+      "risk": "apk_only",
+      "evidence": [
+        "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/xgimi-z7x.md"
+      ],
+      "validation": "automated_only"
+    },
+    {
+      "id": "konka-diagnostic",
+      "platform": "android",
+      "brands": [
+        "konka",
+        "kktv"
+      ],
+      "priority": 80,
+      "fingerprints": [],
+      "min_sdk": 28,
+      "executor": "apk-only",
+      "apk": "standard",
+      "name": {
+        "zh": "康佳安装器与 HOME 检查",
+        "en": "Konka installer and HOME checks"
+      },
+      "guidance": {
+        "zh": "检查文件管理器与系统安装器的差异，保留既有应用数据。",
+        "en": "Inspect file-manager and native-installer differences while preserving app data."
+      },
+      "preconditions": [
+        "authorized_adb",
+        "saved_original_home",
+        "official_signature"
+      ],
+      "detection": [
+        "manufacturer",
+        "brand",
+        "model",
+        "sdk",
+        "fingerprint",
+        "home_candidates",
+        "home_resolver"
+      ],
+      "home": "read_only_diagnostics",
+      "verification": [
+        "apk",
+        "adb_home",
+        "physical_home",
+        "boot",
+        "standby_wake",
+        "memory_cleanup",
+        "hdmi",
+        "restore"
+      ],
+      "failure": "stop_keep_data_and_original_launcher",
+      "recovery": "install.sh restore with original snapshot",
+      "risk": "apk_only",
+      "evidence": [
+        "https://github.com/pengchujin/aerial-tv/blob/main/docs/devices/konka-kktv-u86v9.md"
+      ],
+      "validation": "automated_only"
+    },
+    {
+      "id": "letv-diagnostic",
+      "platform": "android",
+      "brands": [
+        "letv",
+        "leeco",
+        "leshi"
+      ],
+      "priority": 80,
+      "fingerprints": [],
+      "min_sdk": 28,
+      "executor": "apk-only",
+      "apk": "standard",
+      "name": {
+        "zh": "乐视 eUI 守护诊断",
+        "en": "LeTV eUI Guard diagnostics"
+      },
+      "guidance": {
+        "zh": "检查后台进程被反复清理的情况，先让用户正常使用其他应用。",
+        "en": "Inspect repeated background process stops without interrupting other apps."
+      },
+      "preconditions": [
+        "authorized_adb",
+        "saved_original_home",
+        "official_signature"
+      ],
+      "detection": [
+        "manufacturer",
+        "brand",
+        "model",
+        "sdk",
+        "fingerprint",
+        "home_candidates",
+        "home_resolver"
+      ],
+      "home": "read_only_diagnostics",
+      "verification": [
+        "apk",
+        "adb_home",
+        "physical_home",
+        "boot",
+        "standby_wake",
+        "memory_cleanup",
+        "hdmi",
+        "restore"
+      ],
+      "failure": "stop_keep_data_and_original_launcher",
+      "recovery": "install.sh restore with original snapshot",
+      "risk": "apk_only",
+      "evidence": [
+        "https://github.com/pengchujin/aerial-tv/blob/main/docs/ARCHITECTURE.md"
+      ],
+      "validation": "automated_only"
+    },
+    {
       "id": "generic-android",
       "platform": "android",
       "brands": [],
