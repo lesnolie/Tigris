@@ -3,6 +3,7 @@ import type { Copy, Locale } from "../data/lang";
 import InstallQuick from "./InstallQuick.astro";
 import InstallationChecks from "./InstallationChecks.astro";
 import ApkLimits from "./ApkLimits.astro";
+import ApkChoice from "./ApkChoice.astro";
 import StrategyGuide from "./StrategyGuide.astro";
 import type { Step } from "../data/interfaces";
 
@@ -33,6 +34,7 @@ const dl = locale === "zh" ? "打开 Releases" : "Open Releases";
       ))}
     </div>
 
+    <ApkChoice locale={locale} />
     <ApkLimits locale={locale} />
     <div class="prereq reveal">{s.prereq}</div>
     <aside class="prereq hisense-report">

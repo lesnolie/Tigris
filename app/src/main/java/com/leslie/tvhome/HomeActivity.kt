@@ -96,7 +96,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private val io = Executors.newSingleThreadExecutor()
     private val sheets = ArrayList<Sheet>()
 
-    private val cols = 5
+    private var cols = DockLayout.DEFAULT_COLUMNS
     private var tileW = 0
     private var tileH = 0
     private var rowPitch = 0
@@ -206,6 +206,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         super.onCreate(savedInstanceState)
         Tween.readScale(this)
         prefs = Prefs(this)
+        cols = prefs.dockColumns
         repo = AppRepo(this)
         buildViews()
         control = ControlCenter(this, root)
@@ -284,7 +285,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     override fun onDestroy() {
         resumed = false
-        videoWallpaper.stop()
+        videoWallpaper.destroy()
         unregisterReceiver(pkgReceiver)
         main.removeCallbacksAndMessages(null)
         control.destroy()
@@ -316,11 +317,12 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         // Proportions measured from a 1920×1080 tvOS 26 screenshot.
         val side = (sw * 0.0583f).toInt()          // 112 px
         val gap = (sw * 0.0292f).toInt()           // 56 px
-        tileW = (sw - side * 2 - gap * (cols - 1)) / cols
+        tileW = DockLayout.tileWidth(sw, side, gap, cols)
         tileH = tileW * 9 / 16
         rowPitch = (sh * 0.2463f).toInt()          // 266 px
         // The dock sits at the bottom; only the top edge of the next row peeks out below it.
-        firstRowY = (sh * 0.744f).toInt()          // 804 px; next row just peeks above the bottom edge
+        val defaultTileHeight = DockLayout.tileWidth(sw, side, gap, DockLayout.DEFAULT_COLUMNS) * 9 / 16
+        firstRowY = DockLayout.dockTop((sh * 0.744f).toInt(), defaultTileHeight, tileH)
         expandedRowY = (sh * 0.36f).toInt()
 
         // The dock hugs the first row: a focused tile (scaled 1.12) nearly touches its edges.
@@ -1181,6 +1183,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     override fun onResume() {
         super.onResume()
+        // Rebuild only after Settings changes column count; order/folders remain in Prefs.
+        if (cols != prefs.dockColumns) { recreate(); return }
         prefs.observe(wallpaperChanges)
         avatar.visibility = if (prefs.showAvatar) View.VISIBLE else View.GONE
         avatar.setPortrait(SettingsActivity.avatarFile(this)?.let { SettingsActivity.decodeIcon(it, 96) })

@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- No HOME category (see build.gradle.kts): here the home screen is an ordinary TV app that the
      home guard keeps in front. -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
-    <application android:banner="@drawable/banner">
+    <application android:banner="@drawable/banner" android:label="@string/app_name_guard"
+        tools:replace="android:label">
         <activity android:name="com.leslie.tvhome.HomeActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -5,4 +5,14 @@
     <string name="wallpaper_name">Wallpaper</string>
     <string name="guard_name">Home Screen Guardian</string>
     <string name="guard_description">Brings the home screen back when the built-in launcher takes over. Only checks which app is in front; it does not read screen content.</string>
+    <string name="dock_columns_title">Dock icons per row</string>
+    <string name="dock_columns_description">Choose 5 or 6 icons in the Dock. The app grid uses the same column count. Applies when you return Home.</string>
+    <string name="install_home_next_native">Android reports Tigris as Home. Open another app, press the physical Home button, then test reboot and standby. These checks are not automatically verified.</string>
+    <string name="install_home_next_guard">Home Guard appears connected, but this is not native HOME. Test the physical Home key, reboot, wake, and memory cleanup. If it fails, use the model-specific guide.</string>
+    <string name="install_home_next_xiaomi">Xiaomi / Redmi: MIUI or HyperOS may force PatchWall and stop Tigris on standby. Do not disable PatchWall or Settings. Follow firmware-specific HOME diagnostics and authorized Guard setup.</string>
+    <string name="install_home_next_tcl">TCL / FFalcon: some firmwares reject Standard APK or block Guard autostart. Check the verifier result and ADB authorization. Guard installation via T-Cast may require TV confirmation.</string>
+    <string name="install_home_next_permission">Tigris is not the detected HOME and the required Guard permission is missing. Follow your TV model’s authorized ADB or manual setup instructions.</string>
+    <string name="install_home_next_generic">This firmware does not currently report Tigris as native HOME or a connected Guard. Use the official installation guide and a read-only device diagnosis first.</string>
+    <string name="install_home_guide_open">Installation guide</string>
+    <string name="app_name_guard">Tigris · Guard Mode</string>
 </resources>

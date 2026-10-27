@@ -1,0 +1,71 @@
+import unittest
+from vendor_install_guidance import registry, guidance_for
+from installation_strategy import select
+
+class VendorGuidanceTests(unittest.TestCase):
+    def sample(self, name, sdk="28"):
+        return {"manufacturer": name, "brand": name, "model": "fixture",
+                "fingerprint": "synthetic/test", "firmware": "test", "sdk": sdk}
+
+    def test_known_families(self):
+        brands = {"Sony": "sony", "TCL": "tcl", "FFalcon": "tcl",
+                  "Xiaomi": "xiaomi", "Redmi": "xiaomi", "Skyworth": "coocaa",
+                  "Coocaa": "coocaa", "Hisense": "hisense", "VIDAA": "hisense",
+                  "OPPO": "oppo", "XGIMI": "xgimi", "Konka": "konka",
+                  "LeEco": "letv", "Other": "generic"}
+        for brand, family in brands.items():
+            with self.subTest(brand=brand):
+                data = guidance_for(self.sample(brand))
+                self.assertEqual(data["vendor"], family)
+                self.assertTrue(data["read_only"])
+                self.assertFalse(data["hardware_verified"])
+                self.assertEqual(data["mutations"], [])
+
+    def test_upstream_hardware_examples_are_never_certification(self):
+        checks = [
+            ("TCL", {"board_platform": "mt5879"}, "tcl-mt5879-example"),
+            ("TCL", {"board_platform": "mt9655"}, "tcl-mt9655-example"),
+            ("Redmi", {"model": "MiTV-MFTR0"}, "xiaomi-mftr0-example"),
+            ("Xiaomi", {"model": "MiTV-MFTP0"}, "xiaomi-mftp0-example"),
+            ("Hisense", {"model": "VIDAA_TV"}, "hisense-vidaa-android-example"),
+        ]
+        for brand, changes, expected in checks:
+            with self.subTest(brand=brand, changes=changes):
+                sample = self.sample(brand)
+                sample.update(changes)
+                info = guidance_for(sample)
+                self.assertIn(expected, [e["id"] for e in info["matching_upstream_examples"]])
+                self.assertFalse(info["hardware_verified"])
+                self.assertEqual(info["mutations"], [])
+        self.assertEqual(
+            guidance_for(self.sample("TCL"))["matching_upstream_examples"], []
+        )
+
+    def test_conflict_is_ambiguous(self):
+        result = guidance_for({"manufacturer": "Sony", "brand": "Xiaomi"})
+        self.assertEqual(result["status"], "identity_conflict")
+
+    def test_strategy_is_not_changed(self):
+        for brand, ident, executor in [
+            ("Sony", "sony-native", "legacy"),
+            ("TCL", "tcl-compatible", "legacy"),
+            ("Xiaomi", "xiaomi-diagnostic", "apk-only"),
+            ("Skyworth", "coocaa-diagnostic", "apk-only"),
+            ("Hisense", "hisense-android-diagnostic", "apk-only"),
+            ("OPPO", "oppo-diagnostic", "apk-only"),
+            ("XGIMI", "xgimi-diagnostic", "apk-only"),
+            ("Konka", "konka-diagnostic", "apk-only"),
+            ("LeEco", "letv-diagnostic", "apk-only"),
+        ]:
+            plan = select(self.sample(brand))
+            self.assertEqual(plan["strategy"]["id"], ident)
+            self.assertEqual(plan["strategy"]["executor"], executor)
+            self.assertEqual(plan["vendor_guidance"]["mutations"], [])
+        self.assertEqual(select(self.sample("TCL", sdk="26"))["status"], "blocked")
+
+    def test_registry_unique(self):
+        self.assertEqual(len(registry()), 10)
+        self.assertEqual(len({row["id"] for row in registry()}), 10)
+
+if __name__ == "__main__":
+    unittest.main()

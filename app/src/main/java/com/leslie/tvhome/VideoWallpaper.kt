@@ -1,13 +1,17 @@
 package com.leslie.tvhome
 
 import android.content.Context
-import android.graphics.Matrix
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Rect
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.Looper
+import android.os.SystemClock
+import android.view.PixelCopy
+import android.view.Surface
 import android.view.TextureView
 import android.widget.FrameLayout
 import android.widget.Toast
@@ -23,7 +27,15 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 
-/** Home-only playback; TextureView stays inside the existing backdrop/shelf/intro layers. */
+/**
+ * Shared tvOS aerial/local video wallpaper. Video decoding stays in the hardware
+ * layer. Glass receives bounded, *asynchronous* PixelCopy snapshots; unlike
+ * TextureView.getBitmap(), the GPU readback never blocks the remote-control UI.
+ *
+ * The extra source Surface is only borrowed for a single PixelCopy and released.
+ * PixelCopy can fail on vendor codecs: video keeps playing and the static glass
+ * remains in place until a good frame arrives.
+ */
 @androidx.annotation.OptIn(UnstableApi::class)
 internal class VideoWallpaper(
     private val ctx: Context,
@@ -34,9 +46,8 @@ internal class VideoWallpaper(
     private val texture = TextureView(ctx).apply { alpha = 0f; isOpaque = false }
     var frame: Bitmap? = null
         private set
+
     private val framePaint = Paint(Paint.FILTER_BITMAP_FLAG)
-    // TextureView cannot draw its hardware layer into ControlCenter's software Canvas.
-    // Substitute the same bounded video snapshot only during that offscreen capture.
     private val layer = object : FrameLayout(ctx) {
         override fun dispatchDraw(canvas: Canvas) {
             if (canvas.isHardwareAccelerated) super.dispatchDraw(canvas)
@@ -46,6 +57,8 @@ internal class VideoWallpaper(
         }
     }
     private val main = Handler(Looper.getMainLooper())
+    private val copyThread = HandlerThread("TigrisVideoGlassCopy").apply { start() }
+    private val copyHandler = Handler(copyThread.looper)
     private var player: ExoPlayer? = null
     private var key: String? = null
     private var films: List<List<String>> = emptyList()
@@ -53,23 +66,34 @@ internal class VideoWallpaper(
     private var variant = 0
     private var failures = 0
     private var aspect = 16f / 9f
+    private var captureGeneration = 0L
+    private var pendingCapture = false
+    private var captureSurface: Surface? = null
+    private var captureStartedAt = 0L
+    private var failedCopies = 0
+    private var nextCaptureAt = 0L
+    private val lowEnd by lazy { Device.isLowEnd(ctx) }
     private val timeout = Runnable { nextAfterError() }
+
     private val sample = object : Runnable {
         override fun run() {
             if (player == null) return
-            if (texture.alpha > 0f && texture.isAvailable && canSample() && texture.width > 0 && texture.height > 0) {
-                // 480px looked soft after the glass slab was enlarged to half-screen.
-                // Keep enough detail for the dock while bounding the readback cost.
-                val width = minOf(640, texture.width)
-                val height = (width.toLong() * texture.height / texture.width).toInt().coerceAtLeast(1)
-                runCatching { texture.getBitmap(width, height) }.getOrNull()?.let {
-                    frame = it
-                    onFrame(it)
-                }
+            val now = SystemClock.uptimeMillis()
+            // Vendor PixelCopy can swallow callbacks. Never hold the busy flag forever.
+            if (pendingCapture && now - captureStartedAt > 3_000L) {
+                captureSurface?.release()
+                captureSurface = null
+                captureGeneration++
+                pendingCapture = false
+                failedCopies++
+                nextCaptureAt = now + 5_000L
             }
-            // Check frequently so the next sample starts soon after a bake ends.
-            // The busy gate still limits this to one in-flight CPU bake.
-            main.postDelayed(this, 100)
+            if (!pendingCapture && now >= nextCaptureAt && texture.alpha > 0f &&
+                texture.isAvailable && canSample() && texture.width > 0 && texture.height > 0
+            ) {
+                capture(now)
+            }
+            main.postDelayed(this, if (lowEnd) 350L else 200L)
         }
     }
 
@@ -77,6 +101,56 @@ internal class VideoWallpaper(
         layer.addView(texture, FrameLayout.LayoutParams(-1, -1))
         host.addView(layer, FrameLayout.LayoutParams(-1, -1))
         texture.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> crop() }
+    }
+
+    /** Called from the UI thread; only enqueues an asynchronous PixelCopy. */
+    private fun capture(now: Long) {
+        val surfaceTexture = texture.surfaceTexture ?: return
+        val width = minOf(if (lowEnd) 320 else 480, texture.width)
+        val height = (width.toLong() * texture.height / texture.width).toInt().coerceAtLeast(1)
+        val bitmap = runCatching { Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888) }
+            .getOrNull() ?: run {
+                nextCaptureAt = now + 10_000L
+                return
+            }
+        val generation = captureGeneration
+        pendingCapture = true
+        captureStartedAt = now
+        nextCaptureAt = now + if (lowEnd) 1_000L else 500L
+        val surface = Surface(surfaceTexture)
+        captureSurface = surface
+        try {
+            PixelCopy.request(surface, bitmap, { result ->
+                surface.release()
+                main.post {
+                    if (captureSurface === surface) captureSurface = null
+                    if (generation != captureGeneration || player == null) {
+                        bitmap.recycle()
+                        return@post
+                    }
+                    pendingCapture = false
+                    if (result == PixelCopy.SUCCESS) {
+                        failedCopies = 0
+                        frame = bitmap
+                        onFrame(bitmap)
+                    } else {
+                        bitmap.recycle()
+                        failedCopies++
+                        // Some vendor codecs do not support copying their video layer.
+                        // Back off rather than spin and interfere with remote input.
+                        nextCaptureAt = SystemClock.uptimeMillis() +
+                            if (failedCopies >= 3) 10_000L else 1_500L
+                    }
+                }
+            }, copyHandler)
+        } catch (_: Exception) {
+            surface.release()
+            if (captureSurface === surface) captureSurface = null
+            bitmap.recycle()
+            pendingCapture = false
+            failedCopies++
+            nextCaptureAt = now + if (failedCopies >= 3) 10_000L else 1_500L
+        }
     }
 
     fun start(source: String) {
@@ -88,17 +162,18 @@ internal class VideoWallpaper(
         if (source == LOCAL && file == null) { fail(); return }
         films = if (source == LOCAL) listOf(listOf(android.net.Uri.fromFile(file!!).toString())) else {
             val hevc = MediaQuality.hevcDecoderPresent()
-            val uhd = MediaQuality.canDecode4kHevc()
+            val uhd = MediaQuality.uhdAerial(ctx)
             Aerials.all(ctx).shuffled().map { MediaQuality.aerialCandidates(it.url, it.hevc, uhd, hevc) }
         }
         if (films.isEmpty()) { fail(); return }
         val http = DefaultHttpDataSource.Factory().setConnectTimeoutMs(5000).setReadTimeoutMs(8000)
-        val factory = DefaultMediaSourceFactory(DefaultDataSource.Factory(ctx, http))
+        val sources = DefaultMediaSourceFactory(DefaultDataSource.Factory(ctx, http))
             .setLoadErrorHandlingPolicy(DefaultLoadErrorHandlingPolicy(1))
-        val load = DefaultLoadControl.Builder()
+        val buffers = DefaultLoadControl.Builder()
             .setBufferDurationsMs(5000, 15000, 500, 1000)
-            .setTargetBufferBytes(24 * 1024 * 1024).setPrioritizeTimeOverSizeThresholds(false).build()
-        val p = ExoPlayer.Builder(ctx).setLoadControl(load).setMediaSourceFactory(factory).build()
+            .setTargetBufferBytes(24 * 1024 * 1024)
+            .setPrioritizeTimeOverSizeThresholds(false).build()
+        val p = ExoPlayer.Builder(ctx).setLoadControl(buffers).setMediaSourceFactory(sources).build()
         player = p
         p.volume = 0f
         p.repeatMode = if (source == LOCAL) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
@@ -115,7 +190,9 @@ internal class VideoWallpaper(
                 if (size.height > 0) aspect = size.width * size.pixelWidthHeightRatio / size.height
                 crop()
             }
-            override fun onPlayerError(error: PlaybackException) { if (player === p) nextAfterError() }
+            override fun onPlayerError(error: PlaybackException) {
+                if (player === p) nextAfterError()
+            }
             override fun onPlaybackStateChanged(state: Int) {
                 if (player !== p) return
                 if (state == Player.STATE_BUFFERING) armTimeout()
@@ -141,7 +218,7 @@ internal class VideoWallpaper(
 
     private fun armTimeout() {
         main.removeCallbacks(timeout)
-        main.postDelayed(timeout, 20000)
+        main.postDelayed(timeout, 20_000L)
     }
 
     private fun playCurrent() {
@@ -164,32 +241,36 @@ internal class VideoWallpaper(
     }
 
     private fun fail() {
-        release()
+        stop()
         Toast.makeText(ctx, I18n.text(R.string.live_wallpaper_failed), Toast.LENGTH_LONG).show()
     }
 
-    private fun release() {
+    private fun clearFrame() {
+        captureGeneration++
+        captureSurface?.release()
+        captureSurface = null
+        pendingCapture = false
+        frame = null
+        onFrame(null)
+    }
+
+    fun stop() {
         main.removeCallbacks(timeout)
         main.removeCallbacks(sample)
         player?.release()
         player = null
         texture.alpha = 0f
         clearFrame()
-    }
-
-    private fun clearFrame() {
-        if (frame == null) return
-        frame = null
-        onFrame(null)
-    }
-
-    fun stop() {
-        release()
         key = null
         filmIndex = 0
         variant = 0
         failures = 0
         films = emptyList()
+    }
+
+    fun destroy() {
+        stop()
+        copyThread.quitSafely()
     }
 
     companion object {

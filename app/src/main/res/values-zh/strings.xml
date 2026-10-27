@@ -5,4 +5,14 @@
     <string name="wallpaper_name">壁纸</string>
     <string name="guard_name">主屏幕守护</string>
     <string name="guard_description">电视自带的桌面跑到前面时，把主屏幕切回来。只看哪个 App 在前台，不读取屏幕内容。</string>
+    <string name="dock_columns_title">Dock 图标数量</string>
+    <string name="dock_columns_description">选择 Dock 每行 5 或 6 个图标，应用列表也使用相同列数；返回桌面后生效。</string>
+    <string name="install_home_next_native">系统显示 Tigris 是默认 HOME。请打开其他应用后按实体遥控器 Home，再检查重启和待机唤醒；这些还需要人工验收。</string>
+    <string name="install_home_next_guard">桌面守护已连接，但这不等于原生 HOME。请验证实体 Home、重启、唤醒及内存清理；如失败，按具体机型查看安装步骤。</string>
+    <string name="install_home_next_xiaomi">小米 / Redmi：MIUI 或澎湃 OS 可能强制使用 PatchWall，并在待机时停止 Tigris。不要禁用 PatchWall 或系统设置。请按固件检查 HOME，必要时授权守护。</string>
+    <string name="install_home_next_tcl">TCL / 雷鸟：部分固件拒绝标准版 APK，或限制守护自启动。先检查安装校验和 ADB 授权；使用多屏互动推送守护版时可能需要在电视上确认。</string>
+    <string name="install_home_next_permission">Tigris 不是当前默认 HOME，守护权限也未就绪。请按电视型号完成授权的 ADB 或手动安装步骤。</string>
+    <string name="install_home_next_generic">该固件尚未确认 Tigris 是默认 HOME 或守护已绑定。请先使用官网安装指南和只读设备诊断，不要直接禁用原厂桌面。</string>
+    <string name="install_home_guide_open">查看安装指南</string>
+    <string name="app_name_guard">Tigris · 兼容守护版</string>
 </resources>

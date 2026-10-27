@@ -1,0 +1,9 @@
+/** Public selection hints, not firmware certification. Keep the filenames unchanged. */
+export const apkChoices = [
+  {zh:"Sony BRAVIA / 原生 Android TV、Google TV",en:"Sony BRAVIA / stock Android TV and Google TV",zhBuild:"标准版",enBuild:"Standard",zhWhy:"优先使用系统默认 HOME；实体 Home、重启和待机需要验收。",enWhy:"Use the native HOME candidate first; verify physical Home, reboot and wake."},
+  {zh:"TCL / 雷鸟 / FFalcon Android",en:"TCL / FFalcon Android",zhBuild:"标准版优先；固件拒绝 HOME APK 时用兼容守护版",enBuild:"Standard first; Compatibility Guard if HOME APK is blocked",zhWhy:"验证器拒绝后才走官方 Guard + 多屏互动/T-Cast；Guard 不声明 HOME，需授权守护。",enWhy:"Only after verifier rejection, use official Guard via TV-side T-Cast; it declares no HOME and needs Guard authorization."},
+  {zh:"小米 / Redmi MIUI TV、HyperOS TV",en:"Xiaomi / Redmi MIUI TV or HyperOS TV",zhBuild:"标准版尝试 + 固件诊断",enBuild:"Try Standard + firmware check",zhWhy:"PatchWall 可能忽略第三方 HOME。不能禁用原厂桌面；Guard 也不保证成功。",enWhy:"PatchWall can ignore preferred HOME. Do not disable the stock launcher; Guard is not a guaranteed fix."},
+  {zh:"创维 / 酷开、海信 / Vidda、OPPO、极米、康佳、乐视等 Android 9+",en:"Skyworth / Coocaa, Hisense / Vidda, OPPO, XGIMI, Konka, LeTV Android 9+",zhBuild:"标准版安全尝试",enBuild:"Standard safe attempt",zhWhy:"同品牌固件可能不同；未知机型先只读检测，不宣称已接管 Home。",enWhy:"Firmware varies by model. Inspect unknown builds first; APK installed is not verified HOME takeover."},
+  {zh:"LG webOS",en:"LG webOS",zhBuild:"独立 IPK 开发预览版",enBuild:"Separate IPK developer preview",zhWhy:"Android 标准版/Guard 均不能安装；预览版不接管 Home。",enWhy:"Neither Android APK works; the IPK preview does not take over Home."},
+  {zh:"Samsung Tizen / 海信原生 VIDAA",en:"Samsung Tizen / Hisense native VIDAA",zhBuild:"均不支持 Android APK",enBuild:"Neither Android APK",zhWhy:"不得执行 Android ADB 安装流程。",enWhy:"Do not run Android ADB installers."},
+] as const;

@@ -60,6 +60,12 @@ if [[ "$MODE" == full-* ]]; then
     curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/xiaomi_home.py -o "$TMP/xiaomi_home.py"
     curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/installation_strategy.py -o "$TMP/installation_strategy.py"
     curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/installation_strategies.json -o "$TMP/installation_strategies.json"
+    # The deployed main installer may still predate the research-only guidance module.
+    # Fetch optional dependencies only when its downloaded strategy code imports them.
+    if grep -q '^from vendor_install_guidance import' "$TMP/installation_strategy.py"; then
+      curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/vendor_install_guidance.py -o "$TMP/vendor_install_guidance.py"
+      curl -fLsS https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/vendor_install_guidance.json -o "$TMP/vendor_install_guidance.json"
+    fi
   fi
   case "$MODE" in
     full-inspect) R_MODE=inspect ;;
@@ -185,9 +191,25 @@ actual = hashlib.sha256(pathlib.Path(apk).read_bytes()).hexdigest()
 if expected != [actual]: raise SystemExit('SHA256 check failed; installation stopped')
 PY
 fi
-if ! ad install -r "$TMP/$ASSET"; then
-  fail 'Installation failed; nothing uninstalled. Signature mismatch requires the original signing key. TCL verification failure: use Guard APK via tools/tcast-push.py (see AGENTS.md).'
+# Keep the real PackageManager error: different firmwares need different next steps.
+# Do not silently switch APK flavors or uninstall an existing user installation.
+if ! ad install -r "$TMP/$ASSET" >"$TMP/install-error.log" 2>&1; then
+  cat "$TMP/install-error.log" >&2
+  INSTALL_REASON=$(cat "$TMP/install-error.log")
+  case "$INSTALL_REASON" in
+    *INSTALL_FAILED_VERIFICATION_FAILURE*)
+      fail "Firmware rejected the ADB installer. TCL/FFalcon models may accept the official Guard APK through the on-TV T-Cast (MultiScreen) confirmation. Download the Guard APK from official Releases, then run: python3 tools/tcast-push.py 192.168.1.20 ./Tigris-guard.apk (replace IP and file path). This installs an app, not a verified HOME takeover. Do not disable the stock launcher." ;;
+    *INSTALL_FAILED_UPDATE_INCOMPATIBLE*|*INSTALL_FAILED_SHARED_USER_INCOMPATIBLE*|*INSTALL_PARSE_FAILED_INCONSISTENT_CERTIFICATES*)
+      fail "Signature conflict. Keep the existing Tigris installation and user settings. Use an official APK signed with the original key; do not uninstall to force an upgrade." ;;
+    *INSTALL_FAILED_OLDER_SDK*|*INSTALL_FAILED_NO_MATCHING_ABIS*)
+      fail "This APK is incompatible with the TV's Android version or CPU ABI. Check SDK and ro.product.cpu.abilist before selecting a build." ;;
+    *INSTALL_FAILED_USER_RESTRICTED*|*INSTALL_FAILED_USER_RESTRICTION*)
+      fail "The TV denied this installation. Check device-side permission/unknown-source settings and try a permitted installer; do not bypass the TV security policy." ;;
+    *)
+      fail "APK installation did not complete; no existing application was uninstalled. Inspect the exact error above and the firmware-specific installation guide." ;;
+  esac
 fi
+cat "$TMP/install-error.log"
 if (( APK_ONLY )); then
   echo "APK installed/updated without HOME or Guard changes. Original state: $STATE"
   echo 'HOME, physical remote, wake, boot and ads: UNVERIFIED. Run tools/install-plan.py again for diagnostics.'

@@ -125,12 +125,12 @@ export const en = {
     packages: [
       {
           name: "Standard APK",
-          use: "For Sony BRAVIA, stock Android TV / Google TV, Xiaomi / Redmi, Hisense and most others. Choose Tigris-vX.Y.Z.apk on the Releases page.",
+          use: "First choice on Android 9+ Sony BRAVIA, stock Android TV / Google TV, Xiaomi / Redmi and other compatible Android TVs. Use Tigris-vX.Y.Z.apk. Successful installation alone does not establish physical HOME takeover.",
         href: brand.apk,
       },
       {
-          name: "Guard APK",
-          use: "Declares no home screen, for TCL / FFalcon firmware that rejects launcher APKs. Choose Tigris-guard-vX.Y.Z.apk on the Releases page and push it through T-Cast.",
+          name: "Compatibility Guard APK",
+          use: "For restricted Android firmware, especially TCL / FFalcon builds that reject Standard. Declares no HOME role and requires authorized Guard. Choose Tigris-guard-vX.Y.Z.apk; some TCL TVs need TV-side T-Cast installation. Not all TCL TVs need Guard.",
         href: brand.apkGuard,
       },
     ],

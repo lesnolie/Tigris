@@ -18,7 +18,7 @@ on:
       - 'tools/download-release.py'
       - '.github/workflows/website.yml'
   push:
-    branches: [main]
+    branches: [main, feat/xiaomi-home-diagnostics]
     paths:
       - 'website/**'
       - 'install.sh'

@@ -119,11 +119,15 @@ class TileCell(ctx: Context, val tileW: Int, val tileH: Int) : FrameLayout(ctx) 
     companion object {
         const val SHADOW_PAD = 30
         const val FOCUS_SCALE = 1.12f
-        private var shared: android.graphics.Bitmap? = null
+        // 5/6-column Dock tiles have different sizes; one global bitmap
+        // silently stretches the old shadow after switching layout. Cache by size.
+        private val shadows = mutableMapOf<Pair<Int, Int>, android.graphics.Bitmap>()
 
-        /** One shadow bitmap serves every tile. */
-        fun shadowFor(ctx: Context, w: Int, h: Int) = shared ?: LiquidGlass.shadow(w, h, ctx.dp(11).toFloat(), ctx.dp(SHADOW_PAD))
-            .also { shared = it }
+        @Synchronized
+        fun shadowFor(ctx: Context, w: Int, h: Int): android.graphics.Bitmap =
+            shadows.getOrPut(w to h) {
+                LiquidGlass.shadow(w, h, ctx.dp(11).toFloat(), ctx.dp(SHADOW_PAD))
+            }
     }
 
     fun setJiggle(on: Boolean) {

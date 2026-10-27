@@ -35,6 +35,11 @@ class Prefs(ctx: Context) {
         get() = sp.getString("order", "")!!.split(',').filter { it.isNotEmpty() }
         set(v) = sp.edit().putString("order", v.joinToString(",")).apply()
 
+    /** tvOS first-row Dock count (5 by default, 6 only after an explicit choice). */
+    var dockColumns: Int
+        get() = DockLayout.normalized(sp.getInt("dock_columns", DockLayout.DEFAULT_COLUMNS))
+        set(value) = sp.edit().putInt("dock_columns", DockLayout.normalized(value)).apply()
+
     /** New installs and upgrades start in fixed manual order; the user can opt in. */
     var recentFirst: Boolean
         get() = sp.getBoolean("recent_first", false)

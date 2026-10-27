@@ -185,7 +185,7 @@ cat > "$TEST/bin/curl" <<'REMOTE_CURL'
 url="$2"
 out="$4"
 case "$url" in
-  https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/*.py|https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/installation_strategies.json)
+  https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/*.py|https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/installation_strategies.json|https://raw.githubusercontent.com/lesnolie/Tigris/main/tools/vendor_install_guidance.json)
     file="${url##*/}"
     cp "$SOURCE_ROOT/tools/$file" "$out"
     echo "$file" >> "$LOG.downloads"
@@ -200,6 +200,8 @@ grep -q '"read_only": true' "$TEST/output"
 grep -Fxq 'tv-replacement.py' "$LOG.downloads"
 grep -Fxq 'replacement_profiles.py' "$LOG.downloads"
 grep -Fxq 'xiaomi_home.py' "$LOG.downloads"
+grep -Fxq 'vendor_install_guidance.py' "$LOG.downloads"
+grep -Fxq 'vendor_install_guidance.json' "$LOG.downloads"
 ! grep -Eq 'pm disable-user|pm uninstall|pm enable|set-home-activity|keyevent' "$LOG"
 echo 'PASS piped installer fetches all HOME dependencies without writes'
 cat > "$TEST/bin/curl" <<'MOCK'

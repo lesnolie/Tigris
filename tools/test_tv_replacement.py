@@ -32,6 +32,8 @@ class FakeTv:
                 "ro.product.manufacturer": self.brand, "ro.product.brand": self.brand,
                 "ro.product.model": self.model, "ro.build.version.incremental": "2026.demo",
                 "ro.build.fingerprint": self.fingerprint, "ro.build.version.sdk": "28",
+                "ro.board.platform": "fixture_board", "ro.hardware": "fixture_hw",
+                "ro.product.device": "fixture_device", "ro.product.name": "fixture_product",
             }
             text = props[command[1]]
         elif command == ("pm", "list", "packages"):
