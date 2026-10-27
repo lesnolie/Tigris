@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="optional_apps_subtitle">只安装你需要的应用，不预装、不占用 Dock。</string>
+    <string name="optional_category_home">电视桌面 · Tigris</string>
+    <string name="optional_category_cast">无线投屏 · 可选应用</string>
+    <string name="optional_category_drama">短剧播放 · 可选应用</string>
+    <string name="optional_status_not_installed">未安装 · 按需获取</string>
+    <string name="optional_action_get">获取</string>
+    <string name="optional_action_open">打开</string>
+    <string name="optional_action_update">更新</string>
+    <string name="optional_action_current">最新版本</string>
+    <string name="optional_action_downloading">下载中</string>
+    <string name="optional_action_verifying">安装中…</string>
+    <string name="optional_action_waiting">等待安装…</string>
+    <string name="optional_action_confirm">继续安装</string>
+    <string name="optional_action_retry">重试</string>
+    <string name="optional_auto_update">自动更新已安装应用</string>
+</resources>
