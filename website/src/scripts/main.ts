@@ -637,8 +637,14 @@ import { searchHelp } from "../data/site-search";
   searchDialog?.addEventListener("click", (event) => {
     if (event.target === searchDialog) searchDialog.close();
   });
+  searchDialog?.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !searchDialog.open) return;
+    event.preventDefault();
+    searchDialog.close();
+  }, true);
   searchDialog?.addEventListener("close", () => {
     if (searchInput) searchInput.value = "";
+    renderSearch("");
   });
   doc.addEventListener("keydown", (event) => {
     const key = event.key.toLowerCase();

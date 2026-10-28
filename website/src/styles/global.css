@@ -3677,7 +3677,6 @@ details.advanced .table-wrap {
 }
 
 .search-dialog {
-  display: flex;
   flex-direction: column;
   width: min(640px, calc(100% - 32px));
   max-height: min(84vh, 720px);
@@ -3691,6 +3690,15 @@ details.advanced .table-wrap {
   overflow: hidden;
 }
 
+/* Author `display` beats the UA `dialog:not([open])` rule, so say it here. */
+.search-dialog:not([open]) {
+  display: none;
+}
+
+.search-dialog[open] {
+  display: flex;
+}
+
 .search-dialog::backdrop {
   background: rgba(0, 0, 0, 0.55);
 }
@@ -3698,12 +3706,14 @@ details.advanced .table-wrap {
 .search-panel {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: 0;
   max-height: 100%;
 }
 
 .search-field {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 10px;
   padding: 16px 18px;
@@ -3734,6 +3744,7 @@ details.advanced .table-wrap {
 }
 
 .search-note {
+  flex: none;
   margin: 0;
   padding: 12px 18px 0;
   color: #86868b;
@@ -3743,8 +3754,16 @@ details.advanced .table-wrap {
 
 .search-dialog [data-search-results] {
   overflow: auto;
+  flex: 1;
   min-height: 0;
   padding: 8px;
+}
+
+@media (max-height: 520px) {
+  .search-dialog[open] {
+    margin-top: 8px;
+    max-height: calc(100dvh - 16px);
+  }
 }
 
 .search-hit {
@@ -3805,7 +3824,7 @@ details.advanced .table-wrap {
 
 @media (max-width: 720px) {
   :root {
-    --nav-h: 108px;
+    --nav-h: 104px;
   }
 
   .site-header {
@@ -3813,19 +3832,42 @@ details.advanced .table-wrap {
   }
 
   .nav {
-    flex-wrap: wrap;
-    align-content: center;
-    gap: 8px 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas:
+      "brand lang toggle"
+      "search search search";
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 8px;
     width: calc(100% - 28px);
+  }
+
+  .brand {
+    grid-area: brand;
   }
 
   .brand em {
     display: none;
   }
 
+  .nav-cta {
+    display: contents;
+  }
+
+  .nav-lang {
+    grid-area: lang;
+    margin-left: 0;
+    justify-self: end;
+  }
+
+  .nav-toggle {
+    grid-area: toggle;
+  }
+
   .nav-search {
-    order: 3;
-    flex: 1 1 100%;
+    grid-area: search;
+    width: 100%;
     max-width: none;
     min-width: 0;
   }
