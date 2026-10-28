@@ -1,4 +1,5 @@
 import { initHeroMotion } from "./hero-motion";
+import { searchHelp } from "../data/site-search";
 
 /* Tigris website — progressive enhancement only. No framework, ~8 KB.
    All user-visible strings come from data-* attributes so the same script
@@ -534,6 +535,57 @@ import { initHeroMotion } from "./hero-motion";
     );
     items.forEach((el) => io.observe(el));
   }
+
+  /* ---------- site search (Spotlight overlay; no shortcut is shown) ---------- */
+  const searchDialog = doc.querySelector<HTMLDialogElement>("[data-search-dialog]");
+  const searchInput = searchDialog?.querySelector<HTMLInputElement>("[data-search-input]");
+  const searchResults = searchDialog?.querySelector<HTMLElement>("[data-search-results]");
+  const searchEmpty = searchDialog?.querySelector<HTMLElement>("[data-search-empty]");
+  const searchLocale = isEnglish ? "en" : "zh";
+
+  const renderSearch = (query: string) => {
+    if (!searchResults || !searchEmpty) return;
+    const hits = searchHelp(searchLocale, query);
+    searchResults.replaceChildren();
+    searchEmpty.hidden = hits.length > 0;
+    hits.forEach((hit) => {
+      const link = doc.createElement("a");
+      link.href = hit.href;
+      link.className = "search-hit";
+      const title = doc.createElement("strong");
+      title.textContent = hit.title;
+      const body = doc.createElement("span");
+      body.textContent = hit.body;
+      link.append(title, body);
+      link.addEventListener("click", () => searchDialog?.close());
+      searchResults.append(link);
+    });
+  };
+
+  const openSearch = (query: string) => {
+    if (!searchDialog || !searchInput) return;
+    if (!searchDialog.open) searchDialog.showModal();
+    searchInput.value = query;
+    renderSearch(query);
+    searchInput.focus();
+    const end = query.length;
+    searchInput.setSelectionRange(end, end);
+  };
+
+  doc.addEventListener("click", (event) => {
+    const opener = (event.target as Element | null)?.closest<HTMLElement>("[data-search-open]");
+    if (!opener || !searchDialog) return;
+    event.preventDefault();
+    openSearch(opener.dataset.searchQuery || "");
+  });
+
+  searchInput?.addEventListener("input", () => renderSearch(searchInput.value));
+  searchDialog?.addEventListener("click", (event) => {
+    if (event.target === searchDialog) searchDialog.close();
+  });
+  searchDialog?.addEventListener("close", () => {
+    if (searchInput) searchInput.value = "";
+  });
 
   initHeroMotion();
 })();

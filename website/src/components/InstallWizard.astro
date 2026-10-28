@@ -60,6 +60,7 @@ const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossa
           <ul>
             {w.chooseStuck.map((item, i) => <li set:html={renderRuns(item, locale, `choose-${i}`)} />)}
           </ul>
+          <button type="button" class="help-search" data-search-open data-search-query={w.chooseHelp}>{w.helpLabel}</button>
         </details>
       </div>
     </div>
@@ -104,9 +105,12 @@ const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossa
               <p class="see-now"><strong class="see-label">{w.seeLabel}</strong> <span set:html={renderRuns(step.see, locale, `${brand.id}-s-${i}`)} /></p>
               <details class="stuck">
                 <summary>{w.stuckLabel}</summary>
-                <ul>
-                  {step.stuck.map((item, n) => <li set:html={renderRuns(item, locale, `${brand.id}-k-${i}-${n}`)} />)}
-                </ul>
+                {step.stuck.length > 0 && (
+                  <ul>
+                    {step.stuck.map((item, n) => <li set:html={renderRuns(item, locale, `${brand.id}-k-${i}-${n}`)} />)}
+                  </ul>
+                )}
+                <button type="button" class="help-search" data-search-open data-search-query={step.help}>{w.helpLabel}</button>
               </details>
             </div>
           </li>
@@ -170,6 +174,7 @@ const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossa
           <ul>
             {w.restoreStuck.map((item, i) => <li set:html={renderRuns(item, locale, `restore-k-${i}`)} />)}
           </ul>
+          <button type="button" class="help-search" data-search-open data-search-query={w.restoreHelp}>{w.helpLabel}</button>
           <p set:html={renderRuns(w.restoreCommandLead, locale, "restore-cmd-lead")} />
           <div class="code">
             <pre><code id="cmd-restore-sh" data-ip-fill="example">{RESTORE_COMMAND}</code></pre>
