@@ -48,4 +48,25 @@ for locale, name in (("zh", "index.html"), ("en", "en/index.html")):
     assert ("文档没有" if locale == "zh" else "The guide does not") not in beginner
     for banned in ("PatchWall", "FallbackHome", "T-Cast", "set-home", "接管"):
         assert banned not in beginner, banned
+    assert "classList.remove(" not in html
+    nav_end = html.index("</nav>")
+    assert html.index("<dialog") > nav_end, "search dialog is inside the nav"
+    cta = html[html.index('class="nav-cta"'):nav_end]
+    assert "<dialog" not in cta
+    assert 'class="nav-search"' in html[:nav_end]
     print(f"PASS {locale}: beginner wizard, ad table, restore, and one advanced source")
+
+css = "\n".join(path.read_text(encoding="utf-8") for path in (root / "website/dist/_astro").glob("*.css"))
+compact = "".join(css.split())
+assert ".search-dialog:not([open]){display:none}" in compact, compact[compact.find("search-dialog"):compact.find("search-dialog") + 240]
+assert ".search-dialog{display:flex" not in compact
+assert ".search-dialog[open]{display:flex}" in compact
+assert ".nav-cta{display:contents}" in compact
+js = "\n".join(path.read_text(encoding="utf-8") for path in (root / "website/dist/_astro").glob("*.js"))
+assert "Escape" in js
+headers = (root / "website/public/_headers").read_text(encoding="utf-8")
+assert "script-src 'self'" in headers and "script-src 'self' 'unsafe-inline'" not in headers
+for page in (root / "website/dist").rglob("*.html"):
+    text = page.read_text(encoding="utf-8")
+    assert "document.documentElement.classList.remove" not in text, page
+print("PASS search dialog stays closed until opened, and the header script is external")

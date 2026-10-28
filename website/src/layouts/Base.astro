@@ -15,7 +15,7 @@ const canonical = `${brand.site}${copy.meta.canonical.replace(brand.site, "")}`;
 const webosPage = Astro.url.pathname === "/webos/" || Astro.url.pathname === "/en/webos/";
 ---
 <!DOCTYPE html>
-<html lang={locale === "zh" ? "zh-CN" : "en"} class="no-js">
+<html lang={locale === "zh" ? "zh-CN" : "en"}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -62,9 +62,11 @@ const webosPage = Astro.url.pathname === "/webos/" || Astro.url.pathname === "/e
     screenshot: [1, 2, 3].map((i) => `${brand.site}${[shots.home, shots.shelf, shots.cc][i - 1].src}`),
   })} />
 
-  <script is:inline>
-    document.documentElement.classList.remove("no-js");
-  </script>
+  <noscript>
+    <style>
+      .reveal { opacity: 1; transform: none; }
+    </style>
+  </noscript>
 </head>
 <body data-copied={t.copied} data-copy-failed={t.copyFailed} data-copy-label={t.copy} data-compare-value={t.compareValue(0).replace("0", "{p}")}>
   <slot />
