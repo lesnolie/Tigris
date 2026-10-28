@@ -17,7 +17,7 @@ const zh = locale === "zh";
 ---
 {mock.kind === "none" ? null : (
   <figure class="menu-mock">
-    <figcaption>{mock.kind === "home" ? homeCaption : diagramLabel}</figcaption>
+    {mock.kind === "home" ? <figcaption>{homeCaption}</figcaption> : diagramLabel ? <figcaption>{diagramLabel}</figcaption> : null}
     {mock.kind === "crumbs" && (
       <div class="tv-bezel" aria-hidden="true">
         <ol class="crumbs">

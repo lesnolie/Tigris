@@ -43,7 +43,9 @@ for locale, name in (("zh", "index.html"), ("en", "en/index.html")):
     assert 'id="gloss-adb"' in html and 'class="see-now"' in html and 'class="stuck"' in html
     assert ("你现在应该看到" if locale == "zh" else "You should now see") in text
     assert ("卡住了？" if locale == "zh" else "Stuck?") in text
-    assert ("示意图" if locale == "zh" else "Diagram, drawn from") in text
+    assert ("下面的小图是示意图" if locale == "zh" else "not photos of a TV") in text
+    assert ("先准备两样东西" if locale == "zh" else "Two things first") in text
+    assert ("文档没有" if locale == "zh" else "The guide does not") not in beginner
     for banned in ("PatchWall", "FallbackHome", "T-Cast", "set-home", "接管"):
         assert banned not in beginner, banned
     print(f"PASS {locale}: beginner wizard, ad table, restore, and one advanced source")

@@ -31,6 +31,13 @@ const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossa
 
   <div class="wizard-start" id="install-wizard">
     <p class="eyebrow">{w.eyebrow}</p>
+    <div class="prep">
+      <p class="wizard-action">{w.prepTitle}</p>
+      <ul>
+        {w.prep.map((item, i) => <li set:html={renderRuns(item, locale, `prep-${i}`)} />)}
+      </ul>
+      <p class="term-hint">{w.diagramOnce}</p>
+    </div>
     <div class="wizard-step">
       <span class="wizard-num" aria-hidden="true">1</span>
       <div>
@@ -136,9 +143,7 @@ const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossa
           {w.adsRows.map((row, r) => (
             <tr>
               <th scope="row">{row.brand}</th>
-              <td data-label={plainRuns(w.adsHead[1], locale)} set:html={renderRuns(row.boot, locale, `ads-b-${r}`)} />
-              <td data-label={plainRuns(w.adsHead[2], locale)} set:html={renderRuns(row.shelf, locale, `ads-s-${r}`)} />
-              <td data-label={plainRuns(w.adsHead[3], locale)} set:html={renderRuns(row.status, locale, `ads-t-${r}`)} />
+              <td data-label={plainRuns(w.adsHead[1], locale)} set:html={renderRuns(row.note, locale, `ads-n-${r}`)} />
             </tr>
           ))}
         </tbody>

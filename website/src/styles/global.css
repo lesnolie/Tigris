@@ -3068,6 +3068,21 @@ details.advanced .table-wrap {
   min-height: calc(100svh - 72px);
 }
 
+.prep {
+  margin: 0 0 28px;
+  max-width: 40rem;
+}
+
+.prep ul {
+  margin: 10px 0 0;
+  padding-left: 1.2rem;
+  color: #1d1d1f;
+}
+
+.prep li {
+  margin: 6px 0;
+}
+
 .wizard-start .lede,
 .brand-panel .lede,
 .restore-block .lede,

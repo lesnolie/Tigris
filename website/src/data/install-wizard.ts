@@ -150,9 +150,7 @@ export interface BrandModel {
 
 export interface AdsRow {
   brand: string;
-  boot: Run[];
-  shelf: Run[];
-  status: Run[];
+  note: Run[];
 }
 
 export interface WizardModel {
@@ -170,9 +168,12 @@ export interface WizardModel {
   glossaryTitle: string;
   glossaryLede: string;
   adsTitle: string;
+  prepTitle: string;
+  prep: Run[][];
+  diagramOnce: string;
   adsNote: Run[];
   adsCaption: string;
-  adsHead: [Run[], Run[], Run[], Run[]];
+  adsHead: [Run[], Run[]];
   adsRows: AdsRow[];
   restoreTitle: string;
   restoreLede: string;
@@ -275,8 +276,8 @@ function tail(locale: Locale): StepModel[] {
       see: zh ? ["四段用点分开的数字。"] : ["Four numbers separated by dots."],
       stuck: [
         zh
-          ? ["电脑和电视要在", word(locale, "wifi"), "。文档没有为这个品牌另写一条菜单。"]
-          : ["Use ", word(locale, "wifi"), ". The guide does not list a different menu for this brand."],
+          ? ["在「网络」和「关于」里找写着 IP 的一行，也可以在设置里搜索 IP。"]
+          : ["Look in Network and in About for a row labeled IP, or search Settings for IP."],
         zh
           ? ["例子 192.168.1.20 要换成你电视上的数字。"]
           : ["192.168.1.20 is only an example. Use the number on your TV."],
@@ -310,8 +311,8 @@ function tail(locale: Locale): StepModel[] {
       see: zh ? ["对话里出现整段文字，对方开始在你的电脑上操作。"] : ["The chat shows the whole paragraph, and the assistant starts working on your computer."],
       stuck: [
         zh
-          ? ["对方必须能操作你的电脑。只会聊天、不能操作电脑的网页，做不了这一步。"]
-          : ["The assistant has to operate your computer. A chat page that cannot run commands cannot do this step."],
+          ? ["如果对方只把步骤发回来，换一个能在你的电脑上执行的助手。"]
+          : ["If it only sends the steps back, switch to an assistant that can run them on your computer."],
       ],
     },
     {
@@ -356,14 +357,14 @@ function xiaomiLike(locale: Locale, _which: "xiaomi" | "redmi"): StepModel[] {
       mock: { kind: "crumbs", crumbs: zh ? ["设置"] : ["Settings"] },
       see: zh ? ["一列设置菜单。"] : ["A list of settings items."],
       stuck: [
-        zh ? ["在主界面找「设置」或齿轮。文档没有规定遥控器的哪一个键。"] : ["Look for Settings or a gear icon. The guide does not name a remote button."],
+        zh ? ["在主界面找「设置」或齿轮。也可以在菜单里搜索「设置」。"] : ["Look for Settings or a gear icon. You can also search the menus for Settings."],
       ],
     },
     {
       action: zh ? ["进入「关于」。"] : ["Open About."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "关于"] : ["Settings", "About"] },
       see: zh ? ["页面上有「产品型号」。"] : ["The page shows Model. Chinese menus say 产品型号."],
-      stuck: [zh ? ["就在「设置」里面。文档没有写第二种入口。"] : ["It is inside Settings. The guide does not list another place."]],
+      stuck: [zh ? ["在设置里搜索「关于」或 About。"] : ["Search Settings for About or 关于."]],
     },
     {
       action: zh
@@ -383,7 +384,7 @@ function xiaomiLike(locale: Locale, _which: "xiaomi" | "redmi"): StepModel[] {
         ? ["页面上有", word(locale, "adb"), "和", word(locale, "unknown"), "。"]
         : ["The page shows ", word(locale, "adb"), " and ", word(locale, "unknown"), "."],
       stuck: [
-        zh ? ["从设置里找「账号与安全」。文档没有写别的位置。"] : ["Find Account & security inside Settings. Chinese menus say 账号与安全. The guide does not list another place."],
+        zh ? ["在设置里搜索「账号与安全」。英文菜单可能写成 Account & security。"] : ["Search Settings for Account & security. A Chinese menu says 账号与安全."],
       ],
     },
     {
@@ -422,20 +423,20 @@ function tclLike(locale: Locale, _which: "tcl" | "ffalcon"): StepModel[] {
       mock: { kind: "crumbs", crumbs: zh ? ["设置"] : ["Settings"] },
       see: zh ? ["一列设置菜单。"] : ["A list of settings items."],
       stuck: [
-        zh ? ["在主界面找「设置」或齿轮。文档没有规定遥控器的哪一个键。"] : ["Look for Settings or a gear icon. The guide does not name a remote button."],
+        zh ? ["在主界面找「设置」或齿轮。也可以在菜单里搜索「设置」。"] : ["Look for Settings or a gear icon. You can also search the menus for Settings."],
       ],
     },
     {
       action: zh ? ["进入「关于」。"] : ["Open About."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "关于"] : ["Settings", "About"] },
       see: zh ? ["页面上有「本机信息」。"] : ["The page shows Device info. Chinese menus say 本机信息."],
-      stuck: [zh ? ["就在「设置」里面。"] : ["It is inside Settings."]],
+      stuck: [zh ? ["在设置里搜索「关于」或 About。"] : ["Search Settings for About or 关于."]],
     },
     {
       action: zh ? ["进入「本机信息」。"] : ["Open Device info."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "关于", "本机信息"] : ["Settings", "About", "Device info"] },
       see: zh ? ["本机信息这一页打开了。"] : ["The device info page is open."],
-      stuck: [zh ? ["文档写的就是「设置 → 关于 → 本机信息」。"] : ["The guide says Settings → About → Device info. Chinese menus say 本机信息."]],
+      stuck: [zh ? ["在「关于」里找「本机信息」，或直接搜索这个名字。"] : ["Look in About for Device info, or search for 本机信息."]],
     },
     {
       action: zh
@@ -451,7 +452,7 @@ function tclLike(locale: Locale, _which: "tcl" | "ffalcon"): StepModel[] {
       action: zh ? ["在「更多」里把", word(locale, "adb", "ADB"), "打开。"] : ["Under More, turn ", word(locale, "adb", "ADB"), " on."],
       mock: { kind: "toggle", label: "ADB" },
       see: zh ? ["这个开关是打开的。"] : ["The switch is on."],
-      stuck: [zh ? ["「更多」在页面底部。文档没有写第二种开法。"] : ["More is at the bottom. The guide does not list another way."]],
+      stuck: [zh ? ["「更多」在这一页的底部。没看到就回到「本机信息」，把上、下、左、右再按一遍。"] : ["More is at the bottom of this page. If it is missing, go back to Device info and press Up, Down, Left, Right again."]],
     },
   ];
   const steps = [...head, ...tail(locale)];
@@ -475,13 +476,13 @@ function sonySteps(locale: Locale): StepModel[] {
       action: zh ? ["打开电视的「设置」。"] : ["Open Settings on the TV."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置"] : ["Settings"] },
       see: zh ? ["一列设置菜单。"] : ["A list of settings items."],
-      stuck: [zh ? ["在主界面找「设置」或齿轮。"] : ["Look for Settings or a gear icon."]],
+      stuck: [zh ? ["在主界面找「设置」或齿轮。也可以搜索「设置」。"] : ["Look for Settings or a gear icon. You can also search for Settings."]],
     },
     {
       action: zh ? ["进入「系统」。"] : ["Open System."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "系统"] : ["Settings", "System"] },
       see: zh ? ["系统这一页打开了。"] : ["The System page is open."],
-      stuck: [zh ? ["文档写的路径从「设置 → 系统」开始。"] : ["The guide starts at Settings → System."]],
+      stuck: [zh ? ["在设置里搜索「系统」或 System。"] : ["Search Settings for System or 系统."]],
     },
     {
       action: zh ? ["进入「关于」。"] : ["Open About."],
@@ -495,13 +496,13 @@ function sonySteps(locale: Locale): StepModel[] {
         : ["On the Android TV OS build row, press ", word(locale, "ok"), " 7 times."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "系统", "关于", "Android TV 操作系统版本"] : ["Settings", "System", "About", "Build"] },
       see: zh ? ["电视提示已经进入", word(locale, "devmode"), "。"] : ["The TV says ", word(locale, "devmode"), " is on."],
-      stuck: [zh ? ["要按满 7 次。英文资料把这一行写成 Build。"] : ["Press it seven times. Chinese guides call this row Android TV 操作系统版本."]],
+      stuck: [zh ? ["要按满 7 次。这一行也可能写成「版本」或 Build。没出现提示就再数一遍。"] : ["Press it seven times. The row may also say 版本 or Android TV 操作系统版本. Count again if nothing appears."]],
     },
     {
       action: zh ? ["打开", word(locale, "devopts"), "。"] : ["Open ", word(locale, "devopts"), "."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "系统", "开发者选项"] : ["Settings", "System", "Developer options"] },
       see: zh ? ["开发者选项这一页打开了。"] : ["The Developer options page is open."],
-      stuck: [zh ? ["它在你连按 7 次之后才会出现。"] : ["It appears after the 7 presses."]],
+      stuck: [zh ? ["连按之后才会出现。还没有的话，回到上一行再按几次，或把电视重启后再试。"] : ["It appears after the presses. If it is still missing, press the previous row again, or restart the TV and try once more."]],
     },
     {
       action: zh ? ["把", word(locale, "adb", "USB 调试"), "打开。"] : ["Turn on ", word(locale, "adb", "USB debugging"), "."],
@@ -524,15 +525,15 @@ function otherSteps(locale: Locale): StepModel[] {
       see: zh ? ["一列设置菜单。"] : ["A list of settings items."],
       stuck: [
         zh
-          ? ["海信的 Android 电视，文档和这条写在一起。菜单如果完全对不上，可能是", word(locale, "vidaa"), "，或 LG 的", word(locale, "webos"), "、三星的", word(locale, "tizen"), "。那种电视不要继续。"]
-          : ["Hisense Android TVs are listed with this path. If the menus do not match at all, it may be ", word(locale, "vidaa"), ", LG ", word(locale, "webos"), ", or Samsung ", word(locale, "tizen"), ". Stop if it is one of those."],
+          ? ["海信的 Android 电视也用这些菜单。完全对不上时，可能是", word(locale, "vidaa"), "、LG 的", word(locale, "webos"), "或三星的", word(locale, "tizen"), "，就停下来。"]
+          : ["Hisense Android TVs use these menus too. If nothing matches, it may be ", word(locale, "vidaa"), ", LG ", word(locale, "webos"), ", or Samsung ", word(locale, "tizen"), ". Stop."],
       ],
     },
     {
       action: zh ? ["进入「设备偏好设置」。"] : ["Open Device Preferences."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "设备偏好设置"] : ["Settings", "Device Preferences"] },
       see: zh ? ["设备偏好设置这一页打开了。"] : ["Device Preferences is open."],
-      stuck: [zh ? ["文档写的就是这个名字。"] : ["The guide uses this name."]],
+      stuck: [zh ? ["在设置里搜索「设备偏好设置」或 Device Preferences。"] : ["Search Settings for Device Preferences or 设备偏好设置."]],
     },
     {
       action: zh ? ["进入「关于」。"] : ["Open About."],
@@ -544,13 +545,13 @@ function otherSteps(locale: Locale): StepModel[] {
       action: zh ? ["在「版本号」上连按", word(locale, "ok"), " 7 次。"] : ["On Build, press ", word(locale, "ok"), " 7 times."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "设备偏好设置", "关于", "版本号"] : ["Settings", "Device Preferences", "About", "Build"] },
       see: zh ? ["电视提示已经可以打开", word(locale, "devopts"), "。"] : ["You can now open ", word(locale, "devopts"), "."],
-      stuck: [zh ? ["要按满 7 次。"] : ["Press it seven times."]],
+      stuck: [zh ? ["要按满 7 次。这一行也可能写成 Build。没出现提示就再数一遍。"] : ["Press it seven times. The row may also say 版本号. Count again if nothing appears."]],
     },
     {
       action: zh ? ["打开", word(locale, "devopts"), "。"] : ["Open ", word(locale, "devopts"), "."],
       mock: { kind: "crumbs", crumbs: zh ? ["开发者选项"] : ["Developer options"] },
       see: zh ? ["开发者选项这一页打开了。"] : ["Developer options is open."],
-      stuck: [zh ? ["它在连按 7 次之后才会出现。"] : ["It appears after the 7 presses."]],
+      stuck: [zh ? ["连按之后才会出现。还没有的话，回到上一行再按几次，或把电视重启后再试。"] : ["It appears after the presses. If it is still missing, press the previous row again, or restart the TV and try once more."]],
     },
     {
       action: zh ? ["把", word(locale, "adb", "USB 调试"), "打开。"] : ["Turn on ", word(locale, "adb", "USB debugging"), "."],
@@ -590,70 +591,48 @@ function prompts(locale: Locale): Record<string, string> {
 
 function ads(locale: Locale): { note: Run[]; caption: string; head: WizardModel["adsHead"]; rows: AdsRow[] } {
   const zh = locale === "zh";
-  const boot = (more: Run[]): Run[] =>
-    zh
-      ? ["不要指望", word(locale, "bootad"), "会消失。文档写明它在进入主屏幕之前由系统播放，不能去掉。", ...more]
-      : ["Do not expect ", word(locale, "bootad"), " to disappear. The docs say the system plays them before any home screen, and removal cannot be promised. ", ...more];
-  const shelf = (more: Run[]): Run[] =>
-    zh
-      ? ["按", word(locale, "homekey"), "后如果停在 Tigris，屏幕是时间、壁纸和应用，没有原厂的", word(locale, "shelf"), "。如果仍是", word(locale, "stock"), "，推荐海报还在。", word(locale, "popup"), "：", word(locale, "unverified"), "。", ...more]
-      : ["If ", word(locale, "homekey"), " leaves you on Tigris, you see a clock, wallpaper and apps, not the original ", word(locale, "shelf"), ". If the ", word(locale, "stock"), " is still showing, those posters are still there. ", word(locale, "popup"), ": ", word(locale, "unverified"), ". ", ...more];
   return {
     note: zh
-      ? ["很多人想少看广告。能确定的是：按", word(locale, "homekey"), "之后如果停在 Tigris，就看不到原厂的", word(locale, "shelf"), "。", word(locale, "bootad"), "文档写明不能去掉。", word(locale, "popup"), "每种电视都", word(locale, "unverified"), "。"]
-      : ["Many people install this to see fewer ads. What we can say: if ", word(locale, "homekey"), " leaves you on Tigris, the original ", word(locale, "shelf"), " is not on that screen. The docs say ", word(locale, "bootad"), " cannot be promised gone. ", word(locale, "popup"), " are ", word(locale, "unverified"), " on every brand."],
+      ? ["停在 Tigris 主屏幕时没有原厂", word(locale, "shelf"), "；", word(locale, "bootad"), "在进主屏幕之前由系统播放，不能去掉；", word(locale, "popup"), "还没测过。"]
+      : ["On the Tigris home screen there is no original ", word(locale, "shelf"), "; ", word(locale, "bootad"), " play before that screen and cannot be removed; ", word(locale, "popup"), " have not been checked."],
     caption: zh
-      ? "每一格只写仓库文档里有的内容。没测过就写未实机验证或用户自报。"
-      : "Each cell uses only what the repository docs say. Anything untested is marked not checked on a real TV, or as a user report.",
+      ? "上面那一句对每个品牌都一样，所以表里不再重复。没测过的广告都算未实机验证。没有已批准的固件可以自动关广告。若主页键仍停在自带桌面，推荐位还在。"
+      : "The sentence above is the same for every brand, so the table does not repeat it. Ads that were not checked count as not checked on a real TV. No firmware is approved for automatic ad removal. If the house button still opens the original home screen, the recommendation row is still there.",
     head: zh
-      ? [["电视"], [word(locale, "bootad")], [word(locale, "shelf"), " / ", word(locale, "popup")], ["验证到哪一步"]]
-      : [["TV"], [word(locale, "bootad")], [word(locale, "shelf"), " / ", word(locale, "popup")], ["What was checked"]],
+      ? [["电视"], ["和上面那句不一样的地方"]]
+      : [["TV"], ["What differs"]],
     rows: [
       {
         brand: zh ? "小米" : "Xiaomi",
-        boot: boot([zh ? "没有小米机型的记录说它已经没有。" : "No Xiaomi model is recorded as having lost them."]),
-        shelf: shelf([]),
-        status: zh
-          ? ["广告", word(locale, "unverified"), "。没有已批准、可以自动关广告的固件。MiTV-ANSP0、MiTV-ASTR0 是", word(locale, "report"), "，只说明能否安装或运行。"]
-          : ["Ads are ", word(locale, "unverified"), ". No firmware is approved for automatic ad removal. MiTV-ANSP0 and MiTV-ASTR0 are a ", word(locale, "report"), " about install or running, not about ads."],
+        note: zh
+          ? ["有的机器主页键仍打开自带桌面。MiTV-ANSP0、MiTV-ASTR0 是", word(locale, "report"), "，只说明能否安装或运行。"]
+          : ["Some sets still open the original home screen. MiTV-ANSP0 and MiTV-ASTR0 are a ", word(locale, "report"), " about installing or running."],
       },
       {
         brand: zh ? "红米" : "Redmi",
-        boot: boot([zh ? "文档把红米和小米写在一起，没有红米单独的记录。" : "The docs group Redmi with Xiaomi and have no separate Redmi record."]),
-        shelf: shelf([zh ? "没有红米专用的广告记录。" : "There is no Redmi-only ad record."]),
-        status: zh
-          ? ["广告", word(locale, "unverified"), "。"]
-          : ["Ads are ", word(locale, "unverified"), "."],
+        note: zh ? ["和小米同一套说明，没有单独记录。"] : ["Grouped with Xiaomi. No separate record."],
       },
       {
         brand: zh ? "雷鸟" : "FFalcon (雷鸟)",
-        boot: boot([zh ? "安装不会替雷鸟关闭系统里的广告组件。" : "Install does not switch off ad components for FFalcon."]),
-        shelf: shelf([]),
-        status: zh
-          ? ["雷鸟 75R685C 已在真机上装好，音量、设置和信号源可用，没有测广告。75S545C 是", word(locale, "report"), "，说装好并能打开。广告", word(locale, "unverified"), "。"]
-          : ["FFalcon 75R685C was installed on a real TV; volume, settings and inputs worked. Ads were not tested. 75S545C is a ", word(locale, "report"), " that it installed and opened. Ads are ", word(locale, "unverified"), "."],
+        note: zh
+          ? ["75R685C 实机装成功，音量、设置、信号源可用。75S545C 是", word(locale, "report"), "。"]
+          : ["75R685C installed on a real TV; volume, settings and inputs worked. 75S545C is a ", word(locale, "report"), "."],
       },
       {
         brand: "TCL",
-        boot: boot([zh ? "文档把 TCL 和雷鸟的安装写在一起。没有单独的 TCL 广告记录。安装不会关闭系统里的广告组件。" : "The docs group TCL install steps with FFalcon. There is no separate TCL ad record. Install does not switch off ad components."]),
-        shelf: shelf([]),
-        status: zh ? ["广告", word(locale, "unverified"), "。"] : ["Ads are ", word(locale, "unverified"), "."],
+        note: zh ? ["和雷鸟同一套说明，没有单独记录。"] : ["Same notes as FFalcon. No separate record."],
       },
       {
         brand: zh ? "索尼" : "Sony",
-        boot: boot([zh ? "索尼的测试没有包含开机广告。安装不会替索尼关闭系统里的广告组件。" : "Sony testing did not cover boot ads. Install does not switch off ad components for Sony."]),
-        shelf: shelf([]),
-        status: zh
-          ? ["XR-55A80J 是维护者的主要测试机，查过桌面、亮度、音量和信号源，不是广告。广告", word(locale, "unverified"), "。"]
-          : ["XR-55A80J is the maintainer’s main test TV for the home screen, brightness, volume and inputs, not for ads. Ads are ", word(locale, "unverified"), "."],
+        note: zh
+          ? ["XR-55A80J 测过桌面、亮度、音量和信号源。"]
+          : ["XR-55A80J was checked for the home screen, brightness, volume and inputs."],
       },
       {
         brand: zh ? "其他 Android 电视" : "Other Android TV",
-        boot: boot([zh ? "没有按品牌的记录说它已经没有。" : "No per-brand record says they are gone."]),
-        shelf: shelf([]),
-        status: zh
-          ? ["广告", word(locale, "unverified"), "。海信有一条 2026-10-26 的", word(locale, "report"), "：用 WorkBuddy 安装成功，没有型号，也不能说明广告。"]
-          : ["Ads are ", word(locale, "unverified"), ". A Hisense ", word(locale, "report"), " from 2026-10-26 says install with WorkBuddy succeeded. No model was given, and it does not speak to ads."],
+        note: zh
+          ? ["海信 2026-10-26：", word(locale, "report"), "用 WorkBuddy 装成功，没有型号。"]
+          : ["Hisense, 2026-10-26: a ", word(locale, "report"), " of a WorkBuddy install, with no model."],
       },
     ],
   };
@@ -687,6 +666,18 @@ export function getWizard(locale: Locale): WizardModel {
   const webosHref = zh ? "/webos/" : "/en/webos/";
   return {
     eyebrow: "INSTALL",
+    prepTitle: zh ? "先准备两样东西。" : "Two things first.",
+    prep: [
+      zh
+        ? ["一台电脑，和电视连在同一个 Wi-Fi。"]
+        : ["A computer on the same Wi-Fi as the TV."],
+      zh
+        ? ["一个能操作这台电脑的", word(locale, "ai"), "：它会在你的电脑上亲自安装，而不是只把步骤发给你。"]
+        : ["An ", word(locale, "ai"), " that can operate that computer: it runs the install on your computer, instead of only sending you the steps."],
+    ],
+    diagramOnce: zh
+      ? "下面的小图是示意图，按菜单名字绘制，不是电视照片。"
+      : "The small pictures below are diagrams drawn from menu names, not photos of a TV.",
     title: zh ? "选出你的电视。" : "Choose your TV.",
     lede: zh ? "点下面的一个品牌。" : "Tap one brand below.",
     termHint: zh ? "带下划线的词，点一下就能看解释。" : "Underlined words open a short explanation.",
@@ -741,7 +732,7 @@ export function getWizard(locale: Locale): WizardModel {
     restoreCommandLead: zh
       ? ["如果助手不方便，Mac 或 Linux 可以自己粘贴文档里的 install.sh restore。它会关掉自动切回，把画着房子的键还给安装时记下的原来的桌面，并且先不卸载 Tigris。Windows 请用上面的文字。电脑需要 bash、curl，以及 adb（电脑用来连接电视的程序，在", { href: "https://developer.android.com/tools/releases/platform-tools", word: "Android 平台工具" }, "里）。"]
       : ["If an assistant is not handy, Mac or Linux can paste the documented install.sh restore command. It turns off the automatic switch-back, returns the house button to the saved original home screen, and does not uninstall Tigris yet. On Windows, use the paragraph above. The computer needs bash, curl, and adb (the program that connects the computer to the TV, inside ", { href: "https://developer.android.com/tools/releases/platform-tools", word: "Android platform-tools" }, ")."],
-    diagramLabel: zh ? "示意图。按文档里的菜单名绘制，不是电视照片。" : "Diagram, drawn from the menu names in the docs. Not a photo of a TV.",
+    diagramLabel: "",
     exampleLabel: zh ? "举例，不是你的电视" : "Example, not your TV",
     homeAlt: zh
       ? "Tigris 主屏幕的真实照片：风景壁纸，上方有时间，下方一排应用图标。拍自索尼电视。"
