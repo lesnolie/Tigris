@@ -29,7 +29,12 @@ const zh = locale === "zh";
       {system.id === "webos" && <a class="text-link" href={zh ? "/webos/" : "/en/webos/"}>{zh ? "打开 LG webOS 独立安装指南" : "Open the separate LG webOS guide"} ↗</a>}
     </div>)}
     <div id="android-quick-commands">
-      <p>{zh ? "先安装 Git、Python 3、Android SDK Platform-Tools（adb）、Bash 和 curl。Windows 需安装 Git for Windows，并将 Git Bash 与 adb 加入 PATH。电脑和电视同一局域网，在电视上允许调试。将第一行地址改为电视 IP。" : "Install Git, Python 3, Android SDK Platform-Tools (adb), Bash and curl. On Windows, install Git for Windows and add Git Bash and adb to PATH. Use the same network and allow debugging on the TV. Replace the address on the first line."}</p>
+      <p>{zh ? "先装好这三样，再运行命令。Windows 还要安装 Git for Windows，并把 Git Bash 和 adb 加入 PATH。电脑和电视同一个 Wi-Fi。把第一行地址改成电视上的四段数字。" : "Install these three first, then run the command. On Windows, also install Git for Windows and add Git Bash and adb to PATH. Use the same Wi-Fi. Replace the address on the first line with the four numbers from the TV."}</p>
+      <ul class="tool-links">
+        <li><a href="https://git-scm.com/downloads" rel="noopener noreferrer">Git</a></li>
+        <li><a href="https://www.python.org/downloads/" rel="noopener noreferrer">Python 3</a></li>
+        <li><a href="https://developer.android.com/tools/releases/platform-tools" rel="noopener noreferrer">{zh ? "Android SDK Platform-Tools（adb）" : "Android SDK Platform-Tools (adb)"}</a></li>
+      </ul>
       {(["powershell", "posix"] as const).map(shell => (["plan", "execute"] as const).map(mode => <div data-install-command={`${shell}-${mode}`} hidden={shell !== "powershell" || mode !== "plan"}>
         <div class="code"><pre><code id={`quick-${shell}-${mode}`}>{quickCommand(shell, mode)}</code></pre><button class="copy" data-copy={`#quick-${shell}-${mode}`} type="button"><span class="label"></span></button></div>
       </div>))}

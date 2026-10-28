@@ -121,8 +121,8 @@ export const zh = {
 
     install: {
       eyebrow: "INSTALL",
-      title: "选一种方式，把 Tigris 带回家。",
-      lede: "一台和电视连在同一个 Wi-Fi 的电脑、电视的 IP 地址、打开的 ADB 调试，就够了。支持 Android 9 及以上，不需要 root。",
+      title: "选出你的电视。",
+      lede: "点下面的一个品牌。",
       packages: [
         {
           name: "标准版 APK",

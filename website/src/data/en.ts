@@ -120,8 +120,8 @@ export const en = {
 
   install: {
     eyebrow: "INSTALL",
-    title: "A better home screen, step by step.",
-    lede: "You need a computer on the same Wi-Fi as the TV, the TV's IP address and ADB debugging enabled. Android 9+, no root.",
+    title: "Choose your TV.",
+    lede: "Tap one brand below.",
     packages: [
       {
           name: "Standard APK",

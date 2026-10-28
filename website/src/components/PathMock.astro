@@ -1,0 +1,78 @@
+---
+import type { Locale } from "../data/lang";
+import type { Mock } from "../data/install-wizard";
+import { shots } from "../data/site";
+
+interface Props {
+  mock: Mock;
+  locale: Locale;
+  diagramLabel: string;
+  exampleLabel: string;
+  homeAlt: string;
+  homeCaption: string;
+}
+
+const { mock, locale, diagramLabel, exampleLabel, homeAlt, homeCaption } = Astro.props;
+const zh = locale === "zh";
+---
+{mock.kind === "none" ? null : (
+  <figure class="menu-mock">
+    <figcaption>{mock.kind === "home" ? homeCaption : diagramLabel}</figcaption>
+    {mock.kind === "crumbs" && (
+      <div class="tv-bezel" aria-hidden="true">
+        <ol class="crumbs">
+          {mock.crumbs.map((crumb, i) => <li class:list={{ "is-here": i === mock.crumbs.length - 1 }}>{crumb}</li>)}
+        </ol>
+      </div>
+    )}
+    {mock.kind === "dpad" && (
+      <div class="tv-bezel" aria-hidden="true">
+        <div class="dpad">
+          <span class="up">{zh ? "上" : "Up"}</span>
+          <span class="left">{zh ? "左" : "Left"}</span>
+          <span class="right">{zh ? "右" : "Right"}</span>
+          <span class="down">{zh ? "下" : "Down"}</span>
+        </div>
+        <p class="mock-note">{zh ? "依次按，间隔不超过 1 秒" : "In order, less than 1 second apart"}</p>
+      </div>
+    )}
+    {mock.kind === "toggle" && (
+      <div class="tv-bezel" aria-hidden="true">
+        <div class="mock-row">
+          <span>{mock.label}</span>
+          <span class="mock-switch"><i></i></span>
+        </div>
+        <p class="mock-note">{zh ? "开关打开之后的样子" : "How the switch looks when it is on"}</p>
+      </div>
+    )}
+    {mock.kind === "ip" && (
+      <div class="tv-bezel" aria-hidden="true">
+        <p class="mock-example">{exampleLabel}</p>
+        <p class="mock-ip">192.168.1.20</p>
+      </div>
+    )}
+    {mock.kind === "dialog" && (
+      <div class="tv-bezel" aria-hidden="true">
+        <p class="mock-dialog-title">{mock.title}</p>
+        <div class="mock-choices">
+          {mock.choices.map((choice) => <span>{choice}</span>)}
+        </div>
+      </div>
+    )}
+    {mock.kind === "quote" && (
+      <div class="tv-bezel" aria-hidden="true">
+        <p class="mock-quote">{mock.text}</p>
+      </div>
+    )}
+    {mock.kind === "home" && (
+      <img
+        src={shots.home.src}
+        srcset={`${shots.home.small} 640w, ${shots.home.src} 1280w`}
+        sizes="(max-width: 700px) 100vw, 640px"
+        width="1280"
+        height="720"
+        alt={homeAlt}
+      />
+    )}
+  </figure>
+)}
