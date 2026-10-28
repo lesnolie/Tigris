@@ -4,17 +4,12 @@ import registry from "../../../tools/installation_strategies.json";
 interface Props { locale: Locale }
 const { locale } = Astro.props;
 const zh = locale === "zh";
-const command = "tools/install-plan.py --platform android --serial 192.168.1.20:5555";
 ---
-<details class="manual-install strategy-guide">
-  <summary>{zh ? "统一策略安装 · 需要 v2.0.9 或更新版本的完整源码" : "Shared strategy installation · requires full v2.0.9+ source"}</summary>
-  <p>{zh ? "在 v2.0.9 或更新版本的完整源码目录运行。先确认电视平台，再自动读取品牌、型号、固件及 HOME。未知固件先诊断，不猜危险操作。" : "Run from a full v2.0.9 or newer source checkout. Confirm the TV platform, then inspect brand, model, firmware and HOME. Unknown firmware starts with diagnostics."}</p>
-  <p>{zh ? "需 Python 3、adb 及电视授权；执行安装还需 Bash、curl（Windows 可用 Git Bash 并加入 PATH）。将示例地址改为电视地址。" : "Requires Python 3, adb and TV authorization. Execution also requires Bash and curl (Git Bash on Windows, added to PATH). Replace the example address."}</p>
-  <div class="code"><pre><code>{`# Windows PowerShell\npython ${command}\n# macOS / Linux\npython3 ${command}`}</code></pre></div>
-  <p>{zh ? "一键执行：核对报告后，在同一命令后加 --execute。手动安装和 AI 安装都按同一报告操作；恢复继续使用原电脑的 install.sh restore 与原始快照。实体 Home、重启、待机及清理内存需分别验收。" : "Automatic execution: review the report, then append --execute. Manual and AI installation follow the same report. Restore with install.sh restore on the original computer using its original snapshot. Test physical Home, reboot, standby and memory cleanup separately."}</p>
+<div class="strategy-guide">
+  <h3>{zh ? "策略对照" : "Strategy lookup"}</h3>
+  <p>{zh ? "上面那条命令会读取电视的真实型号，再对照这张表。这不是另一套安装步骤。" : "The command above reads the TV and matches this table. It is not a second way to install."}</p>
   <div class="table-wrap"><table>
     <thead><tr><th>{zh ? "策略" : "Strategy"}</th><th>{zh ? "实际路径" : "Actual path"}</th></tr></thead>
     <tbody>{registry.strategies.map(s => <tr><th scope="row">{s.name[locale]}</th><td>{s.guidance[locale]}</td></tr>)}</tbody>
   </table></div>
-  <p>{zh ? "AI 提示词：先阅读当前源码的 AGENTS.md，运行上述只读计划，按 installation_strategy 与 HOME 证据选择路径。不得禁用原厂桌面或设置；广告清理独立授权；不要把模拟 Home 当作实体遥控器通过。" : "AI prompt: read AGENTS.md in this checkout and run the read-only plan above. Follow installation_strategy and HOME evidence. Never disable factory launchers or settings; obtain separate consent for ad maintenance. Synthetic Home is not physical remote verification."}</p>
-</details>
+</div>

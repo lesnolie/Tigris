@@ -206,6 +206,105 @@ import { initHeroMotion } from "./hero-motion";
     select(0);
   });
 
+  /* ---------- beginner install wizard ---------- */
+  const wizard = doc.querySelector<HTMLElement>("[data-wizard]");
+  if (wizard) {
+    const picks = Array.from(wizard.querySelectorAll<HTMLButtonElement>("[data-brand-pick]"));
+    const panels = Array.from(wizard.querySelectorAll<HTMLElement>("[data-brand-panel]"));
+    const live = wizard.querySelector<HTMLElement>("[data-wizard-live]");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const selectBrand = (id: string, focus = false) => {
+      picks.forEach((btn, i) => {
+        const on = btn.dataset.brandPick === id;
+        btn.setAttribute("aria-checked", on ? "true" : "false");
+        btn.classList.toggle("is-on", on);
+        btn.tabIndex = on || (!id && i === 0) ? 0 : -1;
+        if (on && focus) btn.focus();
+      });
+      panels.forEach((panel) => {
+        panel.hidden = panel.dataset.brandPanel !== id;
+      });
+      const picked = picks.find((btn) => btn.dataset.brandPick === id);
+      if (live && picked) {
+        const name = picked.textContent?.trim() ?? "";
+        live.textContent = isEnglish
+          ? `${name} selected. The steps are below.`
+          : `已选出${name}。步骤在下面。`;
+      }
+      if (id) {
+        wizard.querySelector<HTMLElement>(`#steps-${id}`)?.scrollIntoView({
+          behavior: reduceMotion ? "auto" : "smooth",
+          block: "start",
+        });
+      }
+    };
+
+    picks.forEach((btn) => btn.addEventListener("click", () => selectBrand(btn.dataset.brandPick || "")));
+    wizard.querySelector("[data-brand-group]")?.addEventListener("keydown", (event) => {
+      const key = (event as KeyboardEvent).key;
+      if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Home", "End"].includes(key)) return;
+      event.preventDefault();
+      const checked = picks.findIndex((btn) => btn.getAttribute("aria-checked") === "true");
+      const current = checked >= 0 ? checked : Math.max(0, picks.indexOf(document.activeElement as HTMLButtonElement));
+      let next = current < 0 ? 0 : current;
+      if (key === "ArrowRight" || key === "ArrowDown") next = (next + 1) % picks.length;
+      else if (key === "ArrowLeft" || key === "ArrowUp") next = (next - 1 + picks.length) % picks.length;
+      else if (key === "Home") next = 0;
+      else if (key === "End") next = picks.length - 1;
+      selectBrand(picks[next].dataset.brandPick || "", true);
+    });
+
+    const inputs = Array.from(wizard.querySelectorAll<HTMLInputElement>(".tv-ip"));
+    const fills = Array.from(wizard.querySelectorAll<HTMLElement>("[data-ip-fill]"));
+    const originals = new Map(fills.map((el) => [el, el.textContent || ""]));
+    const applyIp = (raw: string) => {
+      const ip = raw.trim();
+      const slot = inputs[0]?.dataset.ipSlot || "";
+      const example = inputs[0]?.dataset.ipExample || "";
+      fills.forEach((el) => {
+        let text = originals.get(el) || "";
+        if (el.dataset.ipFill === "slot" && slot) text = text.split(slot).join(ip || slot);
+        if (el.dataset.ipFill === "example" && example) text = text.split(example).join(ip || example);
+        el.textContent = text;
+      });
+    };
+    inputs.forEach((input) => {
+      input.addEventListener("input", () => {
+        inputs.forEach((other) => {
+          if (other !== input) other.value = input.value;
+        });
+        applyIp(input.value);
+      });
+    });
+
+    const closeTerms = () => {
+      doc.querySelectorAll("a.term.is-open").forEach((el) => {
+        el.classList.remove("is-open");
+        el.setAttribute("aria-expanded", "false");
+      });
+    };
+    doc.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const wrap = target.closest(".term-wrap");
+      if (!wrap) {
+        closeTerms();
+        return;
+      }
+      const term = target.closest("a.term");
+      if (!term) return;
+      const mouse = event as MouseEvent;
+      if (mouse.metaKey || mouse.ctrlKey || mouse.shiftKey || mouse.altKey || mouse.button) return;
+      event.preventDefault();
+      const willOpen = !term.classList.contains("is-open");
+      closeTerms();
+      if (willOpen) {
+        term.classList.add("is-open");
+        term.setAttribute("aria-expanded", "true");
+      }
+    });
+  }
+
   /* ---------- install shell switch (PowerShell / macOS · Linux) ---------- */
   let currentShell: "posix" | "powershell" = initialShell;
 

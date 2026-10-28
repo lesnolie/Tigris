@@ -1,5 +1,7 @@
 ---
 import type { Copy, Locale } from "../data/lang";
+import { getWizard } from "../data/install-wizard";
+import InstallWizard from "./InstallWizard.astro";
 import InstallQuick from "./InstallQuick.astro";
 import InstallationChecks from "./InstallationChecks.astro";
 import ApkLimits from "./ApkLimits.astro";
@@ -14,162 +16,155 @@ interface Props {
 
 const { copy, locale } = Astro.props;
 const s = copy.install;
-const dl = locale === "zh" ? "打开 Releases" : "Open Releases";
+const w = getWizard(locale);
+const zh = locale === "zh";
+const dl = zh ? "打开 Releases" : "Open Releases";
 ---
 <section class="section install section-light" id="install">
   <div class="wrap">
-    <div class="section-head center reveal">
-      <p class="eyebrow">{s.eyebrow}</p>
-      <h2>{s.title}</h2>
-      <p class="lede">{s.lede}</p>
-    </div>
+    <InstallWizard locale={locale} />
 
-    <div class="downloads reveal">
-      {s.packages.map((pkg) => (
-        <a class="download" href={pkg.href} rel="noopener">
-          <span class="name">{pkg.name}</span>
-          <span class="use">{pkg.use}</span>
-          <span class="arrow">{dl} <svg aria-hidden="true"><use href="#i-arrow"></use></svg></span>
-        </a>
-      ))}
-    </div>
+    <details class="advanced-install" id="advanced-install">
+      <summary>{w.advancedSummary}</summary>
+      <div class="advanced-body">
+        <p>{w.advancedIntro}</p>
 
-    <ApkChoice locale={locale} />
-    <ApkLimits locale={locale} />
-    <div class="prereq reveal">{s.prereq}</div>
-    <aside class="prereq hisense-report">
-      <strong>{locale === "zh" ? "用户案例 · 海信通过 WorkBuddy 安装成功" : "User report · Hisense installation succeeded with WorkBuddy"}</strong>
-      <p>{locale === "zh" ? "2026-10-26 收录。型号、系统/固件及 Tigris 版本未提供；仅作为安装成功案例，不推断所有海信或原生 VIDAA 兼容，不代表实体 Home、冷启动、待机或广告清理已验证。" : "Recorded 2026-10-26. Model, OS/firmware and Tigris version were not supplied. Installation success only: not certification of all Hisense/native VIDAA TVs or verification of physical Home, cold boot, wake or ad removal."}</p>
-    </aside>
-
-    <InstallQuick locale={locale} />
-
-    <div class="agent-card reveal">
-      <h3><svg aria-hidden="true"><use href="#i-terminal"></use></svg>{s.agent.title}</h3>
-      <p>{s.agent.body}</p>
-      <div class="prompt-box">
-        <p id="cmd-agent">{s.agent.prompt}</p>
-        <button class="copy" type="button" data-copy="#cmd-agent">
-          <svg aria-hidden="true"><use href="#i-copy"></use></svg><span class="label"></span>
-        </button>
-      </div>
-      <p class="fine">{s.agent.note}</p>
-    </div>
-
-    <InstallationChecks locale={locale} />
-    <StrategyGuide locale={locale} />
-    <details class="manual-install"><summary>{locale === "zh" ? "手动安装 · 按电视品牌查看步骤" : "Manual installation · choose your TV brand"}</summary>
-    <div class="table-wrap brand-table">
-      <table>
-        <caption>{s.adbTable.caption}</caption>
-        <thead>
-          <tr>{s.adbTable.head.map((h) => <th scope="col">{h}</th>)}</tr>
-        </thead>
-        <tbody>
-          {s.adbTable.rows.map((row) => (
-            <tr>
-              <th scope="row">{row[0]}</th>
-              <td set:html={row[1]} />
-            </tr>
+        <div class="downloads">
+          {s.packages.map((pkg) => (
+            <a class="download" href={pkg.href} rel="noopener">
+              <span class="name">{pkg.name}</span>
+              <span class="use">{pkg.use}</span>
+              <span class="arrow">{dl} <svg aria-hidden="true"><use href="#i-arrow"></use></svg></span>
+            </a>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </div>
 
-    <p class="windows-note">{s.shellNote}</p>
+        <ApkChoice locale={locale} />
+        <ApkLimits locale={locale} />
+        <aside class="prereq hisense-report">
+          <strong>{zh ? "用户案例 · 海信通过 WorkBuddy 安装成功" : "User report · Hisense installation succeeded with WorkBuddy"}</strong>
+          <p>{zh ? "2026-10-26 收录。型号、系统/固件及 Tigris 版本未提供；仅作为安装成功案例，不推断所有海信或原生 VIDAA 兼容，不代表实体 Home、冷启动、待机或广告清理已验证。" : "Recorded 2026-10-26. Model, OS/firmware and Tigris version were not supplied. Installation success only: not certification of all Hisense/native VIDAA TVs or verification of physical Home, cold boot, wake or ad removal."}</p>
+        </aside>
 
-    {/* One switch for every snippet on the page; the choice is remembered. */}
-    <div class="shell-switch" data-shell-switch aria-label={s.shellLabels.posix + " / " + s.shellLabels.powershell}>
-      {(["powershell", "posix"] as const).map((shell, i) => (
-        <button
-          type="button"
-          data-shell={shell}
-          aria-pressed={i === 0 ? "true" : "false"}
-          class:list={{ "is-on": i === 0 }}
-        >{s.shellLabels[shell]}</button>
-      ))}
-      <p class="shell-switch-note">{s.placeholderNote}</p>
-    </div>
+        <h3 class="manual-brand-heading">{w.commandTitle}</h3>
+        <InstallQuick locale={locale} />
+        <InstallationChecks locale={locale} />
+        <StrategyGuide locale={locale} />
 
-    <div class="shell-guide" data-shell-panel="powershell">
-      <h3>{locale === "zh" ? "Windows：打开 PowerShell" : "Windows: open PowerShell"}</h3>
-      <p>{locale === "zh" ? "在开始菜单搜索 PowerShell 并打开。先安装 Android SDK Platform-Tools，并把 adb 加入 PATH；TCL 推送还需要 Python 3。运行下面的检查，再选择电视品牌。" : "Open PowerShell from Start. Install Android SDK Platform-Tools and add adb to PATH; TCL push also requires Python 3. Check the tools, then choose your TV brand."}</p>
-      <div class="code"><pre><code>{"adb version\ncurl.exe --version"}</code></pre></div>
-      <p>{locale === "zh" ? "TCL / 雷鸟还需运行 python --version，确认是 Python 3。" : "For TCL, also run python --version and confirm Python 3."}</p>
-    </div>
-    <div class="shell-guide" data-shell-panel="posix" hidden>
-      <h3>{locale === "zh" ? "macOS / Linux：打开终端" : "macOS / Linux: open Terminal"}</h3>
-      <p>{locale === "zh" ? "先安装 Android SDK Platform-Tools（提供 adb）。TCL 推送还需要 Python 3。运行下面的检查，再按电视品牌逐条执行；不要把这些命令粘贴到 Windows PowerShell。" : "Install Android SDK Platform-Tools for adb. TCL push also requires Python 3. Check the tools, then follow your TV's steps in Terminal."}</p>
-      <div class="code"><pre><code>{"adb version\ncurl --version"}</code></pre></div>
-      <p>{locale === "zh" ? "TCL / 雷鸟还需运行 python3 --version。" : "For TCL, also run python3 --version."}</p>
-    </div>
-    <h3 class="manual-brand-heading">{locale === "zh" ? "选择电视品牌，按顺序执行" : "Choose your TV and follow each step"}</h3>
-    <div class="tabs" data-tabs>
-      <div class="tablist" role="tablist" aria-label={s.tabsLabel}>
-        {s.tabs.map((tab, i) => (
-          <button
-            type="button"
-            role="tab"
-            id={`tab-${tab.id}`}
-            aria-controls={`panel-${tab.id}`}
-            aria-selected={i === 0 ? "true" : "false"}
-            tabindex={i === 0 ? 0 : -1}
-          >{tab.label}</button>
-        ))}
-      </div>
+        <details class="manual-install">
+          <summary>{zh ? "不用上面的命令时，才按品牌逐条输入" : "Type each command yourself only if you are not using the command above"}</summary>
+          <div class="table-wrap brand-table">
+            <table>
+              <caption>{s.adbTable.caption}</caption>
+              <thead>
+                <tr>{s.adbTable.head.map((h) => <th scope="col">{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {s.adbTable.rows.map((row) => (
+                  <tr>
+                    <th scope="row">{row[0]}</th>
+                    <td set:html={row[1]} />
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      {s.tabs.map((tab, i) => (
-        <div class="tabpanel" role="tabpanel" id={`panel-${tab.id}`} aria-labelledby={`tab-${tab.id}`} hidden={i !== 0}>
-          <h3>{tab.label}</h3>
-          {tab.intro && <p>{tab.intro}</p>}
-          {tab.danger && (
-            <div class="callout is-danger">
-              <svg aria-hidden="true"><use href="#i-warning"></use></svg>
-              <span set:html={tab.danger} />
+          <p class="windows-note">{s.shellNote}</p>
+
+          <div class="shell-switch" data-shell-switch aria-label={s.shellLabels.posix + " / " + s.shellLabels.powershell}>
+            {(["powershell", "posix"] as const).map((shell, i) => (
+              <button
+                type="button"
+                data-shell={shell}
+                aria-pressed={i === 0 ? "true" : "false"}
+                class:list={{ "is-on": i === 0 }}
+              >{s.shellLabels[shell]}</button>
+            ))}
+            <p class="shell-switch-note">{s.placeholderNote}</p>
+          </div>
+
+          <div class="shell-guide" data-shell-panel="powershell">
+            <h3>{zh ? "Windows：打开 PowerShell" : "Windows: open PowerShell"}</h3>
+            <p>{zh ? "在开始菜单搜索 PowerShell 并打开。先安装 Android SDK Platform-Tools，并把 adb 加入 PATH；TCL 推送还需要 Python 3。运行下面的检查，再选择电视品牌。" : "Open PowerShell from Start. Install Android SDK Platform-Tools and add adb to PATH; TCL push also requires Python 3. Check the tools, then choose your TV brand."}</p>
+            <div class="code"><pre><code>{"adb version\ncurl.exe --version"}</code></pre></div>
+            <p>{zh ? "TCL / 雷鸟还需运行 python --version，确认是 Python 3。" : "For TCL, also run python --version and confirm Python 3."}</p>
+          </div>
+          <div class="shell-guide" data-shell-panel="posix" hidden>
+            <h3>{zh ? "macOS / Linux：打开终端" : "macOS / Linux: open Terminal"}</h3>
+            <p>{zh ? "先安装 Android SDK Platform-Tools（提供 adb）。TCL 推送还需要 Python 3。运行下面的检查，再按电视品牌逐条执行；不要把这些命令粘贴到 Windows PowerShell。" : "Install Android SDK Platform-Tools for adb. TCL push also requires Python 3. Check the tools, then follow your TV's steps in Terminal."}</p>
+            <div class="code"><pre><code>{"adb version\ncurl --version"}</code></pre></div>
+            <p>{zh ? "TCL / 雷鸟还需运行 python3 --version。" : "For TCL, also run python3 --version."}</p>
+          </div>
+          <h3 class="manual-brand-heading">{zh ? "选择电视品牌，按顺序执行" : "Choose your TV and follow each step"}</h3>
+          <div class="tabs" data-tabs>
+            <div class="tablist" role="tablist" aria-label={s.tabsLabel}>
+              {s.tabs.map((tab, i) => (
+                <button
+                  type="button"
+                  role="tab"
+                  id={`tab-${tab.id}`}
+                  aria-controls={`panel-${tab.id}`}
+                  aria-selected={i === 0 ? "true" : "false"}
+                  tabindex={i === 0 ? 0 : -1}
+                >{tab.label}</button>
+              ))}
             </div>
-          )}
-          <ol class="steps">
-            {tab.steps.map((step: Step, si) => (
-              <li>
-                <h4>{step.title}</h4>
-                {step.body && <p>{step.body}</p>}
-                {step.cmd && (
-                  <div class="code">
-                    <pre><code id={`cmd-${tab.id}-${si}`} data-cmd={typeof step.cmd === "object" ? JSON.stringify(step.cmd) : undefined}>{typeof step.cmd === "string" ? step.cmd : step.cmd.powershell}</code></pre>
-                    <button class="copy" type="button" data-copy={`#cmd-${tab.id}-${si}`}>
-                      <svg aria-hidden="true"><use href="#i-copy"></use></svg><span class="label"></span>
-                    </button>
+
+            {s.tabs.map((tab, i) => (
+              <div class="tabpanel" role="tabpanel" id={`panel-${tab.id}`} aria-labelledby={`tab-${tab.id}`} hidden={i !== 0}>
+                <h3>{tab.label}</h3>
+                {tab.intro && <p>{tab.intro}</p>}
+                {tab.danger && (
+                  <div class="callout is-danger">
+                    <svg aria-hidden="true"><use href="#i-warning"></use></svg>
+                    <span set:html={tab.danger} />
                   </div>
                 )}
-                {step.note && <p class="fine" set:html={step.note} />}
-              </li>
+                <ol class="steps">
+                  {tab.steps.map((step: Step, si) => (
+                    <li>
+                      <h4>{step.title}</h4>
+                      {step.body && <p>{step.body}</p>}
+                      {step.cmd && (
+                        <div class="code">
+                          <pre><code id={`cmd-${tab.id}-${si}`} data-cmd={typeof step.cmd === "object" ? JSON.stringify(step.cmd) : undefined}>{typeof step.cmd === "string" ? step.cmd : step.cmd.powershell}</code></pre>
+                          <button class="copy" type="button" data-copy={`#cmd-${tab.id}-${si}`}>
+                            <svg aria-hidden="true"><use href="#i-copy"></use></svg><span class="label"></span>
+                          </button>
+                        </div>
+                      )}
+                      {step.note && <p class="fine" set:html={step.note} />}
+                    </li>
+                  ))}
+                </ol>
+              </div>
             ))}
-          </ol>
-        </div>
-      ))}
-    </div>
+          </div>
 
-    <details class="faq advanced reveal">
-      <summary>{s.advanced.title}</summary>
-      <div class="faq-body">
-        <p>{s.advanced.body}</p>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th scope="col">{locale === "zh" ? "权限" : "Grant"}</th><th scope="col">{locale === "zh" ? "用途" : "Purpose"}</th></tr></thead>
-            <tbody>
-              {s.advanced.rows.map((r) => (
-                <tr><th scope="row">{r.name}</th><td>{r.use}</td></tr>
-              ))}
-            </tbody>
-          </table>
+          <details class="faq advanced">
+            <summary>{s.advanced.title}</summary>
+            <div class="faq-body">
+              <p>{s.advanced.body}</p>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th scope="col">{zh ? "权限" : "Grant"}</th><th scope="col">{zh ? "用途" : "Purpose"}</th></tr></thead>
+                  <tbody>
+                    {s.advanced.rows.map((r) => (
+                      <tr><th scope="row">{r.name}</th><td>{r.use}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </details>
+        </details>
+
+        <div class="callout is-danger">
+          <svg aria-hidden="true"><use href="#i-warning"></use></svg>
+          <span set:html={s.safety} />
         </div>
       </div>
     </details>
-
-    </details>
-    <div class="callout is-danger reveal">
-      <svg aria-hidden="true"><use href="#i-warning"></use></svg>
-      <span set:html={s.safety} />
-    </div>
   </div>
 </section>

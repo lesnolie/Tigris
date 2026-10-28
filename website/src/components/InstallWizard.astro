@@ -1,0 +1,184 @@
+---
+import type { Locale } from "../data/lang";
+import {
+  IP_EXAMPLE,
+  IP_SLOT,
+  RESTORE_COMMAND,
+  getWizard,
+  glossary,
+  promptsFor,
+  renderRuns,
+  plainRuns,
+} from "../data/install-wizard";
+import PathMock from "./PathMock.astro";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const w = getWizard(locale);
+const prompts = promptsFor(locale);
+const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossary)[keyof typeof glossary]][];
+---
+<div data-wizard>
+  <noscript>
+    <style>
+      [data-brand-panel][hidden] { display: block !important; }
+    </style>
+    <p class="lede">{w.noscript}</p>
+  </noscript>
+
+  <div class="wizard-start" id="install-wizard">
+    <p class="eyebrow">{w.eyebrow}</p>
+    <div class="prep">
+      <p class="wizard-action">{w.prepTitle}</p>
+      <ul>
+        {w.prep.map((item, i) => <li set:html={renderRuns(item, locale, `prep-${i}`)} />)}
+      </ul>
+      <p class="term-hint">{w.diagramOnce}</p>
+    </div>
+    <div class="wizard-step">
+      <span class="wizard-num" aria-hidden="true">1</span>
+      <div>
+        <h2>{w.title}</h2>
+        <p class="lede">{w.lede}</p>
+        <div class="brand-picker" role="radiogroup" aria-label={w.groupsLabel} data-brand-group>
+          {w.brands.map((brand, i) => (
+            <button
+              type="button"
+              role="radio"
+              class="brand-pick"
+              data-brand-pick={brand.id}
+              aria-checked="false"
+              tabindex={i === 0 ? 0 : -1}
+            >{brand.label}</button>
+          ))}
+        </div>
+        <details class="stuck">
+          <summary>{w.stuckLabel}</summary>
+          <ul>
+            {w.chooseStuck.map((item, i) => <li set:html={renderRuns(item, locale, `choose-${i}`)} />)}
+          </ul>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <p class="sr-only" aria-live="polite" data-wizard-live></p>
+
+  {w.brands.map((brand) => (
+    <div class="brand-panel" data-brand-panel={brand.id} id={`steps-${brand.id}`} hidden>
+      <p class="see-now"><strong class="see-label">{w.seeLabel}</strong> {brand.label}{w.chosenSee}</p>
+      <p class="term-hint">{w.termHint}</p>
+      <h3 class="brand-panel-title">{brand.label}</h3>
+      <ol class="wizard-list">
+        {brand.steps.map((step, i) => (
+          <li class="wizard-step">
+            <span class="wizard-num" aria-hidden="true">{i + 2}</span>
+            <div>
+              <p class="wizard-action" set:html={renderRuns(step.action, locale, `${brand.id}-a-${i}`)} />
+              <PathMock
+                mock={step.mock}
+                locale={locale}
+                diagramLabel={w.diagramLabel}
+                exampleLabel={w.exampleLabel}
+                homeAlt={w.homeAlt}
+                homeCaption={w.homeCaption}
+              />
+              {step.ip && (
+                <label class="ip-field">
+                  {w.ipLabel}
+                  <input class="tv-ip" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder={IP_EXAMPLE} data-ip-slot={IP_SLOT[locale]} data-ip-example={IP_EXAMPLE} />
+                </label>
+              )}
+              {step.prompt && (
+                <div class="prompt-box">
+                  <p id={`cmd-agent-${brand.id}`} data-ip-fill="slot">{prompts[brand.id]}</p>
+                  <button class="copy" type="button" data-copy={`#cmd-agent-${brand.id}`}>
+                    <svg aria-hidden="true"><use href="#i-copy"></use></svg><span class="label"></span>
+                  </button>
+                </div>
+              )}
+              {step.prompt && <p class="term-hint">{w.promptLegend}</p>}
+              <p class="see-now"><strong class="see-label">{w.seeLabel}</strong> <span set:html={renderRuns(step.see, locale, `${brand.id}-s-${i}`)} /></p>
+              <details class="stuck">
+                <summary>{w.stuckLabel}</summary>
+                <ul>
+                  {step.stuck.map((item, n) => <li set:html={renderRuns(item, locale, `${brand.id}-k-${i}-${n}`)} />)}
+                </ul>
+              </details>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  ))}
+
+  <section class="glossary-block" aria-labelledby="glossary-title">
+    <h2 id="glossary-title">{w.glossaryTitle}</h2>
+    <p class="lede">{w.glossaryLede}</p>
+    <dl class="glossary">
+      {terms.map(([id, copy]) => (
+        <div id={`gloss-${id}`}>
+          <dt>{copy[locale].word}</dt>
+          <dd>{copy[locale].def}</dd>
+        </div>
+      ))}
+    </dl>
+  </section>
+
+  <section class="ads-block" id="ads-by-brand" aria-labelledby="ads-title">
+    <h2 id="ads-title">{w.adsTitle}</h2>
+    <p class="lede" set:html={renderRuns(w.adsNote, locale, "ads-note")} />
+    <div class="table-wrap ads-table">
+      <table>
+        <caption>{w.adsCaption}</caption>
+        <thead>
+          <tr>
+            {w.adsHead.map((cell, i) => <th scope="col" set:html={renderRuns(cell, locale, `ads-h-${i}`)} />)}
+          </tr>
+        </thead>
+        <tbody>
+          {w.adsRows.map((row, r) => (
+            <tr>
+              <th scope="row">{row.brand}</th>
+              <td data-label={plainRuns(w.adsHead[1], locale)} set:html={renderRuns(row.note, locale, `ads-n-${r}`)} />
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="restore-block" id="restore-home" aria-labelledby="restore-title">
+    <div class="wizard-step">
+      <span class="wizard-num" aria-hidden="true">↺</span>
+      <div>
+        <h2 id="restore-title">{w.restoreTitle}</h2>
+        <p class="lede">{w.restoreLede}</p>
+        <p class="wizard-action" set:html={renderRuns(w.restoreAction, locale, "restore-a")} />
+        <div class="prompt-box">
+          <p id="cmd-restore" data-ip-fill="slot">{w.restorePrompt}</p>
+          <button class="copy" type="button" data-copy="#cmd-restore">
+            <svg aria-hidden="true"><use href="#i-copy"></use></svg><span class="label"></span>
+          </button>
+        </div>
+        <p class="see-now"><strong class="see-label">{w.seeLabel}</strong> <span set:html={renderRuns(w.restoreSee, locale, "restore-s")} /></p>
+        <details class="stuck">
+          <summary>{w.stuckLabel}</summary>
+          <ul>
+            {w.restoreStuck.map((item, i) => <li set:html={renderRuns(item, locale, `restore-k-${i}`)} />)}
+          </ul>
+          <p set:html={renderRuns(w.restoreCommandLead, locale, "restore-cmd-lead")} />
+          <div class="code">
+            <pre><code id="cmd-restore-sh" data-ip-fill="example">{RESTORE_COMMAND}</code></pre>
+            <button class="copy" type="button" data-copy="#cmd-restore-sh">
+              <svg aria-hidden="true"><use href="#i-copy"></use></svg><span class="label"></span>
+            </button>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+</div>
