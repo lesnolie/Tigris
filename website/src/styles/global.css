@@ -628,8 +628,8 @@ h3 {
 }
 
 :lang(en) .hero h1 {
-  max-width: 14em;
-  font-size: clamp(36px, 5vw, 72px);
+  max-width: 16em;
+  font-size: clamp(40px, 5.4vw, 80px);
   letter-spacing: -0.015em;
 }
 
