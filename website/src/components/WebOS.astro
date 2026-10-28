@@ -3,7 +3,7 @@ import type { Locale } from "../data/lang";
 const zh = Astro.props.locale === "zh";
 const route = zh ? "/webos/" : "/en/webos/";
 ---
-<section class="section webos-home" id="webos">
+<section class="section webos-home section-light" id="webos">
   <div class="wrap">
     <div class="section-head center reveal">
       <p class="eyebrow">LG WEBOS · DEVELOPER PREVIEW</p>
@@ -20,5 +20,5 @@ const route = zh ? "/webos/" : "/en/webos/";
   </div>
 </section>
 <style>
-.webos-home{background:linear-gradient(180deg,transparent,rgba(21,32,52,.45))}.webos-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.webos-tile{border:1px solid rgba(255,255,255,.14);border-radius:22px;padding:26px;background:rgba(255,255,255,.04)}.webos-tile strong{font-size:20px;color:#f8fbff;display:block;margin-bottom:15px}.webos-tile p{font-size:15px;line-height:1.7;color:#afbdd1;margin:0}.webos-caution{margin:24px auto 14px;max-width:880px;color:#bbc3d5;font-size:14px;text-align:center}.webos-link{text-align:center}.webos-link a{display:inline-block;border-radius:12px;border:1px solid rgba(255,255,255,.3);padding:12px 23px;color:#fff;font-weight:600}.webos-link a:hover{background:rgba(255,255,255,.13)}@media(max-width:750px){.webos-tiles{grid-template-columns:1fr}}
+.webos-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.webos-tile{border:1px solid rgba(0,0,0,.12);border-radius:22px;padding:26px;background:#fff}.webos-tile strong{font-size:20px;color:#1d1d1f;display:block;margin-bottom:15px}.webos-tile p{font-size:15px;line-height:1.7;color:#6e6e73;margin:0}.webos-caution{margin:24px auto 14px;max-width:880px;color:#6e6e73;font-size:14px;text-align:center}.webos-link{text-align:center}.webos-link a{display:inline-block;border-radius:12px;border:1px solid rgba(0,0,0,.16);padding:12px 23px;color:#1d1d1f;font-weight:400;background:#f5f5f7}.webos-link a:hover{background:#fff}@media(max-width:750px){.webos-tiles{grid-template-columns:1fr}}
 </style>

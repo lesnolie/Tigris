@@ -1,3 +1,5 @@
+import { initHeroMotion } from "./hero-motion";
+
 /* Tigris website — progressive enhancement only. No framework, ~8 KB.
    All user-visible strings come from data-* attributes so the same script
    speaks Chinese on / and English on /en/. */
@@ -433,4 +435,6 @@
     );
     items.forEach((el) => io.observe(el));
   }
+
+  initHeroMotion();
 })();
