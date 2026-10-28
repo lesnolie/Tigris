@@ -12,7 +12,7 @@ const c = copy.compatibility;
    "cond" = conditional. Keeps the table honest at a glance. */
 const tone = (v: string) => (v === "—" ? "na" : /支持|Yes|standard|Android|Most|大多数|Plus|并显示|清理缓存|Cache only|One-time|需电脑/.test(v) && !/小米|Xiaomi|彻底|Kills|事后/.test(v) ? "ok" : "cond");
 ---
-<section class="section compatibility-section" id="compatibility">
+<section class="section compatibility-section section-light" id="compatibility">
   <div class="wrap">
     <div class="section-head center reveal">
       <p class="eyebrow">{c.eyebrow}</p>

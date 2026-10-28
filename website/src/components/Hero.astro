@@ -11,6 +11,11 @@ interface Props {
 const { copy, locale } = Astro.props;
 const hero = copy.hero;
 const t = uiStrings[locale];
+const keyword = locale === "zh" ? "惊艳" : "opening again";
+const accentLine = hero.titleLines[1];
+const keywordAt = accentLine.indexOf(keyword);
+const accentBefore = keywordAt >= 0 ? accentLine.slice(0, keywordAt) : accentLine;
+const accentAfter = keywordAt >= 0 ? accentLine.slice(keywordAt + keyword.length) : "";
 ---
 <section class="hero">
   <div class="hero-aurora" aria-hidden="true">
@@ -23,7 +28,7 @@ const t = uiStrings[locale];
     <p class="eyebrow">{hero.eyebrow}</p>
     <h1>
       <span class="line"><span class="line-inner">{hero.titleLines[0]}</span></span>
-      <span class="line"><span class="line-inner accent" data-sheen={hero.titleLines[1]}>{hero.titleLines[1]}</span></span>
+      <span class="line"><span class="line-inner">{accentBefore}{keywordAt >= 0 && <span class="keyword" data-sheen={keyword}>{keyword}</span>}{accentAfter}</span></span>
     </h1>
     <p class="hero-sub">{hero.sub}</p>
     <div class="hero-actions">
