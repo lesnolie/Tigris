@@ -57,6 +57,20 @@ const rows: Row[] = [
     },
   },
   {
+    id: "restart-home",
+    stuckKey: "home",
+    zh: {
+      answer: "重启后如果又是原来的桌面，还要设成默认桌面，或用桌面守护切回来。按主页键看现在是哪一个，把画面告诉助手。不要自己关掉自带桌面。",
+      section: "安装 · 按主页键",
+      keys: ["重启后又变回去了"],
+    },
+    en: {
+      answer: "If a restart brings the original home screen back, set it as the default home screen, or use the home guard to switch back. Press the house button and tell the assistant what you see. Do not switch off the original one yourself.",
+      section: "Install · press the house button",
+      keys: ["went back after restart"],
+    },
+  },
+  {
     id: "restore",
     stuckKey: "restore",
     zh: {
@@ -89,12 +103,12 @@ const rows: Row[] = [
     zh: {
       answer: "电脑和电视要连在同一个 Wi-Fi。",
       section: "安装 · 先准备两样东西",
-      keys: [{ t: "连不上", w: 100 }, { t: "can't connect", w: 100 }, "同一个 wifi", "同一网络"],
+      keys: [{ t: "连不上", w: 100 }, { t: "连接失败", w: 100 }, { t: "can't connect", w: 100 }, "同一个 wifi", "同一网络"],
     },
     en: {
       answer: "The computer and the TV need to be on the same Wi-Fi.",
       section: "Install · two things first",
-      keys: [{ t: "can't connect", w: 100 }, { t: "cannot connect", w: 100 }, "same wi-fi", "same wifi"],
+      keys: [{ t: "can't connect", w: 100 }, { t: "cannot connect", w: 100 }, { t: "connection failed", w: 100 }, "same wi-fi", "same wifi"],
     },
   },
   {
@@ -103,12 +117,12 @@ const rows: Row[] = [
     zh: {
       answer: "再对一下电视上的四段数字。例子 192.168.1.20 不是你的地址。",
       section: "安装 · 填上数字",
-      keys: [{ t: "连不上", w: 90 }, "地址填不对", "ip 填错"],
+      keys: [{ t: "连不上", w: 90 }, { t: "连接失败", w: 90 }, "地址填不对", "ip 填错"],
     },
     en: {
       answer: "Check the four numbers on the TV again. 192.168.1.20 is only an example.",
       section: "Install · type the number",
-      keys: [{ t: "can't connect", w: 90 }, { t: "cannot connect", w: 90 }, "the address looks wrong", "wrong address"],
+      keys: [{ t: "can't connect", w: 90 }, { t: "cannot connect", w: 90 }, { t: "connection failed", w: 90 }, "the address looks wrong", "wrong address"],
     },
   },
   {
@@ -117,12 +131,12 @@ const rows: Row[] = [
     zh: {
       answer: "小米、红米从待机唤醒后，调试开关有时会自己关掉，再打开一次。",
       section: "安装 · 小米 / 红米 · 允许调试",
-      keys: [{ t: "连不上", w: 80 }, "唤醒后调试关了", "待机后连不上"],
+      keys: [{ t: "连不上", w: 80 }, { t: "连接失败", w: 80 }, "唤醒后调试关了", "待机后连不上"],
     },
     en: {
       answer: "After a Xiaomi or Redmi TV wakes from standby, the debugging switch sometimes turns off. Turn it on again.",
       section: "Install · Xiaomi / Redmi · allow debugging",
-      keys: [{ t: "can't connect", w: 80 }, { t: "cannot connect", w: 80 }, "debugging turned off", "after standby"],
+      keys: [{ t: "can't connect", w: 80 }, { t: "cannot connect", w: 80 }, { t: "connection failed", w: 80 }, "debugging turned off", "after standby"],
     },
   },
   {
@@ -133,6 +147,7 @@ const rows: Row[] = [
       section: "安装 · 允许这台电脑",
       keys: [
         { t: "连不上", w: 70 },
+        { t: "连接失败", w: 70 },
         { t: "电视没反应", w: 80 },
         { t: "电视弹窗了", w: 100 },
         "未授权",
@@ -148,6 +163,7 @@ const rows: Row[] = [
       keys: [
         { t: "can't connect", w: 70 },
         { t: "cannot connect", w: 70 },
+        { t: "connection failed", w: 70 },
         { t: "tv not responding", w: 80 },
         { t: "popup on tv", w: 100 },
         { t: "popup on the tv", w: 100 },

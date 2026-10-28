@@ -15,6 +15,7 @@ interface Expectation {
   answerIncludes?: string;
   suggested?: boolean;
   labels?: string[];
+  stuckKey?: string;
 }
 
 const cases: Expectation[] = [
@@ -25,6 +26,21 @@ const cases: Expectation[] = [
     count: 4,
     ids: ["connect-wifi", "connect-address", "connect-wake", "connect-allow"],
     answerIncludes: "同一个 Wi-Fi",
+  },
+  {
+    locale: "zh",
+    query: "连接失败",
+    first: "connect-wifi",
+    count: 4,
+    ids: ["connect-wifi", "connect-address", "connect-wake", "connect-allow"],
+    answerIncludes: "同一个 Wi-Fi",
+  },
+  {
+    locale: "zh",
+    query: "重启后又变回去了",
+    first: "restart-home",
+    stuckKey: "home",
+    answerIncludes: "默认桌面",
   },
   { locale: "zh", query: "黑屏了", first: "restore", answerIncludes: "别慌" },
   { locale: "zh", query: "按主页键还是原来的", first: "home", answerIncludes: "原来的桌面" },
@@ -45,6 +61,21 @@ const cases: Expectation[] = [
     count: 4,
     ids: ["connect-wifi", "connect-address", "connect-wake", "connect-allow"],
     answerIncludes: "same Wi-Fi",
+  },
+  {
+    locale: "en",
+    query: "connection failed",
+    first: "connect-wifi",
+    count: 4,
+    ids: ["connect-wifi", "connect-address", "connect-wake", "connect-allow"],
+    answerIncludes: "same Wi-Fi",
+  },
+  {
+    locale: "en",
+    query: "went back after restart",
+    first: "restart-home",
+    stuckKey: "home",
+    answerIncludes: "default home screen",
   },
   { locale: "en", query: "black screen", first: "restore", answerIncludes: "Don't panic" },
   { locale: "en", query: "home button still shows the old screen", first: "home", answerIncludes: "old home screen" },
@@ -108,6 +139,7 @@ for (const item of cases) {
   }
   if (item.ids) assert.deepEqual(hits.map((hit) => hit.id), item.ids, item.query);
   if (item.answerIncludes) assert.ok(first.answer.includes(item.answerIncludes), first.answer);
+  if (item.stuckKey) assert.equal(first.stuckKey, item.stuckKey, item.query);
   if (item.labels) assert.deepEqual(hits.map((hit) => hit.label), item.labels, item.query);
   const suggested = hits.every((hit) => hit.suggested);
   assert.equal(suggested, item.suggested === true, `${item.query} suggested=${suggested}`);
@@ -122,6 +154,11 @@ const enAi = searchHelp("en", "what is an ai assistant")[0];
 const enWhich = searchHelp("en", "which AI")[0];
 assert.equal(enAi.id, enWhich.id);
 assert.equal(enAi.answer, enWhich.answer);
+
+const listed = (locale: Locale, query: string) =>
+  searchHelp(locale, query).map((hit) => [hit.id, hit.answer, hit.section]);
+assert.deepEqual(listed("zh", "连接失败"), listed("zh", "连不上"));
+assert.deepEqual(listed("en", "connection failed"), listed("en", "can't connect"));
 
 for (const text of [searchSuggest("zh"), searchSuggest("en")]) {
   assert.ok(text.length > 0);
