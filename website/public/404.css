@@ -2,17 +2,17 @@
    bundle so the 404 works even if the main stylesheet is unavailable. */
 :root {
   color-scheme: dark;
-  --ink: #070a10;
-  --gold: #b9d4ff;
-  --sea: #a79fee;
-  --muted: #a9b3c2;
-  --text: #f5f7fb;
+  --ink: #141413;
+  --gold: #d5d0c7;
+  --sea: #f6f3ee;
+  --muted: #c9c3b8;
+  --text: #f4f1eb;
 }
 * { box-sizing: border-box; }
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(60% 50% at 50% 0%, rgba(56, 108, 180, 0.28), transparent 70%), var(--ink);
+  background: radial-gradient(60% 50% at 50% 0%, rgba(214, 210, 202, 0.08), transparent 70%), var(--ink);
   color: var(--text);
   font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -37,6 +37,6 @@ p { color: var(--muted); max-width: 44ch; margin-inline: auto; }
   min-height: 48px; padding: 0 24px; border-radius: 999px;
   font-weight: 600; text-decoration: none;
 }
-.btn-primary { background: linear-gradient(180deg, #ffffff, #dfe8f7); color: #0a0f18; }
+.btn-primary { background: #f6f3ee; color: #1a1916; }
 .btn-ghost { border: 1px solid rgba(255, 255, 255, 0.16); color: var(--text); }
 :focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
