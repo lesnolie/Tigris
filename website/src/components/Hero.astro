@@ -22,8 +22,8 @@ const t = uiStrings[locale];
   <div class="wrap hero-center">
     <p class="eyebrow">{hero.eyebrow}</p>
     <h1>
-      <span class="line">{hero.titleLines[0]}</span>
-      <span class="line accent">{hero.titleLines[1]}</span>
+      <span class="line"><span class="line-inner">{hero.titleLines[0]}</span></span>
+      <span class="line"><span class="line-inner accent" data-sheen={hero.titleLines[1]}>{hero.titleLines[1]}</span></span>
     </h1>
     <p class="hero-sub">{hero.sub}</p>
     <div class="hero-actions">
@@ -45,33 +45,48 @@ const t = uiStrings[locale];
   <div class="wrap hero-stage">
     <div class="tv-stage">
       <div class="tv-glow" aria-hidden="true"></div>
-      <div class="tv-frame">
-        <div class="tv-screen">
-          <video
-            data-clip
-            src={clips.home.src}
-            poster={clips.home.poster}
-            width="1280"
-            height="720"
-            muted
-            loop
-            playsinline
-            preload="metadata"
-            aria-label={hero.imageAlt}
-          ></video>
-          <button class="clip-toggle" type="button" data-clip-toggle aria-pressed="false"
-            aria-label={t.pauseClips} data-label-pause={t.pauseClips} data-label-play={t.playClips}>
-            <svg viewBox="0 0 16 16" aria-hidden="true"><rect class="i-pause" x="4" y="3" width="3" height="10" rx="1"/><rect class="i-pause" x="9" y="3" width="3" height="10" rx="1"/><path class="i-play" d="M5 3.2v9.6a.6.6 0 0 0 .9.5l7.6-4.8a.6.6 0 0 0 0-1L5.9 2.7a.6.6 0 0 0-.9.5z"/></svg>
-          </button>
+      <div class="tv-perspective">
+        <div class="tv-scroll">
+          <div class="tv-scene">
+            <div class="tv-tilt" data-tv-tilt>
+              <div class="tv-frame">
+                <div class="tv-screen">
+                  <video
+                    data-clip
+                    src={clips.home.src}
+                    poster={clips.home.poster}
+                    width="1280"
+                    height="720"
+                    muted
+                    loop
+                    playsinline
+                    preload="metadata"
+                    aria-label={hero.imageAlt}
+                  ></video>
+                  <button class="clip-toggle" type="button" data-clip-toggle aria-pressed="false"
+                    aria-label={t.pauseClips} data-label-pause={t.pauseClips} data-label-play={t.playClips}>
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><rect class="i-pause" x="4" y="3" width="3" height="10" rx="1"/><rect class="i-pause" x="9" y="3" width="3" height="10" rx="1"/><path class="i-play" d="M5 3.2v9.6a.6.6 0 0 0 .9.5l7.6-4.8a.6.6 0 0 0 0-1L5.9 2.7a.6.6 0 0 0-.9.5z"/></svg>
+                  </button>
+                </div>
+                <div class="tv-glare" aria-hidden="true"></div>
+              </div>
+              <div class="float-chip chip-shelf" aria-hidden="true">
+                <div class="chip-body">
+                  <canvas class="chip-glass" width="2" height="2" aria-hidden="true"></canvas>
+                  <span class="glyph"><svg><use href="#i-play"></use></svg></span>
+                  <span class="chip-copy"><strong>{hero.floating[1].title}</strong><small>{hero.floating[1].sub}</small></span>
+                </div>
+              </div>
+              <div class="float-chip chip-dock" aria-hidden="true">
+                <div class="chip-body">
+                  <canvas class="chip-glass" width="2" height="2" aria-hidden="true"></canvas>
+                  <span class="glyph"><svg><use href="#i-check"></use></svg></span>
+                  <span class="chip-copy"><strong>{hero.floating[0].title}</strong><small>{hero.floating[0].sub}</small></span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="float-chip chip-shelf" aria-hidden="true">
-        <span class="glyph"><svg><use href="#i-play"></use></svg></span>
-        <span><strong>{hero.floating[1].title}</strong><small>{hero.floating[1].sub}</small></span>
-      </div>
-      <div class="float-chip chip-dock" aria-hidden="true">
-        <span class="glyph"><svg><use href="#i-check"></use></svg></span>
-        <span><strong>{hero.floating[0].title}</strong><small>{hero.floating[0].sub}</small></span>
       </div>
     </div>
     <p class="tv-caption">

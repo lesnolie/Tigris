@@ -509,7 +509,7 @@ h3 {
   position: relative;
   isolation: isolate;
   overflow: clip;
-  padding: calc(var(--nav-h) + clamp(52px, 8vw, 104px)) 0 clamp(56px, 7vw, 96px);
+  padding: calc(var(--nav-h) + clamp(36px, 5vw, 72px)) 0 clamp(48px, 6vw, 84px);
   text-align: center;
 }
 
@@ -590,13 +590,81 @@ h3 {
 
 .hero h1 .line {
   display: block;
+  overflow: hidden;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.08em;
+}
+
+.hero h1 .line-inner {
+  display: block;
+}
+
+.hero h1 .line:first-child .line-inner {
+  animation: line-rise 0.86s var(--ease) both;
 }
 
 .hero h1 .accent {
+  position: relative;
   background: linear-gradient(96deg, #7fb6ff 4%, #b79bff 42%, #6ee7d4 96%);
   -webkit-background-clip: text;
   background-clip: text;
+  -webkit-text-fill-color: transparent;
   color: transparent;
+  animation: line-rise 0.86s var(--ease) 0.16s both;
+}
+
+.hero h1 .accent::after {
+  content: attr(data-sheen);
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 28%,
+    rgba(255, 255, 255, 0.35) 42%,
+    #fff 50%,
+    rgba(255, 255, 255, 0.35) 58%,
+    transparent 72%
+  );
+  background-size: 240% 100%;
+  background-repeat: no-repeat;
+  background-position: 120% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  pointer-events: none;
+  animation: text-sheen 1.05s cubic-bezier(0.4, 0, 0.2, 1) 0.58s both;
+}
+
+.hero .eyebrow {
+  animation: hero-in 0.7s var(--ease) 0.04s both;
+}
+
+.hero-sub {
+  animation: hero-in 0.8s var(--ease) 0.7s both;
+}
+
+.hero .hero-actions {
+  animation: hero-in 0.8s var(--ease) 0.84s both;
+}
+
+.hero .hero-meta {
+  animation: hero-in 0.8s var(--ease) 0.98s both;
+}
+
+@keyframes line-rise {
+  from { transform: translate3d(0, 115%, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes text-sheen {
+  from { background-position: 120% 0; }
+  to { background-position: -20% 0; }
+}
+
+@keyframes hero-in {
+  from { opacity: 0; transform: translate3d(0, 16px, 0); }
+  to { opacity: 1; transform: none; }
 }
 
 .hero-sub {
@@ -627,7 +695,7 @@ h3 {
 
 .hero-stage {
   position: relative;
-  margin-top: clamp(44px, 6vw, 76px);
+  margin-top: clamp(28px, 4vw, 48px);
 }
 
 .hero-note {
@@ -644,13 +712,62 @@ h3 {
   margin-inline: auto;
 }
 
+.tv-perspective {
+  perspective: 980px;
+  perspective-origin: 50% 40%;
+}
+
+.tv-scroll,
+.tv-scene,
+.tv-tilt {
+  position: relative;
+}
+
+.tv-scroll,
+.tv-tilt {
+  transform-style: preserve-3d;
+}
+
+.tv-tilt {
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  transform: rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  transition: transform 0.55s var(--ease);
+}
+
+.tv-tilt.is-hot {
+  transition-duration: 0.08s;
+  transition-timing-function: linear;
+}
+
 .tv-glow {
   position: absolute;
   inset: 10% -6% -14%;
-  z-index: -1;
   background: radial-gradient(closest-side, rgba(96, 150, 255, 0.5), transparent 72%);
   filter: blur(46px);
   pointer-events: none;
+}
+
+.tv-glare {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 24px;
+  background:
+    radial-gradient(
+      32% 46% at var(--glare-x, 22%) var(--glare-y, 0%),
+      rgba(255, 255, 255, 0.55),
+      rgba(255, 255, 255, 0.14) 28%,
+      transparent 58%
+    );
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.tv-tilt.is-hot .tv-glare {
+  opacity: 1;
 }
 
 .tv-frame {
@@ -721,19 +838,89 @@ h3 {
 .float-chip {
   position: absolute;
   z-index: 3;
+  pointer-events: none;
+  font-size: 0.78rem;
+  text-align: left;
+  color: var(--text);
+}
+
+.chip-body {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 14px;
   background: rgba(10, 16, 26, 0.66);
   backdrop-filter: blur(18px) saturate(150%);
   box-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.95);
-  font-size: 0.78rem;
-  text-align: left;
-  color: var(--text);
+  white-space: nowrap;
   animation: float 9s ease-in-out infinite;
+}
+
+.chip-glass {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.float-chip .glyph,
+.float-chip .chip-copy {
+  position: relative;
+  z-index: 2;
+}
+
+.float-chip.is-liquid .chip-glass {
+  opacity: 1;
+}
+
+.float-chip.is-liquid .chip-body {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: rgba(255, 255, 255, 0.46);
+  box-shadow:
+    0 18px 40px -22px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.62),
+    inset 0 -1px 0 rgba(140, 180, 255, 0.35);
+}
+
+.float-chip.is-liquid .chip-body::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(5, 8, 14, 0.12), rgba(5, 8, 14, 0.28));
+  pointer-events: none;
+}
+
+.float-chip.is-liquid .chip-copy strong,
+.float-chip.is-liquid .chip-copy small {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.float-chip.is-liquid .chip-body::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  background: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.38),
+    transparent 34%,
+    transparent 68%,
+    rgba(170, 200, 255, 0.16)
+  );
+  pointer-events: none;
+  mix-blend-mode: screen;
 }
 
 .float-chip strong {
@@ -762,25 +949,101 @@ h3 {
   height: 15px;
 }
 
+/* Sit above the dock and below the clock, then drift further out while scrolling. */
 .chip-dock {
-  left: -14px;
-  bottom: 12%;
+  left: 0;
+  bottom: 36%;
+  transform: translate3d(0, 0, 40px);
 }
 
 .chip-shelf {
-  right: -14px;
-  top: 10%;
+  right: 0;
+  top: 24%;
+  transform: translate3d(0, 0, 78px);
+}
+
+.chip-shelf .chip-body {
   animation-delay: -4.5s;
 }
 
 @keyframes float {
   0%,
   100% {
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0);
   }
   50% {
-    transform: translateY(-8px);
+    transform: translate3d(0, -8px, 0);
   }
+}
+
+/* Scroll-driven reveal. Browsers without animation-timeline keep the static hero. */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .hero-center h1 {
+      animation: hero-lift linear both;
+      animation-duration: auto;
+      animation-timeline: scroll(root);
+      animation-range: 0px 46vh;
+    }
+
+    .tv-scroll {
+      transform: translate3d(0, -12px, 0) rotateX(18deg) scale(0.84);
+      transform-origin: 50% 46%;
+      animation: tv-reveal linear both;
+      animation-duration: auto;
+      animation-timeline: scroll(root);
+      animation-range: 0px 64vh;
+    }
+
+    .hero .tv-glow {
+      opacity: 0.28;
+      animation: tv-glow linear both;
+      animation-duration: auto;
+      animation-timeline: scroll(root);
+      animation-range: 0px 64vh;
+    }
+
+    .hero .chip-dock {
+      transform: translate3d(20px, 6px, 40px);
+      animation: chip-dock-out linear both;
+      animation-duration: auto;
+      animation-timeline: scroll(root);
+      animation-range: 0px 64vh;
+    }
+
+    .hero .chip-shelf {
+      transform: translate3d(-20px, -4px, 78px);
+      animation: chip-shelf-out linear both;
+      animation-duration: auto;
+      animation-timeline: scroll(root);
+      animation-range: 0px 64vh;
+    }
+  }
+}
+
+@keyframes hero-lift {
+  from { opacity: 1; transform: translate3d(0, 0, 0); }
+  to { opacity: 0; transform: translate3d(0, -68px, 0); }
+}
+
+@keyframes tv-reveal {
+  from { transform: translate3d(0, -12px, 0) rotateX(18deg) scale(0.84); }
+  to { transform: translate3d(0, 0, 0) rotateX(0deg) scale(1); }
+}
+
+@keyframes tv-glow {
+  from { opacity: 0.28; }
+  to { opacity: 1; }
+}
+
+@keyframes chip-dock-out {
+  from { transform: translate3d(20px, 6px, 40px); }
+  to { transform: translate3d(-28px, 0, 40px); }
+}
+
+@keyframes chip-shelf-out {
+  from { transform: translate3d(-20px, -4px, 78px); }
+  to { transform: translate3d(26px, 0, 78px); }
 }
 
 @media (max-width: 1100px) {
@@ -2409,6 +2672,43 @@ details.advanced .table-wrap {
   .reveal {
     opacity: 1;
     transform: none;
+  }
+
+  .hero .eyebrow,
+  .hero h1,
+  .hero h1 .line-inner,
+  .hero h1 .accent::after,
+  .hero-sub,
+  .hero .hero-actions,
+  .hero .hero-meta,
+  .tv-scroll,
+  .hero .tv-glow,
+  .hero .float-chip,
+  .chip-body {
+    animation: none !important;
+  }
+
+  .hero h1 .accent::after {
+    opacity: 0;
+  }
+
+  .hero h1,
+  .hero h1 .line-inner,
+  .hero-sub,
+  .hero .hero-actions,
+  .hero .hero-meta,
+  .tv-scroll,
+  .chip-body {
+    transform: none;
+  }
+
+  .hero .chip-dock,
+  .hero .chip-shelf {
+    transform: none;
+  }
+
+  .tv-glare {
+    display: none;
   }
 }
 
