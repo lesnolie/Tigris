@@ -55,7 +55,7 @@ const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossa
             >{brand.label}</button>
           ))}
         </div>
-        <details class="stuck">
+        <details class="stuck" data-stuck-key="choose" id="stuck-choose">
           <summary>{w.stuckLabel}</summary>
           <ul>
             {w.chooseStuck.map((item, i) => <li set:html={renderRuns(item, locale, `choose-${i}`)} />)}
@@ -103,7 +103,7 @@ const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossa
               )}
               {step.prompt && <p class="term-hint">{w.promptLegend}</p>}
               <p class="see-now"><strong class="see-label">{w.seeLabel}</strong> <span set:html={renderRuns(step.see, locale, `${brand.id}-s-${i}`)} /></p>
-              <details class="stuck">
+              <details class="stuck" data-stuck-key={step.key} id={`stuck-${brand.id}-${step.key}`}>
                 <summary>{w.stuckLabel}</summary>
                 {step.stuck.length > 0 && (
                   <ul>
@@ -169,7 +169,7 @@ const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossa
           </button>
         </div>
         <p class="see-now"><strong class="see-label">{w.seeLabel}</strong> <span set:html={renderRuns(w.restoreSee, locale, "restore-s")} /></p>
-        <details class="stuck">
+        <details class="stuck" data-stuck-key="restore" id="stuck-restore">
           <summary>{w.stuckLabel}</summary>
           <ul>
             {w.restoreStuck.map((item, i) => <li set:html={renderRuns(item, locale, `restore-k-${i}`)} />)}

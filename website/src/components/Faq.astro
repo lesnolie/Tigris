@@ -19,7 +19,7 @@ const f = copy.faq;
 
     <div class="faq-list reveal">
       {f.items.map((item, idx) => (
-        <details class="faq">
+        <details class="faq" id={`faq-${idx}`}>
           <summary>{item.q}</summary>
           <div class="faq-body">
             {item.a.map((p) => <p>{p}</p>)}

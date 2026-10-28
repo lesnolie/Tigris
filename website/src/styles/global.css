@@ -3748,8 +3748,14 @@ details.advanced .table-wrap {
 
 .search-hit span {
   color: #86868b;
-  font-size: 0.9rem;
-  line-height: 1.45;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.is-search-hit {
+  box-shadow: inset 0 0 0 2px #0071e3;
+  border-radius: 16px;
+  background: rgba(0, 113, 227, 0.08);
 }
 
 .search-hit:hover,

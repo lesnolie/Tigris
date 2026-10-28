@@ -140,6 +140,8 @@ export interface StepModel {
   stuck: Run[][];
   /** Plain-language problem sent to the site search. */
   help: string;
+  /** Stable id so search can open this step’s stuck note. */
+  key: string;
   ip?: boolean;
   prompt?: boolean;
 }
@@ -279,6 +281,7 @@ function tail(locale: Locale): StepModel[] {
       action: zh ? ["在「网络」或「关于」里找到", word(locale, "ip"), "，把四段数字记下来。"] : ["In Network or About, find the ", word(locale, "ip"), " and write down the four numbers."],
       mock: { kind: "ip" },
       see: zh ? ["四段用点分开的数字。"] : ["Four numbers separated by dots."],
+      key: "ip",
       help: zh ? "找不到地址" : "Can't find the address",
       stuck: [
         zh
@@ -292,6 +295,7 @@ function tail(locale: Locale): StepModel[] {
     {
       action: zh ? ["把这四段数字填进下面的框。"] : ["Type those four numbers into the box."],
       mock: { kind: "none" },
+      key: "ip-fix",
       help: zh ? "地址填不对" : "The address looks wrong",
       ip: true,
       see: zh ? ["框里是你的数字。"] : ["Your numbers are in the box."],
@@ -304,6 +308,7 @@ function tail(locale: Locale): StepModel[] {
     {
       action: zh ? ["点「复制」。"] : ["Choose Copy."],
       mock: { kind: "none" },
+      key: "copy",
       help: zh ? "复制不了" : "Copy failed",
       prompt: true,
       see: zh ? ["按钮上的字变成「已复制」。"] : ["The button now says Copied."],
@@ -316,6 +321,7 @@ function tail(locale: Locale): StepModel[] {
     {
       action: zh ? ["把复制的整段文字发给", word(locale, "ai"), "。"] : ["Send the whole copied paragraph to an ", word(locale, "ai"), "."],
       mock: { kind: "none" },
+      key: "assistant",
       help: zh ? "助手不动手" : "The assistant won't do it",
       see: zh ? ["对话里出现整段文字，对方开始在你的电脑上操作。"] : ["The chat shows the whole paragraph, and the assistant starts working on your computer."],
       stuck: [
@@ -333,6 +339,7 @@ function tail(locale: Locale): StepModel[] {
         title: zh ? "允许 USB 调试吗？" : "Allow USB debugging?",
         choices: zh ? ["始终允许", "允许"] : ["Always allow", "Allow"],
       },
+      key: "connect",
       help: zh ? "连不上" : "Can't connect",
       see: zh ? ["这行询问关掉了。"] : ["The question has closed."],
       stuck: [
@@ -349,6 +356,7 @@ function homeStep(locale: Locale, extra: Run[][]): StepModel {
   return {
     action: zh ? ["助手做完后，按遥控器上的", word(locale, "homekey"), "。"] : ["When the assistant is done, press the ", word(locale, "homekey"), " on the remote."],
     mock: { kind: "home" },
+    key: "home",
     help: zh ? "黑屏了" : "Black screen",
     see: zh ? ["Tigris 的主屏幕：有时间，有壁纸，下面一排应用。"] : ["The Tigris home screen: a clock, a wallpaper, and a row of apps along the bottom."],
     stuck: [
@@ -367,6 +375,7 @@ function xiaomiLike(locale: Locale, _which: "xiaomi" | "redmi"): StepModel[] {
       action: zh ? ["打开电视的「设置」。"] : ["Open Settings on the TV."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置"] : ["Settings"] },
       see: zh ? ["一列设置菜单。"] : ["A list of settings items."],
+      key: "settings",
       help: zh ? "找不到设置" : "Can't find Settings",
       stuck: [
         zh ? ["在主界面找「设置」或齿轮。"] : ["Look for Settings or a gear icon on the home screen."],
@@ -376,6 +385,7 @@ function xiaomiLike(locale: Locale, _which: "xiaomi" | "redmi"): StepModel[] {
       action: zh ? ["进入「关于」。"] : ["Open About."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "关于"] : ["Settings", "About"] },
       see: zh ? ["页面上有「产品型号」。"] : ["The page shows Model. Chinese menus say 产品型号."],
+      key: "about",
       help: zh ? "找不到关于" : "Can't find About",
       stuck: [],
     },
@@ -385,6 +395,7 @@ function xiaomiLike(locale: Locale, _which: "xiaomi" | "redmi"): StepModel[] {
         : ["On Model, keep pressing ", word(locale, "ok"), " until the TV says ", word(locale, "devmode"), " is on."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "关于", "产品型号"] : ["Settings", "About", "Model"] },
       see: zh ? ["电视提示", word(locale, "devmode"), "已经打开。"] : ["The TV says ", word(locale, "devmode"), " is on."],
+      key: "devmode",
       help: zh ? "开发者模式没打开" : "Developer mode did not turn on",
       stuck: [
         zh ? ["要连按多次，不是按一下。没有任何提示时，再多按几次。"] : ["Press it several times, not once. If nothing appears, press it again."],
@@ -397,6 +408,7 @@ function xiaomiLike(locale: Locale, _which: "xiaomi" | "redmi"): StepModel[] {
       see: zh
         ? ["页面上有", word(locale, "adb"), "和", word(locale, "unknown"), "。"]
         : ["The page shows ", word(locale, "adb"), " and ", word(locale, "unknown"), "."],
+      key: "account",
       help: zh ? "找不到账号与安全" : "Can't find Account & security",
       stuck: [
         zh ? ["英文菜单可能写成 Account & security。"] : ["A Chinese menu says 账号与安全."],
@@ -406,6 +418,7 @@ function xiaomiLike(locale: Locale, _which: "xiaomi" | "redmi"): StepModel[] {
       action: zh ? ["把", word(locale, "adb"), "的开关打开。"] : ["Turn on ", word(locale, "adb"), "."],
       mock: { kind: "toggle", label: zh ? "ADB 调试" : "ADB debugging" },
       see: zh ? ["这个开关是打开的。"] : ["The switch is on."],
+      key: "adb",
       help: zh ? "调试开关没有" : "No debugging switch",
       stuck: [zh ? ["它和下面一项在同一个页面。开关也可能叫「USB 调试」或「网络调试」。"] : ["It is on the same page as the next switch. It may also say USB debugging or Network debugging."]],
     },
@@ -413,6 +426,7 @@ function xiaomiLike(locale: Locale, _which: "xiaomi" | "redmi"): StepModel[] {
       action: zh ? ["把", word(locale, "unknown"), "的开关打开。"] : ["Turn on ", word(locale, "unknown"), "."],
       mock: { kind: "toggle", label: zh ? "安装未知来源的应用" : "Unknown sources" },
       see: zh ? ["这个开关是打开的。"] : ["The switch is on."],
+      key: "install-fail",
       help: zh ? "装不上" : "The app won't install",
       stuck: [zh ? ["它和上一项在同一个「账号与安全」里。"] : ["It is in the same Account & security page as the previous switch."]],
     },
@@ -439,6 +453,7 @@ function tclLike(locale: Locale, _which: "tcl" | "ffalcon"): StepModel[] {
       action: zh ? ["打开电视的「设置」。"] : ["Open Settings on the TV."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置"] : ["Settings"] },
       see: zh ? ["一列设置菜单。"] : ["A list of settings items."],
+      key: "settings",
       help: zh ? "找不到设置" : "Can't find Settings",
       stuck: [
         zh ? ["在主界面找「设置」或齿轮。"] : ["Look for Settings or a gear icon on the home screen."],
@@ -448,6 +463,7 @@ function tclLike(locale: Locale, _which: "tcl" | "ffalcon"): StepModel[] {
       action: zh ? ["进入「关于」。"] : ["Open About."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "关于"] : ["Settings", "About"] },
       see: zh ? ["页面上有「本机信息」。"] : ["The page shows Device info. Chinese menus say 本机信息."],
+      key: "about",
       help: zh ? "找不到关于" : "Can't find About",
       stuck: [],
     },
@@ -455,6 +471,7 @@ function tclLike(locale: Locale, _which: "tcl" | "ffalcon"): StepModel[] {
       action: zh ? ["进入「本机信息」。"] : ["Open Device info."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "关于", "本机信息"] : ["Settings", "About", "Device info"] },
       see: zh ? ["本机信息这一页打开了。"] : ["The device info page is open."],
+      key: "device-info",
       help: zh ? "找不到本机信息" : "Can't find Device info",
       stuck: [zh ? ["在「关于」里找「本机信息」。"] : ["Look in About for Device info."]],
     },
@@ -464,6 +481,7 @@ function tclLike(locale: Locale, _which: "tcl" | "ffalcon"): StepModel[] {
         : ["On the remote, press Up, Down, Left, Right, with less than one second between presses."],
       mock: { kind: "dpad" },
       see: zh ? ["页面底部出现「更多」。"] : ["More appears at the bottom of the page. Chinese menus say 更多."],
+      key: "more",
       help: zh ? "找不到更多" : "Can't find More",
       stuck: [
         zh ? ["四下要连着按。按慢了就不会出现，再试一次。"] : ["Press the four keys as one quick sequence. If More does not appear, try again faster."],
@@ -473,6 +491,7 @@ function tclLike(locale: Locale, _which: "tcl" | "ffalcon"): StepModel[] {
       action: zh ? ["在「更多」里把", word(locale, "adb", "ADB"), "打开。"] : ["Under More, turn ", word(locale, "adb", "ADB"), " on."],
       mock: { kind: "toggle", label: "ADB" },
       see: zh ? ["这个开关是打开的。"] : ["The switch is on."],
+      key: "adb",
       help: zh ? "调试开关没有" : "No debugging switch",
       stuck: [zh ? ["「更多」在这一页的底部。没看到就回到「本机信息」，把上、下、左、右再按一遍。"] : ["More is at the bottom of this page. If it is missing, go back to Device info and press Up, Down, Left, Right again."]],
     },
@@ -481,6 +500,7 @@ function tclLike(locale: Locale, _which: "tcl" | "ffalcon"): StepModel[] {
   steps.push({
     action: zh ? ["看到", word(locale, "cast"), "那行字时，选「同意」。"] : ["When you see the ", word(locale, "cast"), ", choose Agree."],
     mock: { kind: "quote", text: "多屏互动：正在发起应用推送" },
+    key: "cast",
     help: zh ? "没有安装确认" : "No install prompt",
     see: zh ? ["你已经选了「同意」。"] : ["You have chosen Agree (同意)."],
     stuck: [
@@ -499,6 +519,7 @@ function sonySteps(locale: Locale): StepModel[] {
       action: zh ? ["打开电视的「设置」。"] : ["Open Settings on the TV."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置"] : ["Settings"] },
       see: zh ? ["一列设置菜单。"] : ["A list of settings items."],
+      key: "settings",
       help: zh ? "找不到设置" : "Can't find Settings",
       stuck: [zh ? ["在主界面找「设置」或齿轮。"] : ["Look for Settings or a gear icon on the home screen."]],
     },
@@ -506,6 +527,7 @@ function sonySteps(locale: Locale): StepModel[] {
       action: zh ? ["进入「系统」。"] : ["Open System."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "系统"] : ["Settings", "System"] },
       see: zh ? ["系统这一页打开了。"] : ["The System page is open."],
+      key: "system",
       help: zh ? "找不到系统" : "Can't find System",
       stuck: [],
     },
@@ -513,6 +535,7 @@ function sonySteps(locale: Locale): StepModel[] {
       action: zh ? ["进入「关于」。"] : ["Open About."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "系统", "关于"] : ["Settings", "System", "About"] },
       see: zh ? ["页面上有「Android TV 操作系统版本」。"] : ["The page shows the Android TV OS build row."],
+      key: "version",
       help: zh ? "找不到版本" : "Can't find the version row",
       stuck: [zh ? ["有的机器这一行写成「版本」或 Build，指的是同一行。"] : ["Some menus label this row Build, 版本, or Android TV OS build. It is the same row."]],
     },
@@ -522,6 +545,7 @@ function sonySteps(locale: Locale): StepModel[] {
         : ["On the Android TV OS build row, press ", word(locale, "ok"), " 7 times."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "系统", "关于", "Android TV 操作系统版本"] : ["Settings", "System", "About", "Build"] },
       see: zh ? ["电视提示已经进入", word(locale, "devmode"), "。"] : ["The TV says ", word(locale, "devmode"), " is on."],
+      key: "devmode",
       help: zh ? "开发者模式没打开" : "Developer mode did not turn on",
       stuck: [zh ? ["要按满 7 次。这一行也可能写成「版本」或 Build。没出现提示就再数一遍。"] : ["Press it seven times. The row may also say 版本 or Android TV 操作系统版本. Count again if nothing appears."]],
     },
@@ -529,6 +553,7 @@ function sonySteps(locale: Locale): StepModel[] {
       action: zh ? ["打开", word(locale, "devopts"), "。"] : ["Open ", word(locale, "devopts"), "."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "系统", "开发者选项"] : ["Settings", "System", "Developer options"] },
       see: zh ? ["开发者选项这一页打开了。"] : ["The Developer options page is open."],
+      key: "devopts",
       help: zh ? "找不到开发者选项" : "Can't find Developer options",
       stuck: [zh ? ["连按之后才会出现。还没有的话，回到上一行再按几次，或把电视重启后再试。"] : ["It appears after the presses. If it is still missing, press the previous row again, or restart the TV and try once more."]],
     },
@@ -536,6 +561,7 @@ function sonySteps(locale: Locale): StepModel[] {
       action: zh ? ["把", word(locale, "adb", "USB 调试"), "打开。"] : ["Turn on ", word(locale, "adb", "USB debugging"), "."],
       mock: { kind: "toggle", label: zh ? "USB 调试" : "USB debugging" },
       see: zh ? ["这个开关是打开的。"] : ["The switch is on."],
+      key: "adb",
       help: zh ? "调试开关没有" : "No debugging switch",
       stuck: [zh ? ["有的菜单写成「网络调试」或「ADB 调试」，是同一个开关。"] : ["Some menus say Network debugging or ADB debugging. It is the same switch."]],
     },
@@ -552,6 +578,7 @@ function otherSteps(locale: Locale): StepModel[] {
       action: zh ? ["打开电视的「设置」。"] : ["Open Settings on the TV."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置"] : ["Settings"] },
       see: zh ? ["一列设置菜单。"] : ["A list of settings items."],
+      key: "menus",
       help: zh ? "菜单对不上" : "Menus don't match",
       stuck: [
         zh
@@ -563,6 +590,7 @@ function otherSteps(locale: Locale): StepModel[] {
       action: zh ? ["进入「设备偏好设置」。"] : ["Open Device Preferences."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "设备偏好设置"] : ["Settings", "Device Preferences"] },
       see: zh ? ["设备偏好设置这一页打开了。"] : ["Device Preferences is open."],
+      key: "prefs",
       help: zh ? "找不到设备偏好设置" : "Can't find Device Preferences",
       stuck: [],
     },
@@ -570,6 +598,7 @@ function otherSteps(locale: Locale): StepModel[] {
       action: zh ? ["进入「关于」。"] : ["Open About."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "设备偏好设置", "关于"] : ["Settings", "Device Preferences", "About"] },
       see: zh ? ["页面上有「版本号」。"] : ["The page shows Build."],
+      key: "build",
       help: zh ? "找不到版本号" : "Can't find the build number",
       stuck: [zh ? ["有的机器写成 Build，指的是同一行。"] : ["Chinese menus may say 版本号. It is the same row."]],
     },
@@ -577,6 +606,7 @@ function otherSteps(locale: Locale): StepModel[] {
       action: zh ? ["在「版本号」上连按", word(locale, "ok"), " 7 次。"] : ["On Build, press ", word(locale, "ok"), " 7 times."],
       mock: { kind: "crumbs", crumbs: zh ? ["设置", "设备偏好设置", "关于", "版本号"] : ["Settings", "Device Preferences", "About", "Build"] },
       see: zh ? ["电视提示已经可以打开", word(locale, "devopts"), "。"] : ["You can now open ", word(locale, "devopts"), "."],
+      key: "devmode",
       help: zh ? "开发者模式没打开" : "Developer mode did not turn on",
       stuck: [zh ? ["要按满 7 次。这一行也可能写成 Build。没出现提示就再数一遍。"] : ["Press it seven times. The row may also say 版本号. Count again if nothing appears."]],
     },
@@ -584,6 +614,7 @@ function otherSteps(locale: Locale): StepModel[] {
       action: zh ? ["打开", word(locale, "devopts"), "。"] : ["Open ", word(locale, "devopts"), "."],
       mock: { kind: "crumbs", crumbs: zh ? ["开发者选项"] : ["Developer options"] },
       see: zh ? ["开发者选项这一页打开了。"] : ["Developer options is open."],
+      key: "devopts",
       help: zh ? "找不到开发者选项" : "Can't find Developer options",
       stuck: [zh ? ["连按之后才会出现。还没有的话，回到上一行再按几次，或把电视重启后再试。"] : ["It appears after the presses. If it is still missing, press the previous row again, or restart the TV and try once more."]],
     },
@@ -591,6 +622,7 @@ function otherSteps(locale: Locale): StepModel[] {
       action: zh ? ["把", word(locale, "adb", "USB 调试"), "打开。"] : ["Turn on ", word(locale, "adb", "USB debugging"), "."],
       mock: { kind: "toggle", label: zh ? "USB 调试" : "USB debugging" },
       see: zh ? ["这个开关是打开的。"] : ["The switch is on."],
+      key: "adb",
       help: zh ? "调试开关没有" : "No debugging switch",
       stuck: [zh ? ["有的菜单写成「网络调试」或「ADB 调试」，是同一个开关。"] : ["Some menus say Network debugging or ADB debugging. It is the same switch."]],
     },

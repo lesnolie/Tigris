@@ -543,6 +543,42 @@ import { searchHelp } from "../data/site-search";
   const searchEmpty = searchDialog?.querySelector<HTMLElement>("[data-search-empty]");
   const searchLocale = isEnglish ? "en" : "zh";
 
+  const clearSearchMark = () => {
+    doc.querySelectorAll(".is-search-hit").forEach((el) => el.classList.remove("is-search-hit"));
+  };
+
+  const showBrandPanel = (id: string) => {
+    doc.querySelectorAll<HTMLButtonElement>("[data-brand-pick]").forEach((btn, i) => {
+      const on = btn.dataset.brandPick === id;
+      btn.setAttribute("aria-checked", on ? "true" : "false");
+      btn.classList.toggle("is-on", on);
+      btn.tabIndex = on || i === 0 ? 0 : -1;
+    });
+    doc.querySelectorAll<HTMLElement>("[data-brand-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.brandPanel !== id;
+    });
+  };
+
+  const jumpToHit = (hit: { stuckKey?: string; elementId?: string }) => {
+    clearSearchMark();
+    let node: HTMLElement | null = null;
+    if (hit.stuckKey) {
+      const nodes = Array.from(doc.querySelectorAll<HTMLElement>(`[data-stuck-key="${hit.stuckKey}"]`));
+      const selected = doc.querySelector<HTMLElement>('[data-brand-pick][aria-checked="true"]')?.dataset.brandPick;
+      node = nodes.find((item) => item.closest<HTMLElement>("[data-brand-panel]")?.dataset.brandPanel === selected) || nodes[0] || null;
+    } else if (hit.elementId) {
+      node = doc.getElementById(hit.elementId);
+    }
+    if (!node) return;
+    const panel = node.closest<HTMLElement>("[data-brand-panel]");
+    if (panel?.hidden && panel.dataset.brandPanel) showBrandPanel(panel.dataset.brandPanel);
+    const details = node instanceof HTMLDetailsElement ? node : node.querySelector<HTMLDetailsElement>("details.stuck, details.faq");
+    if (details) details.open = true;
+    const mark = node.closest<HTMLElement>(".wizard-step") || node;
+    mark.classList.add("is-search-hit");
+    mark.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
+
   const renderSearch = (query: string) => {
     if (!searchResults || !searchEmpty) return;
     const hits = searchHelp(searchLocale, query);
@@ -550,14 +586,18 @@ import { searchHelp } from "../data/site-search";
     searchEmpty.hidden = hits.length > 0;
     hits.forEach((hit) => {
       const link = doc.createElement("a");
-      link.href = hit.href;
+      link.href = hit.elementId ? `#${hit.elementId}` : `#stuck-${hit.stuckKey || "install"}`;
       link.className = "search-hit";
-      const title = doc.createElement("strong");
-      title.textContent = hit.title;
-      const body = doc.createElement("span");
-      body.textContent = hit.body;
-      link.append(title, body);
-      link.addEventListener("click", () => searchDialog?.close());
+      const answer = doc.createElement("strong");
+      answer.textContent = hit.answer;
+      const section = doc.createElement("span");
+      section.textContent = hit.section;
+      link.append(answer, section);
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        searchDialog?.close();
+        jumpToHit(hit);
+      });
       searchResults.append(link);
     });
   };
@@ -580,11 +620,32 @@ import { searchHelp } from "../data/site-search";
   });
 
   searchInput?.addEventListener("input", () => renderSearch(searchInput.value));
+  searchInput?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    const first = searchResults?.querySelector<HTMLAnchorElement>("a.search-hit");
+    if (!first) return;
+    event.preventDefault();
+    first.click();
+  });
   searchDialog?.addEventListener("click", (event) => {
     if (event.target === searchDialog) searchDialog.close();
   });
   searchDialog?.addEventListener("close", () => {
     if (searchInput) searchInput.value = "";
+  });
+  doc.addEventListener("keydown", (event) => {
+    const key = event.key.toLowerCase();
+    const metaK = (event.metaKey || event.ctrlKey) && key === "k";
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    const typing = !!target?.closest("input, textarea, select, [contenteditable='true']");
+    const slash = key === "/" && !typing && !event.metaKey && !event.ctrlKey && !event.altKey;
+    if (!metaK && !slash) return;
+    event.preventDefault();
+    if (metaK && searchDialog?.open) {
+      searchDialog.close();
+      return;
+    }
+    openSearch("");
   });
 
   initHeroMotion();
