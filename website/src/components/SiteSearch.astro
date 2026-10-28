@@ -1,6 +1,6 @@
 ---
 import type { Locale } from "../data/lang";
-import { searchEmpty, searchLabel, searchPlaceholder } from "../data/site-search";
+import { searchLabel, searchPlaceholder, searchSuggest } from "../data/site-search";
 
 interface Props {
   locale: Locale;
@@ -9,7 +9,7 @@ interface Props {
 const { locale } = Astro.props;
 const placeholder = searchPlaceholder(locale);
 const label = searchLabel(locale);
-const empty = searchEmpty(locale);
+const suggest = searchSuggest(locale);
 ---
 <button type="button" class="nav-search" data-search-open aria-haspopup="dialog" aria-controls="site-search">
   <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
@@ -28,7 +28,7 @@ const empty = searchEmpty(locale);
       </svg>
       <input type="search" data-search-input placeholder={placeholder} autocomplete="off" enterkeyhint="search" aria-label={label} />
     </label>
+    <p class="search-note" data-search-note hidden>{suggest}</p>
     <div data-search-results></div>
-    <p class="search-empty" data-search-empty hidden>{empty}</p>
   </div>
 </dialog>

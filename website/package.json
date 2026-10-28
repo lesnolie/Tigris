@@ -8,7 +8,7 @@
     "dev": "astro dev --host 127.0.0.1 --port 4321",
     "build": "astro build",
     "preview": "astro preview --host 127.0.0.1 --port 4321",
-    "check": "astro check"
+    "check": "node ../tools/check-website-search.mts && astro check"
   },
   "dependencies": {
     "astro": "^5.0.0"

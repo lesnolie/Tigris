@@ -540,7 +540,7 @@ import { searchHelp } from "../data/site-search";
   const searchDialog = doc.querySelector<HTMLDialogElement>("[data-search-dialog]");
   const searchInput = searchDialog?.querySelector<HTMLInputElement>("[data-search-input]");
   const searchResults = searchDialog?.querySelector<HTMLElement>("[data-search-results]");
-  const searchEmpty = searchDialog?.querySelector<HTMLElement>("[data-search-empty]");
+  const searchNote = searchDialog?.querySelector<HTMLElement>("[data-search-note]");
   const searchLocale = isEnglish ? "en" : "zh";
 
   const clearSearchMark = () => {
@@ -580,19 +580,26 @@ import { searchHelp } from "../data/site-search";
   };
 
   const renderSearch = (query: string) => {
-    if (!searchResults || !searchEmpty) return;
+    if (!searchResults || !searchNote) return;
     const hits = searchHelp(searchLocale, query);
     searchResults.replaceChildren();
-    searchEmpty.hidden = hits.length > 0;
+    const suggested = hits.length > 0 && hits.every((hit) => hit.suggested);
+    searchNote.hidden = !suggested;
     hits.forEach((hit) => {
       const link = doc.createElement("a");
       link.href = hit.elementId ? `#${hit.elementId}` : `#stuck-${hit.stuckKey || "install"}`;
       link.className = "search-hit";
       const answer = doc.createElement("strong");
-      answer.textContent = hit.answer;
+      answer.textContent = hit.label || hit.answer;
+      link.append(answer);
+      if (hit.label) {
+        const fix = doc.createElement("em");
+        fix.textContent = hit.answer;
+        link.append(fix);
+      }
       const section = doc.createElement("span");
       section.textContent = hit.section;
-      link.append(answer, section);
+      link.append(section);
       link.addEventListener("click", (event) => {
         event.preventDefault();
         searchDialog?.close();

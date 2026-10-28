@@ -2,15 +2,21 @@ import type { Locale } from "./lang";
 
 /** One search result: a one-line answer, the section name, and where to jump. */
 export interface SearchHit {
+  id: string;
   answer: string;
   section: string;
   /** Open this stuck note. Prefer the brand the reader already picked. */
   stuckKey?: string;
   /** Otherwise scroll to this element id and open it if it is a details element. */
   elementId?: string;
+  /** Plain problem name when this hit is one of the common shortcuts. */
+  label?: string;
+  /** True when the query matched nothing and these are fallback suggestions. */
+  suggested?: boolean;
 }
 
 interface Row {
+  id?: string;
   stuckKey?: string;
   elementId?: string;
   zh: { answer: string; section: string; keys: Key[] };
@@ -37,6 +43,7 @@ const rows: Row[] = [
     },
   },
   {
+    id: "home",
     stuckKey: "home",
     zh: {
       answer: "按主页键如果还是原来的桌面，把画面告诉助手，让它继续。不要自己关掉自带桌面。",
@@ -50,6 +57,7 @@ const rows: Row[] = [
     },
   },
   {
+    id: "restore",
     stuckKey: "restore",
     zh: {
       answer: "别慌。复制「换回原来的桌面」里的文字，发给帮你安装的助手。用原来那台电脑。",
@@ -76,6 +84,7 @@ const rows: Row[] = [
     },
   },
   {
+    id: "connect-wifi",
     elementId: "install-prep",
     zh: {
       answer: "电脑和电视要连在同一个 Wi-Fi。",
@@ -89,6 +98,7 @@ const rows: Row[] = [
     },
   },
   {
+    id: "connect-address",
     stuckKey: "ip-fix",
     zh: {
       answer: "再对一下电视上的四段数字。例子 192.168.1.20 不是你的地址。",
@@ -102,6 +112,7 @@ const rows: Row[] = [
     },
   },
   {
+    id: "connect-wake",
     stuckKey: "connect",
     zh: {
       answer: "小米、红米从待机唤醒后，调试开关有时会自己关掉，再打开一次。",
@@ -115,29 +126,58 @@ const rows: Row[] = [
     },
   },
   {
+    id: "connect-allow",
     stuckKey: "connect",
     zh: {
-      answer: "电视弹出询问时，勾上「始终允许」，再选「允许」。",
+      answer: "电视弹出「允许 USB 调试吗？」或「允许调试吗？」时，勾上「始终允许」，再选「允许」。",
       section: "安装 · 允许这台电脑",
-      keys: [{ t: "连不上", w: 70 }, { t: "电视没反应", w: 80 }, "未授权", "unauthorized", "始终允许"],
+      keys: [
+        { t: "连不上", w: 70 },
+        { t: "电视没反应", w: 80 },
+        { t: "电视弹窗了", w: 100 },
+        "未授权",
+        "unauthorized",
+        "始终允许",
+        "允许 usb 调试吗",
+        "允许调试吗",
+      ],
     },
     en: {
-      answer: "When the TV asks, tick Always allow, then choose Allow.",
+      answer: "When the TV shows “Allow USB debugging?” or “Allow debugging?”, tick Always allow, then choose Allow.",
       section: "Install · allow this computer",
-      keys: [{ t: "can't connect", w: 70 }, { t: "cannot connect", w: 70 }, { t: "tv not responding", w: 80 }, "unauthorized", "always allow"],
+      keys: [
+        { t: "can't connect", w: 70 },
+        { t: "cannot connect", w: 70 },
+        { t: "tv not responding", w: 80 },
+        { t: "popup on tv", w: 100 },
+        { t: "popup on the tv", w: 100 },
+        "unauthorized",
+        "always allow",
+        "allow usb debugging",
+        "allow debugging",
+      ],
     },
   },
   {
+    id: "ads",
     elementId: "ads-by-brand",
     zh: {
       answer: "停在 Tigris 上就没有原厂推荐位。开机广告不能去掉。弹窗还没测过。",
       section: "广告会怎样",
-      keys: ["广告还在", "还有广告", "广告没消失", "开机广告", "推荐位", "弹窗"],
+      keys: ["广告还在", "还有广告", "广告没消失", "开机广告", "推荐位", "弹窗", { t: "电视弹窗了", w: 40 }],
     },
     en: {
       answer: "On the Tigris home screen the original recommendation row is gone. Boot ads cannot be removed. Popups have not been checked.",
       section: "What happens to ads",
-      keys: ["ads are still there", "ads still showing", "still have ads", "boot ads", "popups"],
+      keys: [
+        "ads are still there",
+        "ads still showing",
+        "still have ads",
+        "boot ads",
+        "popups",
+        { t: "popup on tv", w: 40 },
+        { t: "popup on the tv", w: 40 },
+      ],
     },
   },
   {
@@ -245,29 +285,31 @@ const rows: Row[] = [
     },
   },
   {
+    id: "dialog-cast",
     stuckKey: "cast",
     zh: {
       answer: "角落如果出现「多屏互动：正在发起应用推送」，选「同意」。",
       section: "安装 · 雷鸟 / TCL",
-      keys: ["没有安装确认", "多屏互动", "正在发起应用推送"],
+      keys: ["没有安装确认", "多屏互动", "正在发起应用推送", { t: "电视弹窗了", w: 90 }],
     },
     en: {
       answer: "If the corner says 「多屏互动：正在发起应用推送」, choose 同意 (Agree).",
       section: "Install · FFalcon / TCL",
-      keys: ["no install prompt", "multi-screen", "agree prompt"],
+      keys: ["no install prompt", "multi-screen", "agree prompt", { t: "popup on tv", w: 90 }, { t: "popup on the tv", w: 90 }],
     },
   },
   {
+    id: "what-ai",
     elementId: "install-prep",
     zh: {
       answer: "能在你的电脑上亲自安装的助手，不是只会把步骤发给你的聊天网页。",
       section: "安装 · 先准备两样东西",
-      keys: ["什么是ai助手", "什么是 ai 助手", "ai助手是什么", "什么助手"],
+      keys: ["什么是ai助手", "什么是 ai 助手", "ai助手是什么", "什么助手", "用哪个ai", "哪个ai", "用什么ai", "用哪个助手"],
     },
     en: {
       answer: "An assistant that can operate your computer and run the install, not a chat page that only sends you the steps.",
       section: "Install · two things first",
-      keys: ["what is an ai assistant", "what kind of assistant", "what is ai"],
+      keys: ["what is an ai assistant", "what kind of assistant", "what is ai", "which ai", "which assistant", "what ai should i use"],
     },
   },
   {
@@ -428,8 +470,31 @@ const rows: Row[] = [
   },
 ];
 
+/** Shown when a vague question should open the usual problems, not a single step. */
+const GENERIC: Record<Locale, string[]> = {
+  zh: ["卡住了", "不会弄", "怎么办"],
+  en: ["help", "stuck"],
+};
+
+/** Clickable problems used for those vague questions, and when nothing matches. */
+const COMMON: Record<Locale, string[]> = {
+  zh: ["按主页键还是原来的", "连不上", "黑屏了", "怎么换回去"],
+  en: ["Home button still shows the old screen", "Can't connect", "Black screen", "How do I switch back"],
+};
+
 function fold(value: string) {
-  return value.trim().toLowerCase();
+  return value.normalize("NFKC").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function compact(value: string) {
+  return fold(value).replace(/[\s'’`"“”‘’\-?？!！.。,，、]/g, "");
+}
+
+function same(left: string, right: string) {
+  if (fold(left) === fold(right)) return true;
+  const a = compact(left);
+  const b = compact(right);
+  return a.length > 0 && a === b;
 }
 
 function keyText(key: Key) {
@@ -440,24 +505,39 @@ function keyWeight(key: Key) {
   return typeof key === "string" ? 100 : key.w;
 }
 
-export function searchHelp(locale: Locale, raw: string): SearchHit[] {
-  const query = fold(raw);
-  const list = rows.map((row) => ({ ...row[locale], stuckKey: row.stuckKey, elementId: row.elementId }));
-  const pack = (entry: (typeof list)[number]): SearchHit => ({
+function entries(locale: Locale) {
+  return rows.map((row, index) => ({
+    ...row[locale],
+    id: row.id || `row-${index}`,
+    stuckKey: row.stuckKey,
+    elementId: row.elementId,
+  }));
+}
+
+function pack(entry: ReturnType<typeof entries>[number]): SearchHit {
+  return {
+    id: entry.id,
     answer: entry.answer,
     section: entry.section,
     stuckKey: entry.stuckKey,
     elementId: entry.elementId,
-  });
+  };
+}
+
+/** Direct matches only. Does not substitute the common-problem list. */
+function rank(locale: Locale, raw: string): SearchHit[] {
+  const query = fold(raw);
+  const list = entries(locale);
   if (!query) return list.slice(0, 6).map(pack);
   const ranked = list
     .map((entry) => {
       let score = 0;
       let exact = false;
       for (const key of entry.keys) {
-        const folded = fold(keyText(key));
+        const text = keyText(key);
         const weight = keyWeight(key);
-        if (folded === query) {
+        const folded = fold(text);
+        if (same(text, raw)) {
           exact = true;
           score = Math.max(score, weight);
         } else if (folded.length >= 2 && query.length >= 2 && (query.includes(folded) || folded.includes(query))) {
@@ -469,16 +549,35 @@ export function searchHelp(locale: Locale, raw: string): SearchHit[] {
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score);
   const exactHits = ranked.filter((item) => item.exact);
-  const chosen = exactHits.length >= 2 ? exactHits.slice(0, 4) : exactHits.length === 0 ? ranked.slice(0, 3) : ranked.slice(0, 3);
+  // A phrase such as 连不上 is the same check on several documented steps.
+  // Keep that whole group. One exact hit can still sit beside close matches.
+  const chosen = exactHits.length >= 2 ? exactHits.slice(0, 4) : ranked.slice(0, 3);
   return chosen.map((item) => pack(item.entry));
+}
+
+function shortcuts(locale: Locale, suggested: boolean): SearchHit[] {
+  return COMMON[locale].map((phrase) => {
+    const hit = rank(locale, phrase)[0];
+    if (!hit) throw new Error(`missing common result for ${phrase}`);
+    return { ...hit, label: phrase, suggested };
+  });
+}
+
+export function searchHelp(locale: Locale, raw: string): SearchHit[] {
+  if (!fold(raw)) return rank(locale, "");
+  if (GENERIC[locale].some((phrase) => same(phrase, raw))) return shortcuts(locale, false);
+  const hits = rank(locale, raw);
+  return hits.length > 0 ? hits : shortcuts(locale, true);
 }
 
 export function searchPlaceholder(locale: Locale) {
   return locale === "zh" ? "遇到问题？搜一下" : "Stuck? Search here";
 }
 
-export function searchEmpty(locale: Locale) {
-  return locale === "zh" ? "没有找到。换个说法试试。" : "Nothing matched. Try different words.";
+export function searchSuggest(locale: Locale) {
+  return locale === "zh"
+    ? "没有直接对上。可以先看这几个常见问题："
+    : "Nothing matched that. Start with one of these:";
 }
 
 export function searchLabel(locale: Locale) {
