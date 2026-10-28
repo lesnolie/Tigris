@@ -31,7 +31,7 @@ const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossa
 
   <div class="wizard-start" id="install-wizard">
     <p class="eyebrow">{w.eyebrow}</p>
-    <div class="prep">
+    <div class="prep" id="install-prep">
       <p class="wizard-action">{w.prepTitle}</p>
       <ul>
         {w.prep.map((item, i) => <li set:html={renderRuns(item, locale, `prep-${i}`)} />)}

@@ -13,9 +13,11 @@ export interface SearchHit {
 interface Row {
   stuckKey?: string;
   elementId?: string;
-  zh: { answer: string; section: string; keys: string[] };
-  en: { answer: string; section: string; keys: string[] };
+  zh: { answer: string; section: string; keys: Key[] };
+  en: { answer: string; section: string; keys: Key[] };
 }
+
+type Key = string | { t: string; w: number };
 
 /* Hand-curated. Keys are the words a beginner actually types, including the
    phrases on the 搜搜看 buttons. Each row points at a real step, stuck note,
@@ -37,27 +39,27 @@ const rows: Row[] = [
   {
     stuckKey: "home",
     zh: {
-      answer: "不要关掉电视出厂时的主屏幕，否则有的小米、红米会黑屏。",
+      answer: "按主页键如果还是原来的桌面，把画面告诉助手，让它继续。不要自己关掉自带桌面。",
       section: "安装 · 按主页键",
-      keys: ["黑屏了", "黑屏", "屏幕黑了", "主页没变", "关掉桌面"],
+      keys: ["按主页键还是原来的", "主页没变", "还是原来的桌面", { t: "电视没反应", w: 100 }],
     },
     en: {
-      answer: "Do not switch off the home screen that came with the TV, or some Xiaomi and Redmi sets stay black.",
+      answer: "If the house button still opens the old home screen, tell the assistant and let it continue. Do not switch off the original one yourself.",
       section: "Install · press the house button",
-      keys: ["black screen", "screen is black", "home didn't change", "turned off the launcher"],
+      keys: ["home button still shows the old screen", "still the original home", "home didn't change", { t: "tv not responding", w: 100 }],
     },
   },
   {
     stuckKey: "restore",
     zh: {
-      answer: "复制「换回原来的桌面」里的文字，发给帮你安装的助手。用原来那台电脑。",
+      answer: "别慌。复制「换回原来的桌面」里的文字，发给帮你安装的助手。用原来那台电脑。",
       section: "换回原来的桌面",
-      keys: ["怎么换回去", "换回去", "恢复原来", "换回桌面", "不想要了"],
+      keys: ["怎么换回去", "换回去", "恢复原来", "换回桌面", "不想要了", { t: "黑屏了", w: 120 }, { t: "黑屏", w: 90 }],
     },
     en: {
-      answer: "Copy the paragraph under “Put the original home screen back” and send it to the assistant. Use the same computer.",
+      answer: "Don't panic. Copy the paragraph under “Put the original home screen back” and send it to the assistant. Use the same computer.",
       section: "Put the original home screen back",
-      keys: ["how do i switch back", "switch back", "go back", "restore original", "undo install"],
+      keys: ["how do i switch back", "switch back", "go back", "restore original", "undo install", { t: "black screen", w: 120 }],
     },
   },
   {
@@ -74,16 +76,55 @@ const rows: Row[] = [
     },
   },
   {
+    elementId: "install-prep",
+    zh: {
+      answer: "电脑和电视要连在同一个 Wi-Fi。",
+      section: "安装 · 先准备两样东西",
+      keys: [{ t: "连不上", w: 100 }, { t: "can't connect", w: 100 }, "同一个 wifi", "同一网络"],
+    },
+    en: {
+      answer: "The computer and the TV need to be on the same Wi-Fi.",
+      section: "Install · two things first",
+      keys: [{ t: "can't connect", w: 100 }, { t: "cannot connect", w: 100 }, "same wi-fi", "same wifi"],
+    },
+  },
+  {
+    stuckKey: "ip-fix",
+    zh: {
+      answer: "再对一下电视上的四段数字。例子 192.168.1.20 不是你的地址。",
+      section: "安装 · 填上数字",
+      keys: [{ t: "连不上", w: 90 }, "地址填不对", "ip 填错"],
+    },
+    en: {
+      answer: "Check the four numbers on the TV again. 192.168.1.20 is only an example.",
+      section: "Install · type the number",
+      keys: [{ t: "can't connect", w: 90 }, { t: "cannot connect", w: 90 }, "the address looks wrong", "wrong address"],
+    },
+  },
+  {
+    stuckKey: "connect",
+    zh: {
+      answer: "小米、红米从待机唤醒后，调试开关有时会自己关掉，再打开一次。",
+      section: "安装 · 小米 / 红米 · 允许调试",
+      keys: [{ t: "连不上", w: 80 }, "唤醒后调试关了", "待机后连不上"],
+    },
+    en: {
+      answer: "After a Xiaomi or Redmi TV wakes from standby, the debugging switch sometimes turns off. Turn it on again.",
+      section: "Install · Xiaomi / Redmi · allow debugging",
+      keys: [{ t: "can't connect", w: 80 }, { t: "cannot connect", w: 80 }, "debugging turned off", "after standby"],
+    },
+  },
+  {
     stuckKey: "connect",
     zh: {
       answer: "电视弹出询问时，勾上「始终允许」，再选「允许」。",
       section: "安装 · 允许这台电脑",
-      keys: ["连不上", "连接失败", "连不上电视", "未授权", "unauthorized"],
+      keys: [{ t: "连不上", w: 70 }, { t: "电视没反应", w: 80 }, "未授权", "unauthorized", "始终允许"],
     },
     en: {
       answer: "When the TV asks, tick Always allow, then choose Allow.",
       section: "Install · allow this computer",
-      keys: ["can't connect", "cannot connect", "connection failed", "unauthorized"],
+      keys: [{ t: "can't connect", w: 70 }, { t: "cannot connect", w: 70 }, { t: "tv not responding", w: 80 }, "unauthorized", "always allow"],
     },
   },
   {
@@ -156,12 +197,12 @@ const rows: Row[] = [
     zh: {
       answer: "小米、红米在「产品型号」上连按确认键。索尼和其他电视在版本那一行连按 7 次。",
       section: "安装 · 开发者模式",
-      keys: ["开发者模式没打开", "连按没反应", "按了没提示"],
+      keys: ["开发者模式没打开", "连按没反应", "按了没提示", { t: "电视没反应", w: 70 }],
     },
     en: {
       answer: "On Xiaomi and Redmi, keep pressing OK on Model. On Sony and other TVs, press the version row 7 times.",
       section: "Install · developer mode",
-      keys: ["developer mode did not turn on", "nothing happened", "pressed seven times"],
+      keys: ["developer mode did not turn on", "nothing happened", "pressed seven times", { t: "tv not responding", w: 70 }],
     },
   },
   {
@@ -214,6 +255,19 @@ const rows: Row[] = [
       answer: "If the corner says 「多屏互动：正在发起应用推送」, choose 同意 (Agree).",
       section: "Install · FFalcon / TCL",
       keys: ["no install prompt", "multi-screen", "agree prompt"],
+    },
+  },
+  {
+    elementId: "install-prep",
+    zh: {
+      answer: "能在你的电脑上亲自安装的助手，不是只会把步骤发给你的聊天网页。",
+      section: "安装 · 先准备两样东西",
+      keys: ["什么是ai助手", "什么是 ai 助手", "ai助手是什么", "什么助手"],
+    },
+    en: {
+      answer: "An assistant that can operate your computer and run the install, not a chat page that only sends you the steps.",
+      section: "Install · two things first",
+      keys: ["what is an ai assistant", "what kind of assistant", "what is ai"],
     },
   },
   {
@@ -334,29 +388,16 @@ const rows: Row[] = [
     },
   },
   {
-    stuckKey: "ip-fix",
-    zh: {
-      answer: "框里要是你电视上的四段数字，不是例子 192.168.1.20。",
-      section: "安装 · 填上数字",
-      keys: ["地址填不对"],
-    },
-    en: {
-      answer: "The box needs the four numbers from your TV, not the example 192.168.1.20.",
-      section: "Install · type the number",
-      keys: ["the address looks wrong", "wrong address"],
-    },
-  },
-  {
     elementId: "faq-2",
     zh: {
       answer: "小米、红米不要停用自带桌面。停用后有的电视会黑屏。",
       section: "常见问题 · 为什么不能停用自带桌面",
-      keys: ["为什么不能停用", "停用桌面"],
+      keys: ["为什么不能停用", "停用桌面", { t: "黑屏了", w: 80 }, { t: "黑屏", w: 70 }, { t: "按主页键还是原来的", w: 60 }],
     },
     en: {
       answer: "Do not disable the Xiaomi or Redmi home screen. Some sets then stay black.",
       section: "FAQ · why not to disable the original home screen",
-      keys: ["why must i not disable", "disable the launcher"],
+      keys: ["why must i not disable", "disable the launcher", { t: "black screen", w: 80 }, { t: "home button still shows the old screen", w: 60 }],
     },
   },
   {
@@ -391,32 +432,45 @@ function fold(value: string) {
   return value.trim().toLowerCase();
 }
 
+function keyText(key: Key) {
+  return typeof key === "string" ? key : key.t;
+}
+
+function keyWeight(key: Key) {
+  return typeof key === "string" ? 100 : key.w;
+}
+
 export function searchHelp(locale: Locale, raw: string): SearchHit[] {
   const query = fold(raw);
   const list = rows.map((row) => ({ ...row[locale], stuckKey: row.stuckKey, elementId: row.elementId }));
-  if (!query) {
-    return list.slice(0, 6).map(({ answer, section, stuckKey, elementId }) => ({ answer, section, stuckKey, elementId }));
-  }
-  return list
+  const pack = (entry: (typeof list)[number]): SearchHit => ({
+    answer: entry.answer,
+    section: entry.section,
+    stuckKey: entry.stuckKey,
+    elementId: entry.elementId,
+  });
+  if (!query) return list.slice(0, 6).map(pack);
+  const ranked = list
     .map((entry) => {
       let score = 0;
+      let exact = false;
       for (const key of entry.keys) {
-        const folded = fold(key);
-        if (folded === query) score += 100;
-        else if (query.includes(folded) || folded.includes(query)) score += 36;
+        const folded = fold(keyText(key));
+        const weight = keyWeight(key);
+        if (folded === query) {
+          exact = true;
+          score = Math.max(score, weight);
+        } else if (folded.length >= 2 && query.length >= 2 && (query.includes(folded) || folded.includes(query))) {
+          score = Math.max(score, Math.round(weight * 0.4));
+        }
       }
-      if (fold(entry.answer).includes(query)) score += 12;
-      return { entry, score };
+      return { entry, score, exact };
     })
     .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 6)
-    .map(({ entry }) => ({
-      answer: entry.answer,
-      section: entry.section,
-      stuckKey: entry.stuckKey,
-      elementId: entry.elementId,
-    }));
+    .sort((a, b) => b.score - a.score);
+  const exactHits = ranked.filter((item) => item.exact);
+  const chosen = exactHits.length >= 2 ? exactHits.slice(0, 4) : exactHits.length === 0 ? ranked.slice(0, 3) : ranked.slice(0, 3);
+  return chosen.map((item) => pack(item.entry));
 }
 
 export function searchPlaceholder(locale: Locale) {

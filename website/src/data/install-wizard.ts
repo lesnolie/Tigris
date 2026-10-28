@@ -357,7 +357,7 @@ function homeStep(locale: Locale, extra: Run[][]): StepModel {
     action: zh ? ["助手做完后，按遥控器上的", word(locale, "homekey"), "。"] : ["When the assistant is done, press the ", word(locale, "homekey"), " on the remote."],
     mock: { kind: "home" },
     key: "home",
-    help: zh ? "黑屏了" : "Black screen",
+    help: zh ? "按主页键还是原来的" : "Home button still shows the old screen",
     see: zh ? ["Tigris 的主屏幕：有时间，有壁纸，下面一排应用。"] : ["The Tigris home screen: a clock, a wallpaper, and a row of apps along the bottom."],
     stuck: [
       zh
