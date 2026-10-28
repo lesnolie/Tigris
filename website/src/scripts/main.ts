@@ -1,4 +1,5 @@
 import { initHeroMotion } from "./hero-motion";
+import { searchHelp } from "../data/site-search";
 
 /* Tigris website — progressive enhancement only. No framework, ~8 KB.
    All user-visible strings come from data-* attributes so the same script
@@ -534,6 +535,125 @@ import { initHeroMotion } from "./hero-motion";
     );
     items.forEach((el) => io.observe(el));
   }
+
+  /* ---------- site search (Spotlight overlay; no shortcut is shown) ---------- */
+  const searchDialog = doc.querySelector<HTMLDialogElement>("[data-search-dialog]");
+  const searchInput = searchDialog?.querySelector<HTMLInputElement>("[data-search-input]");
+  const searchResults = searchDialog?.querySelector<HTMLElement>("[data-search-results]");
+  const searchNote = searchDialog?.querySelector<HTMLElement>("[data-search-note]");
+  const searchLocale = isEnglish ? "en" : "zh";
+
+  const clearSearchMark = () => {
+    doc.querySelectorAll(".is-search-hit").forEach((el) => el.classList.remove("is-search-hit"));
+  };
+
+  const showBrandPanel = (id: string) => {
+    doc.querySelectorAll<HTMLButtonElement>("[data-brand-pick]").forEach((btn, i) => {
+      const on = btn.dataset.brandPick === id;
+      btn.setAttribute("aria-checked", on ? "true" : "false");
+      btn.classList.toggle("is-on", on);
+      btn.tabIndex = on || i === 0 ? 0 : -1;
+    });
+    doc.querySelectorAll<HTMLElement>("[data-brand-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.brandPanel !== id;
+    });
+  };
+
+  const jumpToHit = (hit: { stuckKey?: string; elementId?: string }) => {
+    clearSearchMark();
+    let node: HTMLElement | null = null;
+    if (hit.stuckKey) {
+      const nodes = Array.from(doc.querySelectorAll<HTMLElement>(`[data-stuck-key="${hit.stuckKey}"]`));
+      const selected = doc.querySelector<HTMLElement>('[data-brand-pick][aria-checked="true"]')?.dataset.brandPick;
+      node = nodes.find((item) => item.closest<HTMLElement>("[data-brand-panel]")?.dataset.brandPanel === selected) || nodes[0] || null;
+    } else if (hit.elementId) {
+      node = doc.getElementById(hit.elementId);
+    }
+    if (!node) return;
+    const panel = node.closest<HTMLElement>("[data-brand-panel]");
+    if (panel?.hidden && panel.dataset.brandPanel) showBrandPanel(panel.dataset.brandPanel);
+    const details = node instanceof HTMLDetailsElement ? node : node.querySelector<HTMLDetailsElement>("details.stuck, details.faq");
+    if (details) details.open = true;
+    const mark = node.closest<HTMLElement>(".wizard-step") || node;
+    mark.classList.add("is-search-hit");
+    mark.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
+
+  const renderSearch = (query: string) => {
+    if (!searchResults || !searchNote) return;
+    const hits = searchHelp(searchLocale, query);
+    searchResults.replaceChildren();
+    const suggested = hits.length > 0 && hits.every((hit) => hit.suggested);
+    searchNote.hidden = !suggested;
+    hits.forEach((hit) => {
+      const link = doc.createElement("a");
+      link.href = hit.elementId ? `#${hit.elementId}` : `#stuck-${hit.stuckKey || "install"}`;
+      link.className = "search-hit";
+      const answer = doc.createElement("strong");
+      answer.textContent = hit.label || hit.answer;
+      link.append(answer);
+      if (hit.label) {
+        const fix = doc.createElement("em");
+        fix.textContent = hit.answer;
+        link.append(fix);
+      }
+      const section = doc.createElement("span");
+      section.textContent = hit.section;
+      link.append(section);
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        searchDialog?.close();
+        jumpToHit(hit);
+      });
+      searchResults.append(link);
+    });
+  };
+
+  const openSearch = (query: string) => {
+    if (!searchDialog || !searchInput) return;
+    if (!searchDialog.open) searchDialog.showModal();
+    searchInput.value = query;
+    renderSearch(query);
+    searchInput.focus();
+    const end = query.length;
+    searchInput.setSelectionRange(end, end);
+  };
+
+  doc.addEventListener("click", (event) => {
+    const opener = (event.target as Element | null)?.closest<HTMLElement>("[data-search-open]");
+    if (!opener || !searchDialog) return;
+    event.preventDefault();
+    openSearch(opener.dataset.searchQuery || "");
+  });
+
+  searchInput?.addEventListener("input", () => renderSearch(searchInput.value));
+  searchInput?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    const first = searchResults?.querySelector<HTMLAnchorElement>("a.search-hit");
+    if (!first) return;
+    event.preventDefault();
+    first.click();
+  });
+  searchDialog?.addEventListener("click", (event) => {
+    if (event.target === searchDialog) searchDialog.close();
+  });
+  searchDialog?.addEventListener("close", () => {
+    if (searchInput) searchInput.value = "";
+  });
+  doc.addEventListener("keydown", (event) => {
+    const key = event.key.toLowerCase();
+    const metaK = (event.metaKey || event.ctrlKey) && key === "k";
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    const typing = !!target?.closest("input, textarea, select, [contenteditable='true']");
+    const slash = key === "/" && !typing && !event.metaKey && !event.ctrlKey && !event.altKey;
+    if (!metaK && !slash) return;
+    event.preventDefault();
+    if (metaK && searchDialog?.open) {
+      searchDialog.close();
+      return;
+    }
+    openSearch("");
+  });
 
   initHeroMotion();
 })();

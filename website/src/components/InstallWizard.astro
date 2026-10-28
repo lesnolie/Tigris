@@ -31,7 +31,7 @@ const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossa
 
   <div class="wizard-start" id="install-wizard">
     <p class="eyebrow">{w.eyebrow}</p>
-    <div class="prep">
+    <div class="prep" id="install-prep">
       <p class="wizard-action">{w.prepTitle}</p>
       <ul>
         {w.prep.map((item, i) => <li set:html={renderRuns(item, locale, `prep-${i}`)} />)}
@@ -55,11 +55,12 @@ const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossa
             >{brand.label}</button>
           ))}
         </div>
-        <details class="stuck">
+        <details class="stuck" data-stuck-key="choose" id="stuck-choose">
           <summary>{w.stuckLabel}</summary>
           <ul>
             {w.chooseStuck.map((item, i) => <li set:html={renderRuns(item, locale, `choose-${i}`)} />)}
           </ul>
+          <button type="button" class="help-search" data-search-open data-search-query={w.chooseHelp}>{w.helpLabel}</button>
         </details>
       </div>
     </div>
@@ -102,11 +103,14 @@ const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossa
               )}
               {step.prompt && <p class="term-hint">{w.promptLegend}</p>}
               <p class="see-now"><strong class="see-label">{w.seeLabel}</strong> <span set:html={renderRuns(step.see, locale, `${brand.id}-s-${i}`)} /></p>
-              <details class="stuck">
+              <details class="stuck" data-stuck-key={step.key} id={`stuck-${brand.id}-${step.key}`}>
                 <summary>{w.stuckLabel}</summary>
-                <ul>
-                  {step.stuck.map((item, n) => <li set:html={renderRuns(item, locale, `${brand.id}-k-${i}-${n}`)} />)}
-                </ul>
+                {step.stuck.length > 0 && (
+                  <ul>
+                    {step.stuck.map((item, n) => <li set:html={renderRuns(item, locale, `${brand.id}-k-${i}-${n}`)} />)}
+                  </ul>
+                )}
+                <button type="button" class="help-search" data-search-open data-search-query={step.help}>{w.helpLabel}</button>
               </details>
             </div>
           </li>
@@ -165,11 +169,12 @@ const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossa
           </button>
         </div>
         <p class="see-now"><strong class="see-label">{w.seeLabel}</strong> <span set:html={renderRuns(w.restoreSee, locale, "restore-s")} /></p>
-        <details class="stuck">
+        <details class="stuck" data-stuck-key="restore" id="stuck-restore">
           <summary>{w.stuckLabel}</summary>
           <ul>
             {w.restoreStuck.map((item, i) => <li set:html={renderRuns(item, locale, `restore-k-${i}`)} />)}
           </ul>
+          <button type="button" class="help-search" data-search-open data-search-query={w.restoreHelp}>{w.helpLabel}</button>
           <p set:html={renderRuns(w.restoreCommandLead, locale, "restore-cmd-lead")} />
           <div class="code">
             <pre><code id="cmd-restore-sh" data-ip-fill="example">{RESTORE_COMMAND}</code></pre>
