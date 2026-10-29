@@ -188,7 +188,7 @@ Sony TVs can use the local BRAVIA IP-control endpoint for brightness, TV volume 
 
 ### Home guard and permissions
 
-On firmware that enforces the manufacturer's launcher, Tigris uses an accessibility service to watch foreground window changes without reading screen content. Automatic takeover requires a confirmed stock HOME window; app windows, HDMI inputs and dialogs cancel pending takeovers. Boot, wake and service recovery alone do not initiate a takeover, and repeated attempts are rate-limited. The notification listener helps recover the process after OEM termination without reading notifications.
+On firmware that enforces the manufacturer's launcher, Tigris uses an accessibility service to watch foreground window changes without reading screen content. A physical Home press always returns to Tigris. Boot, wake and process recovery take over only when the front is a confirmed stock home; an unknown front, an app or HDMI is left alone. Automatic retries during the first three minutes are rate-limited so a boot fight with the factory launcher stops. The Home key itself is not rate-limited. The notification listener helps recover the process after OEM termination without reading notifications.
 
 | Permission or service | Purpose |
 |---|---|

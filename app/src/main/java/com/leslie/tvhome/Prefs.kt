@@ -152,6 +152,19 @@ class Prefs(ctx: Context) {
         get() = sp.getBoolean("keep_adb", false)
         set(v) = sp.edit().putBoolean("keep_adb", v).apply()
 
+    /**
+     * Android 12+: keep filtering every key, not only while the stock launcher is open.
+     * Off by default. Ignored on Xiaomi, which answers Home when this app pauses.
+     */
+    var persistentHomeFilter: Boolean
+        get() = sp.getBoolean("persistent_home_filter", false)
+        set(v) = sp.edit().putBoolean("persistent_home_filter", v).apply()
+
+    /** Times the process was revived after a force-stop, comma-separated epoch millis. */
+    var revivals: String
+        get() = sp.getString("revivals", "")!!
+        set(v) = sp.edit().putString("revivals", v).apply()
+
     /** Kept on disk while the home screen is in front, so a new process can tell how the last one ended. */
     var homeInFront: Boolean
         get() = sp.getBoolean("home_in_front", false)

@@ -36,7 +36,7 @@ Android APK 无法用于 webOS、Tizen 等非 Android 电视。
 
 **只用遥控器 / U 盘**：从官方 [Releases](https://github.com/lesnolie/Tigris/releases) 下载标准 APK（有 HOME 安装限制的固件用 Guard 兼容包），使用电视允许的方式安装并打开。如果系统提供默认桌面选择器，选择 Tigris；打开其他应用后按遥控器 Home。仍回原厂桌面时，进入 Tigris 设置 → 安装与 Home 检查 / 桌面守护。应用仍可打开，完整接管可能需要 ADB 或专用适配；U 盘安装不会自动授予系统权限。
 
-**电脑 / ADB（Android 调试桥）**：先按 README 保存原 HOME、屏保、无障碍服务和通知监听，再安装正确包。标准包尝试设置默认 HOME；Guard 包不声明 HOME，直接配置守护。不要因品牌直接开启守护。若 Home 正常，无须检查小米包名白名单，也不必授予守护权限。
+**电脑 / ADB（Android 调试桥）**：先按 README 保存原 HOME、屏保、无障碍服务和通知监听，再安装正确包。标准包先 `cmd role add-role-holder`，再 `set-home-activity`。小米/红米、TCL/雷鸟、酷开/创维、海信会同时打开桌面守护；索尼和 Google TV 仅在原厂桌面的 HOME 优先级大于 0 时打开。其他品牌只在 Home 检查失败时打开。守护不关闭原厂桌面。主页键仍回原厂时运行 `TV=<IP> bash install.sh repair`。前台以 `dumpsys activity activities` 的 `mFocusedApp` 为准。
 
 所有 Android 品牌使用同一个检查器。Windows 下载用 `curl.exe`，运行用 `python`；macOS/Linux 用 `curl` 和 `python3`：
 

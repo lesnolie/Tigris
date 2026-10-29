@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The account RevivalSync's sync adapter runs under. -->
+<account-authenticator xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accountType="com.leslie.tvhome"
+    android:icon="@drawable/banner"
+    android:smallIcon="@drawable/banner"
+    android:label="@string/guard_name" />

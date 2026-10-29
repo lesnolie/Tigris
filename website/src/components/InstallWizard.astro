@@ -3,9 +3,11 @@ import type { Locale } from "../data/lang";
 import {
   IP_EXAMPLE,
   IP_SLOT,
+  REPAIR_COMMAND,
   RESTORE_COMMAND,
   getWizard,
   glossary,
+  homeStill,
   promptsFor,
   renderRuns,
   plainRuns,
@@ -19,6 +21,7 @@ interface Props {
 const { locale } = Astro.props;
 const w = getWizard(locale);
 const prompts = promptsFor(locale);
+const homeFix = homeStill(locale);
 const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossary)[keyof typeof glossary]][];
 ---
 <div data-wizard>
@@ -118,6 +121,34 @@ const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossa
       </ol>
     </div>
   ))}
+
+  <section class="glossary-block" id="home-still-stock" aria-labelledby="home-still-title">
+    <h2 id="home-still-title">{homeFix.title}</h2>
+    <p class="lede">{homeFix.lede}</p>
+    <ol class="wizard-list">
+      {homeFix.steps.map((step, i) => (
+        <li class="wizard-step">
+          <span class="wizard-num" aria-hidden="true">{i + 1}</span>
+          <div>
+            <p class="wizard-action">{step.action}</p>
+            {i === 1 && (
+              <div class="prompt-box">
+                <p id="cmd-repair">{REPAIR_COMMAND}</p>
+                <button class="copy" type="button" data-copy="#cmd-repair">
+                  <svg aria-hidden="true"><use href="#i-copy"></use></svg><span class="label"></span>
+                </button>
+              </div>
+            )}
+            <p class="see-now"><strong class="see-label">{w.seeLabel}</strong> {step.see}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+    <div class="callout is-danger">
+      <svg aria-hidden="true"><use href="#i-warning"></use></svg>
+      <span>{locale === "zh" ? "不要自己关掉自带桌面。" : "Do not switch off the original home screen yourself."}</span>
+    </div>
+  </section>
 
   <section class="glossary-block" aria-labelledby="glossary-title">
     <h2 id="glossary-title">{w.glossaryTitle}</h2>

@@ -1,4 +1,8 @@
 -keep class dadb.** { *; }
+-keep class com.leslie.tvhome.RevivalSyncService { *; }
+-keep class com.leslie.tvhome.RevivalSyncService$* { *; }
+-keep class com.leslie.tvhome.RevivalAccountService { *; }
+-keep class com.leslie.tvhome.RevivalAccountService$* { *; }
 -dontwarn org.bouncycastle.**
 -dontwarn org.conscrypt.**
 -dontwarn org.openjsse.**

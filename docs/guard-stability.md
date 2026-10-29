@@ -2,7 +2,7 @@
 
 The Android services collect events and execute actions. Decisions that do not need Android live in three small modules:
 
-- `HomeTakeoverPolicy`: fresh HOME evidence, settling, cooldown and a bounded takeover budget. Unknown windows never authorize a launch. Every non-HOME window cancels pending evidence, including vendor dialogs and input screens.
+- `HomeTakeoverPolicy`: a real Home press (key, homekey broadcast, or Xiaomi's pause bounce) is never budgeted. Automatic checks — boot, wake, revival, usage stats, and stock-home windows during the first three minutes — need fresh HOME evidence, a short settle, and at most three takeovers in 30 seconds before a 60-second pause. That pause is what stops the 雷鸟 75S545C boot flip-flop (issue #14) from fighting the factory launcher for minutes. After the boot window, a new stock HOME window is answered without spending the budget. An unknown front, an app, or an HDMI input does not authorize a launch. Non-activity overlays do not cancel or confirm a takeover.
 - `ServiceRecovery`: one outstanding rebind, cancellation when the user changes guard settings, and a fresh read of other services before delayed restoration.
 - `CleanupPolicy`: package validation, foreground parsing across Android versions and explicit shell-result markers. Automatic runs never force-stop applications.
 

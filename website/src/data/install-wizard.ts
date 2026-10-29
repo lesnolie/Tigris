@@ -824,6 +824,82 @@ export function getWizard(locale: Locale): WizardModel {
 
 export const RESTORE_COMMAND = `curl -fsSL https://raw.githubusercontent.com/lesnolie/Tigris/main/install.sh | TV=${IP_EXAMPLE} bash -s -- restore`;
 
+export const REPAIR_COMMAND = `curl -fsSL https://raw.githubusercontent.com/lesnolie/Tigris/main/install.sh | TV=${IP_EXAMPLE} bash -s -- repair`;
+
+/** One action per step. Shown when Home still opens the original launcher. */
+export function homeStill(locale: Locale): { title: string; lede: string; steps: { action: string; see: string }[] } {
+  if (locale === "zh") {
+    return {
+      title: "按主页键还是原来的",
+      lede: "装好之后按画着房子的键，画面还是原来的桌面时，按下面的顺序做。一步只做一件事。",
+      steps: [
+        {
+          action: "先看是不是闪一下就回来了。",
+          see: "小米和红米会先闪一下原来的桌面，大约半秒，然后回到 Tigris。这是正常的，不用再修。",
+        },
+        {
+          action: "如果一直停在原来的桌面，把电视上的四段数字换进下面的命令，在安装时用的那台电脑上运行。",
+          see: "电脑上出现 mFocusedApp，并且里面有 com.leslie.tvhome。这是修复，不会卸载，也不会关掉自带桌面。",
+        },
+        {
+          action: "在电视上打开 Tigris 的设置，进入「桌面守护」，先关掉，再打开。",
+          see: "这一行变成「开」。这一下会重新授权。",
+        },
+        {
+          action: "如果系统是 Android 13 或更新，并且上一步没有变成「开」，打开 Tigris 的应用信息，点「允许受限设置」。",
+          see: "允许之后，回到上一步，把桌面守护再开一次。",
+        },
+        {
+          action: "电视待机再亮起之后，按一次遥控器上画着房子的键。",
+          see: "画面回到 Tigris。只按一次即可。",
+        },
+        {
+          action: "如果还是不行，看是不是下面这两种机器。",
+          see: "有的 TCL、雷鸟会大约每一分钟清掉无障碍，例如雷鸟 75S78A Plus。坚果 S621 也修不好。这两种不要反复重装。",
+        },
+        {
+          action: "不要自己关掉自带桌面。",
+          see: "关掉以后，有的电视会黑屏，遥控器也开不回来。自带桌面要留着。",
+        },
+      ],
+    };
+  }
+  return {
+    title: "Home still opens the original screen",
+    lede: "The house button still shows the old home screen after install. Do one thing at a time.",
+    steps: [
+      {
+        action: "Look first for a short flash that then returns.",
+        see: "Xiaomi and Redmi flash the original home screen for about half a second, then return to Tigris. That is expected.",
+      },
+      {
+        action: "If it stays on the old screen, put the TV’s four numbers into the command below and run it on the computer you installed from.",
+        see: "The computer prints mFocusedApp, and that line contains com.leslie.tvhome. This repairs the guard. It does not uninstall Tigris or switch off the original home screen.",
+      },
+      {
+        action: "On the TV, open Tigris settings, open 桌面守护 (home guard), turn it off, then turn it on.",
+        see: "The row says On. That authorizes the guard again.",
+      },
+      {
+        action: "On Android 13 or newer, if that row did not turn on, open Tigris app info and choose Allow restricted settings.",
+        see: "Then go back and turn the home guard on again.",
+      },
+      {
+        action: "After the TV wakes from standby, press the house button once.",
+        see: "The screen returns to Tigris. One press is enough.",
+      },
+      {
+        action: "If it is still the old screen, check whether the TV is one of these.",
+        see: "Some TCL and FFalcon sets clear the accessibility service about once a minute, for example the FFalcon 75S78A Plus. The JMGO S621 cannot be fixed either. Do not keep reinstalling on those sets.",
+      },
+      {
+        action: "Do not switch off the original home screen yourself.",
+        see: "Some TVs then stay black, and the remote cannot turn them back on. Leave the original home screen installed.",
+      },
+    ],
+  };
+}
+
 /*
 Ad-table sources (do not render):
 

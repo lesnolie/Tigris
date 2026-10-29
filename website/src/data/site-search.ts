@@ -30,6 +30,24 @@ type Key = string | { t: string; w: number };
    FAQ item, glossary entry, or section. */
 const rows: Row[] = [
   {
+    id: "home-still",
+    elementId: "home-still-stock",
+    zh: {
+      answer: "按主页键还是原来的桌面：小米闪一下再回来是正常的。否则让助手运行 repair，或在设置里把桌面守护关掉再打开。Android 13 要允许受限设置。待机后按一次主页键。不要自己关掉自带桌面。",
+      section: "安装 · 按主页键还是原来的",
+      keys: ["按主页键还是原来的", "home键回到原厂桌面", "主页键没用", "主页键还是原来的"],
+    },
+    en: {
+      answer: "If the house button still opens the old home screen, a Xiaomi flash then return is expected. Otherwise run repair, or turn the home guard off and on in settings. On Android 13 allow restricted settings. Press the house button once after standby. Do not switch off the original home screen yourself.",
+      section: "Install · Home still opens the original screen",
+      keys: [
+        "home button still shows the old screen",
+        "home key goes back to the factory launcher",
+        "home button does nothing",
+      ],
+    },
+  },
+  {
     stuckKey: "adb",
     zh: {
       answer: "调试开关可能写成「ADB 调试」「USB 调试」或「网络调试」。",
@@ -48,12 +66,12 @@ const rows: Row[] = [
     zh: {
       answer: "按主页键如果还是原来的桌面，把画面告诉助手，让它继续。不要自己关掉自带桌面。",
       section: "安装 · 按主页键",
-      keys: ["按主页键还是原来的", "主页没变", "还是原来的桌面", { t: "电视没反应", w: 100 }],
+      keys: ["主页没变", "还是原来的桌面", { t: "电视没反应", w: 100 }, { t: "按主页键还是原来的", w: 40 }],
     },
     en: {
       answer: "If the house button still opens the old home screen, tell the assistant and let it continue. Do not switch off the original one yourself.",
       section: "Install · press the house button",
-      keys: ["home button still shows the old screen", "still the original home", "home didn't change", { t: "tv not responding", w: 100 }],
+      keys: ["still the original home", "home didn't change", { t: "tv not responding", w: 100 }, { t: "home button still shows the old screen", w: 40 }],
     },
   },
   {

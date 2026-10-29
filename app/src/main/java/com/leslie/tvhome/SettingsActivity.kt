@@ -577,6 +577,17 @@ class SettingsActivity : Activity() {
                 }
             }.start()
         }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && !Guard.isXiaomi()) {
+            row(I18n.text(R.string.home_filter_title), I18n.text(R.string.home_filter_warning),
+                { if (prefs.persistentHomeFilter) I18n.text(R.string.home_filter_on) else I18n.text(R.string.home_filter_off) },
+                checked = { prefs.persistentHomeFilter }) {
+                val on = !prefs.persistentHomeFilter
+                prefs.persistentHomeFilter = on && prefs.guard
+                if (on && !prefs.guard) prefs.persistentHomeFilter = false
+                HomeGuardService.onFilterChanged()
+                if (on) Toast.makeText(this, I18n.text(R.string.home_filter_warning), Toast.LENGTH_LONG).show()
+            }
+        }
         if (Guard.isXiaomi() || prefs.keepAdb) row(I18n.text(R.string.i18n_settingsactivity_132), I18n.text(R.string.i18n_settingsactivity_133), { onOff(prefs.keepAdb) }, checked = { prefs.keepAdb }) { v ->
             val on = !prefs.keepAdb
             v.text = I18n.text(R.string.i18n_settingsactivity_134)

@@ -55,6 +55,23 @@ class HomeCheckTests(unittest.TestCase):
     def test_stale_focused_app_is_not_current_window(self):
         self.assertIsNone(checker.focus("mCurrentFocus=null\nmFocusedApp=com.leslie.tvhome/.HomeActivity"))
 
+    def test_activity_dump_mfocusedapp_verifies_home(self):
+        names = iter(["com.android.settings/.Settings"] + [checker.HOME] * 8)
+
+        def run(args, **kwargs):
+            cmd = args[4:]
+            if cmd[:2] == ["am", "start"]:
+                return SimpleNamespace(stdout="Status: ok", stderr="", returncode=0)
+            if cmd == ["dumpsys", "activity", "activities"]:
+                return SimpleNamespace(
+                    stdout="mFocusedApp=ActivityRecord{u0 " + next(names) + " t1}",
+                    stderr="", returncode=0)
+            if cmd[:2] == ["input", "keyevent"]:
+                return SimpleNamespace(stdout="", stderr="", returncode=0)
+            return SimpleNamespace(stdout="mCurrentFocus=Window{aa u0 com.vendor/.Ignored}", stderr="", returncode=0)
+
+        self.assertEqual("passed", checker.Check("test:5555", run, lambda _: None).verify(checker.HOME))
+
     def test_component_aliases_normalize(self):
         self.assertEqual(checker.component(checker.HOME), checker.component("com.leslie.tvhome/com.leslie.tvhome.HomeActivity"))
 
