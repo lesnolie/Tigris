@@ -6,4 +6,18 @@
     <string name="i18n_shelf_004">%1$s · %2$s · %3$s popularity</string>
     <string name="i18n_shelf_005">%1$.1fM</string>
     <string name="i18n_shelf_006">%1$.1fK</string>
+    <string name="shelf_custom_section">Top Shelf</string>
+    <string name="shelf_custom_url">Custom source</string>
+    <string name="shelf_custom_url_help">Shown when the linked app is focused in the first dock row. A bad address, unusable JSON, or a timeout keeps the built-in shelf for that app when one exists.</string>
+    <string name="shelf_custom_unset">Not set</string>
+    <string name="shelf_custom_url_dialog">The address must return a JSON array of objects with title, meta, and an http or https image. At most 12 items are kept. Jellyfin and Emby do not return this shape; use a small proxy in front of them.</string>
+    <string name="shelf_custom_url_hint">https://</string>
+    <string name="shelf_custom_url_invalid">Enter an http or https address</string>
+    <string name="shelf_custom_app">Linked app</string>
+    <string name="shelf_custom_app_help">Choose which dock app shows this shelf. OK on that tile still opens the app.</string>
+    <string name="shelf_custom_clear">Clear custom source</string>
+    <string name="shelf_custom_clear_help">Removes the address and the linked app.</string>
+    <string name="shelf_custom_source">Custom</string>
+    <string name="shelf_custom_save">Save</string>
+    <string name="shelf_custom_none">No launchable apps</string>
 </resources>

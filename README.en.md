@@ -89,6 +89,7 @@ Please [open a structured TV compatibility report](https://github.com/lesnolie/T
 <!-- TV_COMPATIBILITY_AUTO_START -->
 | TV model | Android | Tigris / APK | Installation result | Issue state | Source |
 |---|---|---|---|---|---|
+| Sony XR-55A80K &#124; BRAVIA 4K VH21 | Android 12 (API level 31) | v2.0.15 / Standard | Installed and launched (reported) | Open | [#69](https://github.com/lesnolie/Tigris/issues/69) |
 | Sony BRAVIA 4K GB（BRAVIA_ATV2_CN，国行，2017 平台） | Android 9 (API 28) | v2.0.11 / Standard | Installed and launched (reported) | Open | [#53](https://github.com/lesnolie/Tigris/issues/53) |
 | GOOJODOQ HY300 Pro+ | Android 14 | v2.0.9 / Standard | Installed and launched (reported) | Open | [#47](https://github.com/lesnolie/Tigris/issues/47) |
 | 创维酷开 85P3DMAX | Android 11 | 2.0.2 / Custom fork | Installed and launched (reported) | Closed (fix unverified) | [#15](https://github.com/lesnolie/Tigris/issues/15) |
@@ -159,7 +160,7 @@ App folders, phone-based avatar upload, an update center for Tigris and Miracast
 - **Recently opened apps first (optional):** off by default when installing v2.0.6 or first upgrading from an older release; after that, your saved preference is retained. Turn it on under Settings → App → Recently opened apps first to move successfully launched apps or folders to the front; turn it off to preserve the current manual order. Long-press a tile and choose Edit Home Screen to rearrange it. Focus changes, failed launches and HDMI switching never reorder apps.
 - **Manage apps:** long-press items for actions including removing preinstalled user-visible packages with `pm uninstall --user 0` when allowed (system partition APKs are not deleted). Restore them from the deleted-preinstalled-apps section. Essential TV system components are protected from this action.
 - **Liquid Glass Dock:** precomputed blur, refraction, highlights and shadows from the wallpaper avoid expensive per-frame GPU effects.
-- **Top Shelf-style content:** selected app tiles can show public-feed content from Bilibili and Douyu. Their corresponding TV apps are required.
+- **Top Shelf-style content:** focusing 云视听小电视, the third-party Bilibili client `com.tutu.myblbl`, or Douyu in the first dock row cycles that service's public feed. Settings can also attach one JSON URL to a dock app. The format, fallback, and the Jellyfin / Emby proxy note are in [docs/top-shelf.md](docs/top-shelf.md).
 - **Control Center:** open with Back or the top-right icon. Floating glass controls or a lower-overhead dark panel; network, sleep, shutdown, restart, memory cleanup, photo frame, settings, brightness, volume and TV inputs.
 - **Boot/wake animation:** optional video uploaded from your phone, or a built-in Tigris wordmark animation. Choose startup only or startup and wake, with adjustable wake delay; skip with any key.
 - **Wallpapers:** Bing daily imagery, 360 scenery and pet images, all-ages anime (Wallhaven, falling back to China-accessible sources), artworks, personal photos, custom image sources and gradient themes. Download photos as needed and clean old cached files.
@@ -176,7 +177,7 @@ These are **implementation capabilities**, not proof of hardware compatibility o
 | Feature | Standard Android TV 9+ | Local ADB approval | Sony-specific |
 |---|:---:|:---:|:---:|
 | Home screen, Dock, focus effects | ✓ | | |
-| Bilibili / Douyu Top Shelf | With corresponding TV apps | | |
+| Bilibili / Douyu / custom Top Shelf | Matching TV app, or a JSON URL in Settings | | |
 | Wallpapers, photo frame and basic Control Center | ✓ | | |
 | Cache cleanup | ✓ | | |
 | Force-stop selected background apps | | ✓ | |
