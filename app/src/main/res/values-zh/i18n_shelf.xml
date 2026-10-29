@@ -6,4 +6,18 @@
     <string name="i18n_shelf_004">%1$s · %2$s · %3$s热度</string>
     <string name="i18n_shelf_005">%1$.1f亿</string>
     <string name="i18n_shelf_006">%1$.1f万</string>
+    <string name="shelf_custom_section">顶部内容</string>
+    <string name="shelf_custom_url">自定义来源</string>
+    <string name="shelf_custom_url_help">关联应用在 Dock 第一排被选中时显示。地址打不开、JSON 不能用或超时时，如果这个应用本来就有顶部内容，就继续用原来的。</string>
+    <string name="shelf_custom_unset">未设置</string>
+    <string name="shelf_custom_url_dialog">地址需要返回 JSON 数组，每一项包含 title、meta 和 http 或 https 图片地址。最多保留 12 条。Jellyfin 和 Emby 的原生接口不是这个格式，需要在前面加一个很小的转换服务。</string>
+    <string name="shelf_custom_url_hint">https://</string>
+    <string name="shelf_custom_url_invalid">请输入 http 或 https 地址</string>
+    <string name="shelf_custom_app">关联应用</string>
+    <string name="shelf_custom_app_help">选择哪个 Dock 应用显示这块内容。在那个图标上按确定仍然打开应用。</string>
+    <string name="shelf_custom_clear">清除自定义来源</string>
+    <string name="shelf_custom_clear_help">去掉地址和关联应用。</string>
+    <string name="shelf_custom_source">自定义</string>
+    <string name="shelf_custom_save">保存</string>
+    <string name="shelf_custom_none">没有可选择的应用</string>
 </resources>

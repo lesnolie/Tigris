@@ -17,6 +17,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo
 import android.text.Editable
+import android.text.InputType
 import android.text.TextWatcher
 import java.util.concurrent.Executors
 import android.widget.EditText
@@ -95,7 +96,7 @@ class SettingsActivity : Activity() {
     /** The main-page row that opened the current sub-page, focused again on the way back. */
     private var opener = 0
 
-    private enum class Page { MAIN, KEEP, HIDDEN, REMOVED }
+    private enum class Page { MAIN, KEEP, HIDDEN, REMOVED, SHELF_APP }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -201,6 +202,7 @@ class SettingsActivity : Activity() {
                 prefs.hidden = if (on) prefs.hidden + pkg else prefs.hidden - pkg
             }
             Page.REMOVED -> removedApps()
+            Page.SHELF_APP -> shelfAppPicker()
         }
         list.post {
             val target = list.getChildAt(focusIndex.coerceIn(0, maxOf(list.childCount - 1, 0)))
@@ -365,6 +367,19 @@ class SettingsActivity : Activity() {
             auto(prefs.ccStyle, prefs.ccGlass(this), I18n.text(R.string.i18n_settingsactivity_038), I18n.text(R.string.i18n_settingsactivity_039))
         }) {
             prefs.ccStyle = next(prefs.ccStyle, Prefs.CC_GLASS, Prefs.CC_PANEL)
+        }
+
+        section(I18n.text(R.string.shelf_custom_section))
+        row(I18n.text(R.string.shelf_custom_url), I18n.text(R.string.shelf_custom_url_help),
+            { shelfUrlLabel() }, chevron = true) { value ->
+            editShelfUrl { value.text = shelfUrlLabel() }
+        }
+        row(I18n.text(R.string.shelf_custom_app), I18n.text(R.string.shelf_custom_app_help),
+            { shelfAppLabel() }, chevron = true) { show(Page.SHELF_APP) }
+        row(I18n.text(R.string.shelf_custom_clear), I18n.text(R.string.shelf_custom_clear_help), { "" }) {
+            prefs.shelfCustomUrl = ""
+            prefs.shelfCustomPkg = ""
+            show(Page.MAIN, opener)
         }
 
         // Weather is a self-contained optional card. No network traffic until opt-in.
@@ -604,6 +619,72 @@ class SettingsActivity : Activity() {
                 I18n.text(R.string.settings_about, packageManager.getPackageInfo(packageName, 0).versionName ?: ""))
         }
     }
+
+    /** One dock app. The shelf appears when that tile is focused in the first row. */
+    private fun shelfAppPicker() {
+        heading.text = I18n.text(R.string.shelf_custom_app)
+        about.text = I18n.text(R.string.shelf_custom_app_help)
+        val apps = repo.allApps().filter { !repo.isOwn(it.pkg) }.sortedBy { it.label }
+        if (apps.isEmpty()) {
+            information(I18n.text(R.string.shelf_custom_app), I18n.text(R.string.shelf_custom_none))
+            return
+        }
+        for (a in apps) {
+            val drawable = runCatching { packageManager.getActivityIcon(a.component) }.getOrNull()
+            row(a.label, a.pkg, { if (a.pkg == prefs.shelfCustomPkg) "✓" else "" },
+                checked = { a.pkg == prefs.shelfCustomPkg }, checkbox = true, appIcon = drawable) {
+                prefs.shelfCustomPkg = a.pkg
+                show(Page.MAIN, opener)
+            }
+        }
+    }
+
+    private fun shelfUrlLabel(): String {
+        val url = prefs.shelfCustomUrl
+        if (url.isBlank()) return I18n.text(R.string.shelf_custom_unset)
+        return runCatching { java.net.URI(url).host }.getOrNull()?.takeIf { it.isNotBlank() } ?: url
+    }
+
+    private fun shelfAppLabel(): String {
+        val pkg = prefs.shelfCustomPkg
+        return if (pkg.isBlank()) I18n.text(R.string.shelf_custom_unset) else appLabel(pkg)
+    }
+
+    private fun editShelfUrl(onSaved: () -> Unit) {
+        val input = EditText(this).apply {
+            isSingleLine = true
+            isFocusable = true
+            isFocusableInTouchMode = true
+            hint = I18n.text(R.string.shelf_custom_url_hint)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+            textSize = 18f
+            setTextColor(Color.WHITE)
+            setHintTextColor(IDLE_VALUE)
+            background = rounded(Color.argb(45, 255, 255, 255), dp(12).toFloat())
+            setText(prefs.shelfCustomUrl)
+            setSelection(text.length)
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            minHeight = dp(48)
+        }
+        dialog(I18n.text(R.string.shelf_custom_url), I18n.text(R.string.shelf_custom_url_dialog),
+            body = input, primary = I18n.text(R.string.shelf_custom_save), confirm = {
+                val raw = input.text.toString().trim()
+                if (!ShelfLimits.isHttpUrl(raw)) {
+                    input.error = I18n.text(R.string.shelf_custom_url_invalid)
+                    input.requestFocus()
+                    false
+                } else {
+                    prefs.shelfCustomUrl = raw
+                    onSaved()
+                    true
+                }
+            })
+        input.post { input.requestFocus() }
+    }
+
+    private fun appLabel(pkg: String): String = runCatching {
+        packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
+    }.getOrElse { pkg }
 
     private fun appPicker(title: String, selected: Set<String>, includeHidden: Boolean = false, toggle: (String, Boolean) -> Unit) {
         heading.text = title

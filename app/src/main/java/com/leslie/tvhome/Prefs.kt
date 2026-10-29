@@ -175,6 +175,16 @@ class Prefs(ctx: Context) {
         get() = sp.getString("custom_urls", "")!!
         set(v) = sp.edit().putString("custom_urls", v).apply()
 
+    /** JSON URL for the custom Top Shelf. Empty leaves built-in shelves unchanged. */
+    var shelfCustomUrl: String
+        get() = sp.getString("shelf_custom_url", "")!!
+        set(v) = sp.edit().putString("shelf_custom_url", v).apply()
+
+    /** Dock package the custom Top Shelf is shown for. */
+    var shelfCustomPkg: String
+        get() = sp.getString("shelf_custom_pkg", "")!!
+        set(v) = sp.edit().putString("shelf_custom_pkg", v).apply()
+
     /** TV inputs pinned to the home grid, as [InputTile.key] strings. */
     var pinnedInputs: Set<String>
         get() = sp.getStringSet("pinned_inputs", emptySet())!!.toSet()

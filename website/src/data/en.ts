@@ -306,7 +306,7 @@ adb -s 192.168.x.x:5555 shell appops set com.leslie.tvhome SYSTEM_ALERT_WINDOW a
     head: ["Feature", "Any Android TV", "On-device debugging", "Sony BRAVIA only"],
     rows: [
       { feature: "Home screen, dock, glass, shadows", any: "Yes", debug: "—", sony: "—" },
-      { feature: "Top Shelf (Bilibili / Douyu)", any: "With the matching TV app", debug: "—", sony: "—" },
+      { feature: "Top Shelf (Bilibili / Douyu / custom)", any: "Matching TV app, or a JSON URL", debug: "—", sony: "—" },
       { feature: "Landscape wallpapers, photo frame", any: "Yes", debug: "—", sony: "—" },
       { feature: "Apple TV aerial screensaver", any: "Yes, needs internet", debug: "—", sony: "—" },
       { feature: "Control Center, clock", any: "Yes", debug: "—", sony: "—" },
@@ -403,7 +403,7 @@ adb -s 192.168.x.x:5555 shell appops set com.leslie.tvhome SYSTEM_ALERT_WINDOW a
         q: "Does the site or the app collect data?",
         a: [
           "The website is static: no cookies, no third-party analytics, no ad scripts, and system fonts only.",
-          "The app needs the network for wallpapers (Bing, Wallhaven) and Top Shelf content (public Bilibili and Douyu web endpoints); aerial films stream from Apple's servers. There is no account system.",
+          "The app needs the network for wallpapers (Bing, Wallhaven) and Top Shelf content (public Bilibili and Douyu web endpoints). A custom Top Shelf address is requested only after you enter one, and that request goes from the TV to the address you set. Aerial films stream from Apple's servers. There is no account system.",
         ],
       },
       {

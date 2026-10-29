@@ -10,44 +10,101 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Top Shelf content. Android TV's own channel API is empty on this TV (none
- * of the installed apps publish to it), so for a few apps the shelf is filled
- * from the service's public web API instead: B站 popular videos, 斗鱼 live rooms.
+ * Top Shelf content. Android TV's own channel API is empty on the TVs this
+ * was written for, so a few apps are filled from public web APIs: Bilibili
+ * popular videos (云视听小电视 and the third-party client com.tutu.myblbl)
+ * and Douyu live rooms.
+ *
+ * Settings can also point one dock app at a JSON URL. That feed is cached
+ * with the same 15-minute policy. A bad address, unusable JSON, or a timeout
+ * leaves the built-in feed for that package in place when one exists.
  */
 object Shelf {
     data class Item(val title: String, val meta: String, val image: String)
     data class Source(val name: String, val fetch: () -> List<Item>)
 
+    /** One user-entered feed, shown when [pkg] is focused in the dock. */
+    data class Custom(val pkg: String, val url: String)
+
+    internal enum class ShelfPick { CUSTOM, BUILTIN, NONE }
+
     private const val UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
     private const val TTL = 15 * 60_000L
+    /** Built-in responses are small; the cap only stops a runaway body. */
+    private const val BUILTIN_JSON_BYTES = 2 * 1024 * 1024
 
-    private val sources get() = mapOf(
-        "com.xiaodianshi.tv.yst" to Source(I18n.text(R.string.i18n_shelf_001), ::bilibili),
-        "com.douyu.xl.douyutv" to Source(I18n.text(R.string.i18n_shelf_002), ::douyu),
+    /** Package → which public feed it shares. Both Bilibili clients use `bilibili`. */
+    internal val builtInPackages = mapOf(
+        "com.xiaodianshi.tv.yst" to "bilibili",
+        "com.tutu.myblbl" to "bilibili",
+        "com.douyu.xl.douyutv" to "douyu",
     )
-    private val cache = HashMap<String, Pair<Long, List<Item>>>()
 
-    fun has(pkg: String) = pkg in sources
-    fun sourceName(pkg: String) = sources[pkg]?.name ?: ""
+    private data class Cached(val at: Long, val name: String, val items: List<Item>)
+
+    private val sources get() = builtInPackages.mapValues { (_, kind) ->
+        if (kind == "bilibili") Source(I18n.text(R.string.i18n_shelf_001), ::bilibili)
+        else Source(I18n.text(R.string.i18n_shelf_002), ::douyu)
+    }
+    private val cache = HashMap<String, Cached>()
+    private val shownName = HashMap<String, String>()
+
+    /**
+     * Custom wins only when the linked package matches and the body was usable.
+     * Otherwise a known package keeps its built-in feed.
+     */
+    internal fun pickShelf(pkg: String, custom: Custom?, customOk: Boolean): ShelfPick {
+        val linked = custom?.pkg?.trim().orEmpty()
+        val url = custom?.url?.trim().orEmpty()
+        if (linked == pkg && ShelfLimits.isHttpUrl(url) && customOk) return ShelfPick.CUSTOM
+        if (pkg in builtInPackages) return ShelfPick.BUILTIN
+        return ShelfPick.NONE
+    }
+
+    fun has(pkg: String, custom: Custom? = null) = pickShelf(pkg, custom, customOk = true) != ShelfPick.NONE
+
+    fun sourceName(pkg: String) = synchronized(cache) {
+        shownName[pkg] ?: sources[pkg]?.name ?: ""
+    }
 
     /** Items for [pkg], cached for a while; empty if the app has no shelf or the network failed. */
-    fun items(pkg: String): List<Item> {
-        val src = sources[pkg] ?: return emptyList()
-        synchronized(cache) {
-            cache[pkg]?.let { (at, list) -> if (System.currentTimeMillis() - at < TTL) return list }
+    fun items(pkg: String, custom: Custom? = null): List<Item> {
+        if (pickShelf(pkg, custom, customOk = true) == ShelfPick.CUSTOM) {
+            val url = custom!!.url.trim()
+            val key = "custom\u0000$pkg\u0000$url"
+            readCache(key, pkg)?.let { return it }
+            val fetched = try {
+                fetchCustom(url)
+            } catch (e: Exception) {
+                Log.w("Shelf", "custom $pkg failed", e)
+                null
+            }
+            if (!fetched.isNullOrEmpty()) {
+                val name = I18n.text(R.string.shelf_custom_source)
+                writeCache(key, pkg, name, fetched)
+                return fetched
+            }
         }
-        val list = try { src.fetch() } catch (e: Exception) { Log.w("Shelf", "$pkg failed", e); emptyList() }
-        if (list.isNotEmpty()) synchronized(cache) { cache[pkg] = System.currentTimeMillis() to list }
+        val src = sources[pkg] ?: return emptyList()
+        readCache(pkg, pkg)?.let { return it }
+        val list = try {
+            src.fetch()
+        } catch (e: Exception) {
+            Log.w("Shelf", "$pkg failed", e)
+            emptyList()
+        }
+        if (list.isNotEmpty()) writeCache(pkg, pkg, src.name, list)
         return list
     }
 
     /** Downloads (or reads from the disk cache) an item's picture. */
     fun image(ctx: Context, url: String): Bitmap? {
+        if (!ShelfLimits.isHttpUrl(url)) return null
         val dir = File(ctx.cacheDir, "shelf").apply { mkdirs() }
         val f = File(dir, Integer.toHexString(url.hashCode()) + ".jpg")
         if (!f.exists()) try {
             val tmp = File(dir, f.name + ".part")
-            tmp.writeBytes(get(url))
+            tmp.writeBytes(get(url, ShelfLimits.MAX_IMAGE_BYTES))
             tmp.renameTo(f)
             // Keep the cache small: the newest 60 pictures.
             dir.listFiles()?.sortedByDescending { it.lastModified() }?.drop(60)?.forEach { it.delete() }
@@ -55,11 +112,43 @@ object Shelf {
             Log.w("Shelf", "image $url failed", e)
             return null
         }
-        return BitmapFactory.decodeFile(f.path, BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.ARGB_8888 })
+        return decodeCapped(f.path)
             ?.let(::trimBars)
             ?.let(::darken)
             // Start the GPU upload now, off the frame that first shows it.
             ?.also { it.prepareToDraw() }
+    }
+
+    private fun fetchCustom(url: String): List<Item>? {
+        val text = get(url, ShelfLimits.MAX_JSON_BYTES).toString(Charsets.UTF_8)
+        val parsed = ShelfJson.parse(text) ?: return null
+        if (parsed.isEmpty()) return null
+        return parsed.map { Item(it.title, it.meta, it.image) }
+    }
+
+    private fun readCache(key: String, pkg: String): List<Item>? = synchronized(cache) {
+        val hit = cache[key] ?: return null
+        if (System.currentTimeMillis() - hit.at >= TTL) return null
+        shownName[pkg] = hit.name
+        hit.items
+    }
+
+    private fun writeCache(key: String, pkg: String, name: String, items: List<Item>) {
+        synchronized(cache) {
+            cache[key] = Cached(System.currentTimeMillis(), name, items)
+            shownName[pkg] = name
+        }
+    }
+
+    private fun decodeCapped(path: String): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(path, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        val opts = BitmapFactory.Options().apply {
+            inSampleSize = ShelfLimits.sampleSize(bounds.outWidth, bounds.outHeight)
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        return BitmapFactory.decodeFile(path, opts)
     }
 
     /**
@@ -92,7 +181,7 @@ object Shelf {
     }
 
     private fun bilibili(): List<Item> {
-        val list = JSONObject(get("https://api.bilibili.com/x/web-interface/popular?ps=12&pn=1").decodeToString())
+        val list = JSONObject(get("https://api.bilibili.com/x/web-interface/popular?ps=12&pn=1", BUILTIN_JSON_BYTES).decodeToString())
             .getJSONObject("data").getJSONArray("list")
         return (0 until list.length()).map { list.getJSONObject(it) }.map { v ->
             Item(
@@ -104,7 +193,7 @@ object Shelf {
     }
 
     private fun douyu(): List<Item> {
-        val list = JSONObject(get("https://www.douyu.com/japi/weblist/apinc/allpage/6/1").decodeToString())
+        val list = JSONObject(get("https://www.douyu.com/japi/weblist/apinc/allpage/6/1", BUILTIN_JSON_BYTES).decodeToString())
             .getJSONObject("data").getJSONArray("rl")
         return (0 until list.length()).map { list.getJSONObject(it) }
             .filter { it.optString("rs16").isNotEmpty() }
@@ -133,16 +222,19 @@ object Shelf {
         }
     }
 
-    private fun get(url: String): ByteArray {
+    private fun get(url: String, maxBytes: Int): ByteArray {
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = 5000
         c.readTimeout = 8000
+        c.instanceFollowRedirects = true
         c.setRequestProperty("User-Agent", UA)
         // B站's API answers with an empty body when sent a Referer from outside its pages.
         if ("douyu" in url) c.setRequestProperty("Referer", "https://www.douyu.com/")
         try {
             if (c.responseCode != 200) throw java.io.IOException("HTTP ${c.responseCode}")
-            return c.inputStream.use { it.readBytes() }
+            val advertised = c.contentLengthLong
+            if (advertised > maxBytes) throw java.io.IOException("response too large")
+            return c.inputStream.use { ShelfLimits.readAtMost(it, maxBytes) }
         } finally {
             c.disconnect()
         }
