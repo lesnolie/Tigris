@@ -827,11 +827,17 @@ export const RESTORE_COMMAND = `curl -fsSL https://raw.githubusercontent.com/les
 export const REPAIR_COMMAND = `curl -fsSL https://raw.githubusercontent.com/lesnolie/Tigris/main/install.sh | TV=${IP_EXAMPLE} bash -s -- repair`;
 
 /** One action per step. Shown when Home still opens the original launcher. */
-export function homeStill(locale: Locale): { title: string; lede: string; steps: { action: string; see: string }[] } {
+export function homeStill(locale: Locale): { title: string; lede: string; note: Run[]; steps: { action: string; see: string }[] } {
+  const a80k = { href: "https://github.com/lesnolie/Tigris/issues/69", word: "索尼 BRAVIA XR-55A80K" };
   if (locale === "zh") {
     return {
       title: "按主页键还是原来的",
       lede: "装好之后按画着房子的键，画面还是原来的桌面时，按下面的顺序做。一步只做一件事。",
+      note: [
+        "一位用户在",
+        a80k,
+        "（Android 12，Google TV）上验证了 v2.0.15：设成默认桌面后，主页键回到 Tigris，HDMI 切换、亮度和音量都能用，其他索尼型号可能不一样。",
+      ],
       steps: [
         {
           action: "先看是不是闪一下就回来了。",
@@ -867,6 +873,11 @@ export function homeStill(locale: Locale): { title: string; lede: string; steps:
   return {
     title: "Home still opens the original screen",
     lede: "The house button still shows the old home screen after install. Do one thing at a time.",
+    note: [
+      "One person verified v2.0.15 on a ",
+      { href: a80k.href, word: "Sony BRAVIA XR-55A80K" },
+      " (Android 12, Google TV): it is the default home, the house button returns to Tigris, and HDMI, brightness and volume work, though other Sony models may differ.",
+    ],
     steps: [
       {
         action: "Look first for a short flash that then returns.",
