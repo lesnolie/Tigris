@@ -3091,6 +3091,10 @@ details.advanced .table-wrap {
   max-width: 40rem;
 }
 
+.glossary-block .lede + .lede {
+  margin-top: 0.65rem;
+}
+
 .wizard-step {
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr);

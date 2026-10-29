@@ -125,6 +125,7 @@ const terms = Object.entries(glossary) as [keyof typeof glossary, (typeof glossa
   <section class="glossary-block" id="home-still-stock" aria-labelledby="home-still-title">
     <h2 id="home-still-title">{homeFix.title}</h2>
     <p class="lede">{homeFix.lede}</p>
+    <p class="lede" set:html={renderRuns(homeFix.note, locale, "home-still-note")} />
     <ol class="wizard-list">
       {homeFix.steps.map((step, i) => (
         <li class="wizard-step">
