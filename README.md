@@ -504,8 +504,8 @@ adb -s 192.168.1.20:5555 uninstall com.leslie.tvhome
 |---|---|---|---|---|---|
 | Sony BRAVIA 4K GB（BRAVIA_ATV2_CN，国行，2017 平台） | Android 9 (API 28) | v2.0.11 / 标准版 | 已安装且能启动（自报） | 未关闭 | [#53](https://github.com/lesnolie/Tigris/issues/53) |
 | GOOJODOQ HY300 Pro+ | Android 14 | v2.0.9 / 标准版 | 已安装且能启动（自报） | 未关闭 | [#47](https://github.com/lesnolie/Tigris/issues/47) |
-| 创维酷开 85P3DMAX | Android 11 | 2.0.2 / 自定义 Fork | 已安装且能启动（自报） | 未关闭 | [#15](https://github.com/lesnolie/Tigris/issues/15) |
-| 雷鸟 75S545C | Android 9 | V2.0.2 / 守护版 | 已安装且能启动（自报） | 未关闭 | [#14](https://github.com/lesnolie/Tigris/issues/14) |
+| 创维酷开 85P3DMAX | Android 11 | 2.0.2 / 自定义 Fork | 已安装且能启动（自报） | 已关闭（未验证修复） | [#15](https://github.com/lesnolie/Tigris/issues/15) |
+| 雷鸟 75S545C | Android 9 | V2.0.2 / 守护版 | 已安装且能启动（自报） | 已关闭（未验证修复） | [#14](https://github.com/lesnolie/Tigris/issues/14) |
 <!-- TV_COMPATIBILITY_AUTO_END -->
 
 ### 适配新品牌
