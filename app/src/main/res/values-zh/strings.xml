@@ -5,6 +5,10 @@
     <string name="wallpaper_name">壁纸</string>
     <string name="guard_name">主屏幕守护</string>
     <string name="guard_description">电视自带的桌面跑到前面时，把主屏幕切回来。只看哪个 App 在前台，不读取屏幕内容。</string>
+    <string name="home_filter_title">持续过滤主页键</string>
+    <string name="home_filter_on">开启</string>
+    <string name="home_filter_off">关闭</string>
+    <string name="home_filter_warning">仅 Android 12 及以上，默认关闭，并且要先打开桌面守护。开启后所有按键都经过守护，部分应用可能按一次走两下。小米电视不会开启这项。关掉就回到原来的过滤方式。</string>
     <string name="dock_columns_title">Dock 图标数量</string>
     <string name="dock_columns_description">选择 Dock 每行 5 或 6 个图标，应用列表也使用相同列数；返回桌面后生效。</string>
     <string name="install_home_next_native">系统显示 Tigris 是默认 HOME。请打开其他应用后按实体遥控器 Home，再检查重启和待机唤醒；这些还需要人工验收。</string>

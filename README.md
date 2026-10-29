@@ -379,7 +379,7 @@ curl.exe -s -u ':<PIN>' http://192.168.1.20/sony/accessControl --data-binary '@b
 
 小米、TCL、海信、创维等国产固件常常只认自家桌面。小米上 `set-home-activity` 可能显示成功，但主页键仍回 PatchWall；待机时还会清理第三方 App。Tigris 用以下方式接管前台，不 root、不修改系统分区、不卸载或停用原厂桌面：
 
-1. **桌面守护**：无障碍服务只监听前台窗口变化，不读取屏幕内容。只在确认原厂首页持续出现时接管；应用、输入源或弹窗出现会取消等待。开机、唤醒和服务恢复本身不会触发接管，短时间反复跳转会暂缓自动接管。
+1. **桌面守护**：无障碍服务只监听前台窗口变化，不读取屏幕内容。遥控器上的主页键一定会切回 Tigris。开机、唤醒和被系统清掉之后，只有确认前台是原厂桌面才会自动切回；看不到前台、正在用应用或 HDMI 时不会切。开机头三分钟里的自动来回跳会被停住，避免和原厂桌面抢画面。主页键本身不受这条例限制。
 2. **后台恢复**：通知监听服务不读取通知。系统结束 Tigris 进程后，Android 会重新绑定监听器，从而拉起进程并恢复桌面守护。
 3. **保持 ADB 开启**：小米唤醒后会关闭 ADB。启用该选项后，Tigris 用 `WRITE_SECURE_SETTINGS` 自动重新打开，方便以后升级。
 4. **TCL 守护版**：TCL 拒绝标准 HOME APK，因此使用不声明 HOME 的守护版（发布文件名如 `Tigris-guard-v2.0.6.apk`），通过「多屏互动」安装，并放行 `APP_AUTO_START` / `APP_ASSOC_START`。
@@ -504,8 +504,8 @@ adb -s 192.168.1.20:5555 uninstall com.leslie.tvhome
 |---|---|---|---|---|---|
 | Sony BRAVIA 4K GB（BRAVIA_ATV2_CN，国行，2017 平台） | Android 9 (API 28) | v2.0.11 / 标准版 | 已安装且能启动（自报） | 未关闭 | [#53](https://github.com/lesnolie/Tigris/issues/53) |
 | GOOJODOQ HY300 Pro+ | Android 14 | v2.0.9 / 标准版 | 已安装且能启动（自报） | 未关闭 | [#47](https://github.com/lesnolie/Tigris/issues/47) |
-| 创维酷开 85P3DMAX | Android 11 | 2.0.2 / 自定义 Fork | 已安装且能启动（自报） | 未关闭 | [#15](https://github.com/lesnolie/Tigris/issues/15) |
-| 雷鸟 75S545C | Android 9 | V2.0.2 / 守护版 | 已安装且能启动（自报） | 未关闭 | [#14](https://github.com/lesnolie/Tigris/issues/14) |
+| 创维酷开 85P3DMAX | Android 11 | 2.0.2 / 自定义 Fork | 已安装且能启动（自报） | 已关闭（未验证修复） | [#15](https://github.com/lesnolie/Tigris/issues/15) |
+| 雷鸟 75S545C | Android 9 | V2.0.2 / 守护版 | 已安装且能启动（自报） | 已关闭（未验证修复） | [#14](https://github.com/lesnolie/Tigris/issues/14) |
 <!-- TV_COMPATIBILITY_AUTO_END -->
 
 ### 适配新品牌

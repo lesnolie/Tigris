@@ -1252,6 +1252,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     }
 
     override fun onPause() {
+        HomeGuardService.onHomePaused()
         resumed = false
         prefs.unobserve(wallpaperChanges)
         videoWallpaper.stop()

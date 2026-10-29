@@ -87,8 +87,8 @@ Please [open a structured TV compatibility report](https://github.com/lesnolie/T
 |---|---|---|---|---|---|
 | Sony BRAVIA 4K GB（BRAVIA_ATV2_CN，国行，2017 平台） | Android 9 (API 28) | v2.0.11 / Standard | Installed and launched (reported) | Open | [#53](https://github.com/lesnolie/Tigris/issues/53) |
 | GOOJODOQ HY300 Pro+ | Android 14 | v2.0.9 / Standard | Installed and launched (reported) | Open | [#47](https://github.com/lesnolie/Tigris/issues/47) |
-| 创维酷开 85P3DMAX | Android 11 | 2.0.2 / Custom fork | Installed and launched (reported) | Open | [#15](https://github.com/lesnolie/Tigris/issues/15) |
-| 雷鸟 75S545C | Android 9 | V2.0.2 / Guard | Installed and launched (reported) | Open | [#14](https://github.com/lesnolie/Tigris/issues/14) |
+| 创维酷开 85P3DMAX | Android 11 | 2.0.2 / Custom fork | Installed and launched (reported) | Closed (fix unverified) | [#15](https://github.com/lesnolie/Tigris/issues/15) |
+| 雷鸟 75S545C | Android 9 | V2.0.2 / Guard | Installed and launched (reported) | Closed (fix unverified) | [#14](https://github.com/lesnolie/Tigris/issues/14) |
 <!-- TV_COMPATIBILITY_AUTO_END -->
 
 ## Install with an AI coding agent
@@ -188,7 +188,7 @@ Sony TVs can use the local BRAVIA IP-control endpoint for brightness, TV volume 
 
 ### Home guard and permissions
 
-On firmware that enforces the manufacturer's launcher, Tigris uses an accessibility service to watch foreground window changes without reading screen content. Automatic takeover requires a confirmed stock HOME window; app windows, HDMI inputs and dialogs cancel pending takeovers. Boot, wake and service recovery alone do not initiate a takeover, and repeated attempts are rate-limited. The notification listener helps recover the process after OEM termination without reading notifications.
+On firmware that enforces the manufacturer's launcher, Tigris uses an accessibility service to watch foreground window changes without reading screen content. A physical Home press always returns to Tigris. Boot, wake and process recovery take over only when the front is a confirmed stock home; an unknown front, an app or HDMI is left alone. Automatic retries during the first three minutes are rate-limited so a boot fight with the factory launcher stops. The Home key itself is not rate-limited. The notification listener helps recover the process after OEM termination without reading notifications.
 
 | Permission or service | Purpose |
 |---|---|

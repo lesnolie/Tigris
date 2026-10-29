@@ -106,7 +106,8 @@ curl -fsSL https://raw.githubusercontent.com/lesnolie/Tigris/main/install.sh | T
 
 ## 常见问题
 
-- **只装 APK，主页键还是原桌面**：还需要默认 HOME 或桌面守护配置。
+- **只装 APK，主页键还是原桌面**：还需要默认 HOME 或桌面守护。已安装后可运行 `TV=<电视IP> bash install.sh repair` 重新授权守护，或在电视上打开 Tigris 设置 → 桌面守护，关掉再打开。Android 13 及以上若系统拦住无障碍，在应用信息里点「允许受限设置」。不要停用原厂桌面。
+- **Home still opens the factory launcher:** run `TV=<TV IP> bash install.sh repair`, or in Tigris open Settings → 桌面守护 and turn it off and on. On Android 13 or newer, allow restricted settings for Tigris if the system blocks the accessibility service. Do not disable the stock launcher.
 - **TCL / 雷鸟拒绝安装**：用 Guard 包和多屏互动，电视弹出提示时选择「同意」。
 - **`KEEP_ADB=1`**：明确启用“保持 ADB 调试开启”，用于固件待机后关闭 ADB 的情况。未指定时保留已有选择，新安装默认关闭，还原时关闭。
 - **系统太旧**：官方包最低 Android 9，`INSTALL_FAILED_OLDER_SDK` 无法靠更换安装器解决。LG webOS、三星 Tizen 等非 Android 系统不能安装。

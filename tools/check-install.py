@@ -25,9 +25,18 @@ def component(value):
 
 
 def focus(text):
-    # mFocusedApp can be stale behind a dialog. Only a single current window counts.
-    matches = re.findall(r"mCurrentFocus[^\n]*?\b([\w.]+/[\w.$]+)", text)
+    # mFocusedApp in a window dump can be stale behind a dialog. Only mCurrentFocus counts here.
+    matches = re.findall(r"mCurrentFocus[^\n]*?\b([\w.]+/[\w.$]+)", text or "")
     values = {component(value) for value in matches}
+    values.discard(None)
+    return values.pop() if len(values) == 1 else None
+
+
+def focused_app(text):
+    """The resumed activity from `dumpsys activity activities` (mFocusedApp)."""
+    matches = re.findall(r"mFocusedApp[^\n]*?\b([\w.]+/[\w.$]+)", text or "")
+    values = {component(value) for value in matches}
+    values.discard(None)
     return values.pop() if len(values) == 1 else None
 
 
@@ -72,7 +81,7 @@ class Check:
         if started is None or re.search(r"Error|Exception", started, re.I):
             return "unverified"
         self.pause(1)
-        baseline = focus(self.shell("dumpsys", "window") or "")
+        baseline = self.read_focus()
         if not baseline or baseline == expected:
             return "unverified"
         if self.shell("input", "keyevent", "KEYCODE_HOME") is None:
@@ -81,10 +90,18 @@ class Check:
         # Observe the whole interval, not just a transient flash of the desktop.
         for _ in range(8):
             self.pause(1)
-            observations.append(focus(self.shell("dumpsys", "window") or ""))
+            observations.append(self.read_focus())
         if observations[-3:] == [expected] * 3:
             return "passed"
         return "failed" if all(observations[-3:]) else "unverified"
+
+    def read_focus(self):
+        # Prefer the activity dump. Fall back to the window dump when that command is absent.
+        activity = self.shell("dumpsys", "activity", "activities") or ""
+        found = focused_app(activity)
+        if found:
+            return found
+        return focus(self.shell("dumpsys", "window") or "")
 
     def diagnose(self, result):
         brand = " ".join(result["device"].get(key) or "" for key in ("brand", "manufacturer")).lower()

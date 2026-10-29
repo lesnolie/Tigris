@@ -5,6 +5,10 @@
     <string name="wallpaper_name">Wallpaper</string>
     <string name="guard_name">Home Screen Guardian</string>
     <string name="guard_description">Brings the home screen back when the built-in launcher takes over. Only checks which app is in front; it does not read screen content.</string>
+    <string name="home_filter_title">Keep filtering the Home key</string>
+    <string name="home_filter_on">On</string>
+    <string name="home_filter_off">Off</string>
+    <string name="home_filter_warning">Android 12 and newer, off by default, and it needs the home guard. Every key then passes through the guard, so some apps may move twice for one press. It does not turn on for Xiaomi. Turn it off to go back to the usual filter.</string>
     <string name="dock_columns_title">Dock icons per row</string>
     <string name="dock_columns_description">Choose 5 or 6 icons in the Dock. The app grid uses the same column count. Applies when you return Home.</string>
     <string name="install_home_next_native">Android reports Tigris as Home. Open another app, press the physical Home button, then test reboot and standby. These checks are not automatically verified.</string>

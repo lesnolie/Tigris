@@ -21,7 +21,17 @@ case "$*" in
   'shell getprop ro.build.fingerprint') echo "test/device/fingerprint" ;;
   'shell pm list packages') printf 'package:com.leslie.tvhome\npackage:com.mitv.tvhome\npackage:com.android.tv.settings\npackage:com.miui.systemAdSolution\n' ;;
   'shell pm list packages -d') : ;;
-  'shell cmd package query-activities'*) echo com.vendor.home/.Home ;;
+  'shell cmd package query-activities'*)
+    if [[ "${STOCK_PRIORITY:-0}" != 0 ]]; then
+      echo "ResolveInfo{com.vendor.home/.Home p=${STOCK_PRIORITY} o=0 m=0x108000}"
+    else
+      echo com.vendor.home/.Home
+    fi ;;
+  'shell dumpsys activity activities')
+    raw=$(cat "$LOG.focus" 2>/dev/null || true)
+    comp=${raw#mCurrentFocus=}
+    if [[ -z "$comp" || "$comp" == "$raw" ]]; then comp="${FOCUS_APP:-com.leslie.tvhome/.HomeActivity}"; fi
+    echo "mFocusedApp=ActivityRecord{u0 ${comp} t1}" ;;
   'shell dumpsys package com.android.tv.settings') echo 'FallbackHome' ;;
   'shell cmd package resolve-activity'*) echo "${RESOLVED_HOME:-com.vendor.home/.Home}" ;;
   'shell settings get secure screensaver_components') echo "${SAVER:-com.vendor.saver/.Dream}" ;;
@@ -101,8 +111,15 @@ RESOLVED_HOME=com.leslie.tvhome/.HomeActivity bash "$ROOT/install.sh" > "$TEST/o
 echo 'PASS native HOME upgrade with no configuration skips empty broadcast'
 : > "$LOG"
 BRAND=Xiaomi bash "$ROOT/install.sh" > "$TEST/output"
-! grep -q -- '--ez guard true' "$LOG"
-echo 'PASS Xiaomi with working HOME does not enable guard by brand'
+grep -q -- '--ez guard true' "$LOG"
+grep -q 'GET_USAGE_STATS allow' "$LOG"
+grep -q 'ACCESS_RESTRICTED_SETTINGS allow' "$LOG"
+grep -q 'WRITE_SETTINGS allow' "$LOG"
+grep -q 'role add-role-holder' "$LOG"
+role_line=$(grep -n 'role add-role-holder' "$LOG" | head -1 | cut -d: -f1)
+home_line=$(grep -n 'set-home-activity' "$LOG" | head -1 | cut -d: -f1)
+[[ "$role_line" -lt "$home_line" ]]
+echo 'PASS Xiaomi keeps the guard on and holds the HOME role before set-home-activity'
 : > "$LOG"
 NEED_GUARD=1 RESOLVED_HOME=com.leslie.tvhome/.HomeActivity bash "$ROOT/install.sh" > "$TEST/output"
 grep -q -- '--ez guard true' "$LOG"
@@ -115,6 +132,31 @@ echo 'PASS unresolved HOME failure is not a successful installation'
 if START_FAIL=1 bash "$ROOT/install.sh" > "$TEST/output" 2>&1; then exit 1; fi
 ! grep -q -- '--ez guard true' "$LOG"
 echo 'PASS missing verification baseline does not enable guard'
+: > "$LOG"
+rm -f "$LOG.focus"
+STOCK_PRIORITY=1 BRAND=Sony bash "$ROOT/install.sh" > "$TEST/output"
+grep -q -- '--ez guard true' "$LOG"
+echo 'PASS Sony with a stock launcher priority above zero enables the guard'
+: > "$LOG"
+STOCK_PRIORITY=0 BRAND=Google bash "$ROOT/install.sh" > "$TEST/output"
+! grep -q -- '--ez guard true' "$LOG"
+echo 'PASS Google TV with no stock launcher priority leaves the guard off'
+: > "$LOG"
+BRAND=Hisense bash "$ROOT/install.sh" > "$TEST/output"
+grep -q -- '--ez guard true' "$LOG"
+echo 'PASS Hisense enables the guard'
+: > "$LOG"
+BRAND=Skyworth bash "$ROOT/install.sh" > "$TEST/output"
+grep -q -- '--ez guard true' "$LOG"
+echo 'PASS Coocaa/Skyworth enables the guard'
+: > "$LOG"
+rm -f "$LOG.focus"
+bash "$ROOT/install.sh" repair > "$TEST/output"
+grep -q 'GET_USAGE_STATS allow' "$LOG"
+grep -q -- '--ez guard true' "$LOG"
+grep -q 'mFocusedApp:' "$TEST/output"
+! grep -Eq 'disable-user|uninstall|set-home-activity' "$LOG"
+echo 'PASS repair re-grants the guard and reads mFocusedApp without disabling the stock launcher'
 : > "$LOG"
 bash "$ROOT/install.sh" inspect > "$TEST/output"
 ! grep -Eq 'install -r|pm grant|am start|am broadcast|input keyevent|set-home-activity' "$LOG"
