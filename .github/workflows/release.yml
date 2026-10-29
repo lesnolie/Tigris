@@ -2,6 +2,7 @@ name: Publish signed release
 on:
   push:
     tags: ['v*']
+    branches: ['release/v*']
 permissions:
   contents: write
 concurrency:
@@ -13,6 +14,16 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+      - name: Resolve release identity
+        run: |
+          set -euo pipefail
+          case "$GITHUB_REF" in
+            refs/tags/v*) TAG="${GITHUB_REF#refs/tags/}" ;;
+            refs/heads/release/v*) TAG="${GITHUB_REF#refs/heads/release/}" ;;
+            *) echo "Unsupported release ref: $GITHUB_REF" >&2; exit 1 ;;
+          esac
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -42,33 +53,50 @@ jobs:
       - name: Verify release identity and checksums
         run: |
           set -euo pipefail
-          VERSION="${GITHUB_REF_NAME#v}"
-          test -f "docs/releases/$GITHUB_REF_NAME.md"
+          VERSION="${RELEASE_TAG#v}"
+          test -f "docs/releases/$RELEASE_TAG.md"
           mkdir -p dist
-          cp app/build/outputs/apk/standard/release/app-standard-release.apk "dist/Tigris-$GITHUB_REF_NAME.apk"
-          cp app/build/outputs/apk/guard/release/app-guard-release.apk "dist/Tigris-guard-$GITHUB_REF_NAME.apk"
+          cp app/build/outputs/apk/standard/release/app-standard-release.apk "dist/Tigris-$RELEASE_TAG.apk"
+          cp app/build/outputs/apk/guard/release/app-guard-release.apk "dist/Tigris-guard-$RELEASE_TAG.apk"
           for apk in dist/*.apk; do
             "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" > "$RUNNER_TEMP/badging.txt"
             head -n 1 "$RUNNER_TEMP/badging.txt" | grep -F "name='com.leslie.tvhome'" | grep -F "versionName='$VERSION'"
             "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk" > "$RUNNER_TEMP/cert.txt"
             grep -F '7d2b6be8a86ce8981e368dde4920869b90c8206137934a6d1fc89a2d1d1b6114' "$RUNNER_TEMP/cert.txt"
           done
-          (cd dist && sha256sum "Tigris-$GITHUB_REF_NAME.apk" "Tigris-guard-$GITHUB_REF_NAME.apk" > "SHA256SUMS-$GITHUB_REF_NAME.txt")
+          (cd dist && sha256sum "Tigris-$RELEASE_TAG.apk" "Tigris-guard-$RELEASE_TAG.apk" > "SHA256SUMS-$RELEASE_TAG.txt")
       - name: Verify upgrade compatibility with previous official APKs
         run: |
           set -euo pipefail
           OLD_STANDARD=$(python3 tools/download-release.py standard)
           OLD_GUARD=$(python3 tools/download-release.py guard)
-          python3 tools/verify-apk-upgrade.py "$OLD_STANDARD" "dist/Tigris-$GITHUB_REF_NAME.apk" \
-            --tools "$ANDROID_HOME/build-tools/36.0.0" --version "${GITHUB_REF_NAME#v}" --flavor standard
-          python3 tools/verify-apk-upgrade.py "$OLD_GUARD" "dist/Tigris-guard-$GITHUB_REF_NAME.apk" \
-            --tools "$ANDROID_HOME/build-tools/36.0.0" --version "${GITHUB_REF_NAME#v}" --flavor guard
+          python3 tools/verify-apk-upgrade.py "$OLD_STANDARD" "dist/Tigris-$RELEASE_TAG.apk" \
+            --tools "$ANDROID_HOME/build-tools/36.0.0" --version "${RELEASE_TAG#v}" --flavor standard
+          python3 tools/verify-apk-upgrade.py "$OLD_GUARD" "dist/Tigris-guard-$RELEASE_TAG.apk" \
+            --tools "$ANDROID_HOME/build-tools/36.0.0" --version "${RELEASE_TAG#v}" --flavor guard
+      - name: Create validated tag from main for a release branch
+        if: startsWith(github.ref, 'refs/heads/release/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$GITHUB_SHA" || {
+            echo "Release branch must point to the current main HEAD" >&2
+            exit 1
+          }
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" > /dev/null 2>&1; then
+            echo "Tag already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$RELEASE_TAG" -f "sha=$GITHUB_SHA"
+
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "dist/Tigris-$GITHUB_REF_NAME.apk" "dist/Tigris-guard-$GITHUB_REF_NAME.apk" "dist/SHA256SUMS-$GITHUB_REF_NAME.txt" \
-            --verify-tag --title "Tigris ${GITHUB_REF_NAME#v}" --notes-file "docs/releases/$GITHUB_REF_NAME.md" --latest
+          gh release create "$RELEASE_TAG" "dist/Tigris-$RELEASE_TAG.apk" "dist/Tigris-guard-$RELEASE_TAG.apk" "dist/SHA256SUMS-$RELEASE_TAG.txt" \
+            --verify-tag --title "Tigris ${RELEASE_TAG#v}" --notes-file "docs/releases/$RELEASE_TAG.md" --latest
       - name: Remove signing key
         if: always()
         run: rm -f "$RUNNER_TEMP/tigris.keystore"

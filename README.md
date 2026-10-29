@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.15 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.15)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/Tigris-v2.0.15.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/Tigris-guard-v2.0.15.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/SHA256SUMS-v2.0.15.txt)）
+- 最新正式版：**[v2.0.16 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.16)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.16/Tigris-v2.0.16.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.16/Tigris-guard-v2.0.16.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.16/SHA256SUMS-v2.0.16.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **正式版为 v2.0.15。** 安装包名称沿用 `Tigris-v2.0.15.apk`（标准版）和 `Tigris-guard-v2.0.15.apk`（兼容守护版）。名称中的 *Guard* 指运行方式，**不是所有 TCL 必装或小米通用的破解包**。本版让遥控器上的主页键不受自动接管次数限制，并增加安装修复和「按主页键还是原来的」说明。构建和测试已通过；实体遥控器、待机和重启尚未在真电视上验收。
+> **正式版为 v2.0.16。** 标准版 `Tigris-v2.0.16.apk`，兼容守护版 `Tigris-guard-v2.0.16.apk`，沿用原有签名，可对应类型覆盖升级。本版修复部分 Sony BRAVIA 注册循环、增加 HDMI 切换回退及更准确的 ADB 授权失败提示。不同型号仍需实机验收；Guard 不是所有电视的通用安装包。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
@@ -36,6 +36,11 @@
 | Samsung **Tizen**、海信**原生 VIDAA** | **无兼容的 Android APK 安装方式** | 不适用 | 请勿执行 Android ADB 安装命令 |
 
 **如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
+
+## v2.0.16：Sony 控制与 ADB 诊断
+
+Sony BRAVIA 后台读取不再主动重复注册，显式写控制失败后有跨重启退避。HDMI 切换在 BRAVIA 接口失败时尝试唯一匹配的 Android 输入源，否则提示手动选择。ADB 授权区分连接、认证、握手和协议错误，并保护已有密钥。保持 v2.0.15 的新版桌面守护架构。请参阅 [v2.0.16 更新说明](docs/releases/v2.0.16.md)。
+
 
 ## v2.0.15：主页键回到 Tigris
 

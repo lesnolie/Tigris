@@ -14,7 +14,7 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeover fixes and video optimizations still need model-level verification. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.15 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.15)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/Tigris-v2.0.15.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/Tigris-guard-v2.0.15.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/SHA256SUMS-v2.0.15.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.16 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.16)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.16/Tigris-v2.0.16.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.16/Tigris-guard-v2.0.16.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.16/SHA256SUMS-v2.0.16.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -22,7 +22,7 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 ## Which APK should I install? Check the TV OS and firmware
 
-> **Latest official release: v2.0.15.** The APK filenames remain `Tigris-v2.0.15.apk` (Standard) and `Tigris-guard-v2.0.15.apk` (Compatibility Guard). Guard describes the launcher mode: **not every TCL needs it, and it is not a universal Xiaomi workaround**. This release answers a real Home press without the automatic-takeover cap, and adds installer repair plus a guide for when Home still opens the original screen. Builds and tests passed. Physical remote, standby and reboot were not tested on a television.
+> **Latest official release: v2.0.16.** Download `Tigris-v2.0.16.apk` (Standard) or `Tigris-guard-v2.0.16.apk` (Compatibility Guard) and upgrade in place with the matching flavor. This release limits repeated Sony BRAVIA registration, adds a safe HDMI fallback, and improves local ADB authorization failure messages. Device-level acceptance is still pending; Guard is not universal.
 
 | TV / platform | First choice | When to use another build | Important limits |
 |---|---|---|---|
@@ -35,6 +35,11 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 | Samsung **Tizen**, Hisense **native VIDAA** | **No supported Android APK** | Neither | Do not run Android ADB installer commands |
 
 **Verification:** After installing, open another app and press the physical Home key; check reboot, standby/wake and long-press Home cleanup separately. If Home does not return to Tigris, keep the stock launcher enabled and use the [brand install and recovery guide](docs/installation-compatibility.md). Preserve the existing APK signing identity and user data; **do not uninstall merely to bypass installation restrictions**.
+
+## v2.0.16: Sony controls and ADB diagnostics
+
+Background Sony BRAVIA reads no longer initiate repeated registration. Explicit writes use a persistent retry backoff; failed HDMI switching may fall back to an unambiguous Android input or the TV settings. Local ADB diagnostics distinguish connection, authentication, handshake and protocol failures without replacing existing keys. The v2.0.15 guard architecture stays intact. See the [v2.0.16 release notes](docs/releases/v2.0.16.md).
+
 
 ## v2.0.15: Home returns to Tigris
 
