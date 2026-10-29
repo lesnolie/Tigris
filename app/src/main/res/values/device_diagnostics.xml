@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="adb_failure_title">Local debugging connection failed</string>
+    <string name="adb_retry">Try again</string>
+    <string name="adb_failure_keys">Could not prepare Tigris’s local debugging key. Check available app storage. Your existing key has been kept.</string>
+    <string name="adb_failure_connect">Could not connect to the TV’s local ADB service at 127.0.0.1:5555. Turning on USB or wireless debugging does not guarantee this port is available. On Android 11 and later, wireless debugging may use a separate TLS pairing flow. Report this connection stage and your firmware version; repeatedly waiting for a permission dialog will not fix a closed port.</string>
+    <string name="adb_failure_auth">The ADB service rejected Tigris’s debugging key. If the TV displays an authorization prompt, confirm it yourself. If no prompt appears, report “authentication rejected”; the app will not reset trusted keys or bypass pairing.</string>
+    <string name="adb_failure_handshake_timeout">The ADB handshake did not finish before the timeout. Check whether an authorization prompt is waiting on the TV. If no prompt appears, report “handshake timeout” and the firmware version. This result alone does not prove the key was rejected.</string>
+    <string name="adb_failure_protocol">The local port returned an incompatible ADB response. Some firmware supports only wireless TLS pairing. Report “protocol error” and the firmware version; Tigris has not changed pairing or debugging settings.</string>
+    <string name="adb_failure_closed">The TV closed the local ADB connection before the check completed. Report “connection closed” and the firmware version. No authorization success was recorded.</string>
+    <string name="adb_failure_shell">The ADB connection opened, but the shell check did not complete successfully. Report “shell check failed”. This is different from a missing authorization dialog.</string>
+    <string name="adb_failure_unknown">The local ADB handshake failed for an unclassified reason. Report the firmware version and the LocalAdb stage/reason from the app log. Do not share debugging keys or pairing codes.</string>
+    <string name="sony_input_choose_system">Automatic HDMI switching was unavailable. Choose the input from the TV’s settings.</string>
+    <string name="sony_input_unavailable">This TV rejected HDMI switching and could not open its settings.</string>
+</resources>

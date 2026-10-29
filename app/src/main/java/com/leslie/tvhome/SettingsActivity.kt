@@ -92,6 +92,7 @@ class SettingsActivity : Activity() {
     private var backdropKey: String? = null
     private var backdropRevision = 0
     private var activeDialog: SettingsDialog? = null
+    private var adbAuthorizing = false
     private var page = Page.MAIN
     /** The main-page row that opened the current sub-page, focused again on the way back. */
     private var opener = 0
@@ -557,10 +558,18 @@ class SettingsActivity : Activity() {
         section(I18n.text(R.string.i18n_settingsactivity_114))
         row(I18n.text(R.string.i18n_settingsactivity_115), I18n.text(R.string.i18n_settingsactivity_116),
             { if (prefs.adbAuthorized) I18n.text(R.string.i18n_settingsactivity_117) else I18n.text(R.string.i18n_settingsactivity_118) }) { v ->
+            if (adbAuthorizing) return@row
+            adbAuthorizing = true
             v.text = I18n.text(R.string.i18n_settingsactivity_119)
             Thread {
-                val ok = LocalAdb.shell(applicationContext, "echo ok", 60_000) != null
-                runOnUiThread { v.text = if (ok) I18n.text(R.string.i18n_settingsactivity_120) else I18n.text(R.string.i18n_settingsactivity_121) }
+                val result = LocalAdb.authorize(applicationContext)
+                runOnUiThread {
+                    adbAuthorizing = false
+                    if (!isFinishing && !isDestroyed) {
+                        v.text = I18n.text(if (result.authorized) R.string.i18n_settingsactivity_120 else R.string.i18n_settingsactivity_121)
+                        if (!result.authorized && hasWindowFocus()) dialog(I18n.text(R.string.adb_failure_title), result.description())
+                    }
+                }
             }.start()
         }
         // Resolver success is not proof that the physical HOME key reaches us.

@@ -18,10 +18,12 @@ import java.util.Locale
 object LocalAdb {
     private const val TAG = "LocalAdb"
 
+    @Synchronized
     private fun keys(ctx: Context): AdbKeyPair {
         val priv = File(ctx.filesDir, "adbkey")
         val pub = File(ctx.filesDir, "adbkey.pub")
-        if (!priv.exists() || !pub.exists()) AdbKeyPair.generate(priv, pub)
+        if (priv.exists() != pub.exists()) throw java.io.IOException("Incomplete existing ADB key pair")
+        if (!priv.exists()) AdbKeyPair.generate(priv, pub)
         return AdbKeyPair.read(priv, pub)
     }
 
@@ -31,14 +33,34 @@ object LocalAdb {
      * user to accept the authorization prompt.
      */
     fun shell(ctx: Context, cmd: String, waitAuthMs: Int = 4000): String? {
+        return execute(ctx, cmd, waitAuthMs).response?.allOutput
+    }
+
+    /** Only this explicit user action reports a failed connection as a lost current authorization. */
+    internal fun authorize(ctx: Context): AdbAuthorization {
+        val result = execute(ctx, "echo tigris-adb-ready", 60_000)
+        val good = result.response?.let { it.exitCode == 0 && it.output.trim() == "tigris-adb-ready" } == true
+        Prefs(ctx).adbAuthorized = good
+        return AdbAuthorization(if (good) null else result.failure ?: AdbFailure.SHELL)
+    }
+
+    private data class ShellResult(val response: dadb.AdbShellResponse? = null, val failure: AdbFailure? = null)
+
+    private fun execute(ctx: Context, cmd: String, waitAuthMs: Int): ShellResult {
         val prefs = Prefs(ctx)
+        var stage = AdbStage.KEYS
         return try {
-            Dadb.create("127.0.0.1", 5555, keys(ctx), connectTimeout = 3000, socketTimeout = waitAuthMs).use { d ->
-                d.shell(cmd).allOutput.also { prefs.adbAuthorized = true }
+            val pair = keys(ctx)
+            stage = AdbStage.HANDSHAKE
+            Dadb.create("127.0.0.1", 5555, pair, connectTimeout = 3000, socketTimeout = waitAuthMs).use { d ->
+                stage = AdbStage.SHELL
+                ShellResult(response = d.shell(cmd)).also { prefs.adbAuthorized = true }
             }
-        } catch (e: Throwable) {
-            Log.w(TAG, "adb shell failed: $cmd", e)
-            null
+        } catch (e: Exception) {
+            val reason = AdbFailure.classify(stage, e)
+            // Do not copy commands, keys, pairing codes or arbitrary server output into diagnostics.
+            Log.w(TAG, "local ADB failed: stage=$stage reason=$reason type=${e.javaClass.simpleName}")
+            ShellResult(failure = reason)
         }
     }
 
