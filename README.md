@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.14 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.14)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.14/Tigris-v2.0.14.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.14/Tigris-guard-v2.0.14.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.14/SHA256SUMS-v2.0.14.txt)）
+- 最新正式版：**[v2.0.15 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.15)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/Tigris-v2.0.15.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/Tigris-guard-v2.0.15.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/SHA256SUMS-v2.0.15.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **正式版为 v2.0.14。** 安装包名称沿用 `Tigris-v2.0.14.apk`（标准版）和 `Tigris-guard-v2.0.14.apk`（兼容守护版）。名称中的 *Guard* 指运行方式，**不是所有 TCL 必装或小米通用的破解包**。本版统一液态玻璃 Settings 与更新页，修复滚动底色跳动，并加入蓝天白云的首次手写欢迎动画；已在 Sony 电视展示验证。
+> **正式版为 v2.0.15。** 安装包名称沿用 `Tigris-v2.0.15.apk`（标准版）和 `Tigris-guard-v2.0.15.apk`（兼容守护版）。名称中的 *Guard* 指运行方式，**不是所有 TCL 必装或小米通用的破解包**。本版让遥控器上的主页键不受自动接管次数限制，并增加安装修复和「按主页键还是原来的」说明。构建和测试已通过；实体遥控器、待机和重启尚未在真电视上验收。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
@@ -36,6 +36,10 @@
 | Samsung **Tizen**、海信**原生 VIDAA** | **无兼容的 Android APK 安装方式** | 不适用 | 请勿执行 Android ADB 安装命令 |
 
 **如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
+
+## v2.0.15：主页键回到 Tigris
+
+遥控器上的主页键不再和开机时的自动接管共用次数限制。开机头三分钟里的自动来回跳仍会停住，避免和原厂桌面抢画面。Android 12 及以上可以在设置里打开「持续过滤主页键」，默认关闭，小米不提供。安装器对小米、TCL/雷鸟、酷开和海信打开桌面守护，并增加 `repair`。官网安装说明有「按主页键还是原来的」。不关闭原厂桌面。完整内容见 [v2.0.15 更新说明](docs/releases/v2.0.15.md)。
 
 ## v2.0.14：液态玻璃设置与蓝天欢迎
 

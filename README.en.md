@@ -14,7 +14,7 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeover fixes and video optimizations still need model-level verification. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.14 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.14)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.14/Tigris-v2.0.14.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.14/Tigris-guard-v2.0.14.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.14/SHA256SUMS-v2.0.14.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.15 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.15)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/Tigris-v2.0.15.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/Tigris-guard-v2.0.15.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/SHA256SUMS-v2.0.15.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -22,7 +22,7 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 ## Which APK should I install? Check the TV OS and firmware
 
-> **Latest official release: v2.0.14.** The APK filenames remain `Tigris-v2.0.14.apk` (Standard) and `Tigris-guard-v2.0.14.apk` (Compatibility Guard). Guard describes the launcher mode: **not every TCL needs it, and it is not a universal Xiaomi workaround**. This release unifies Liquid Glass Settings and Apps & Updates, fixes scrolling texture jumps, and adds a handwritten first-use welcome on a blue sky, displayed and checked on a Sony TV.
+> **Latest official release: v2.0.15.** The APK filenames remain `Tigris-v2.0.15.apk` (Standard) and `Tigris-guard-v2.0.15.apk` (Compatibility Guard). Guard describes the launcher mode: **not every TCL needs it, and it is not a universal Xiaomi workaround**. This release answers a real Home press without the automatic-takeover cap, and adds installer repair plus a guide for when Home still opens the original screen. Builds and tests passed. Physical remote, standby and reboot were not tested on a television.
 
 | TV / platform | First choice | When to use another build | Important limits |
 |---|---|---|---|
@@ -35,6 +35,10 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 | Samsung **Tizen**, Hisense **native VIDAA** | **No supported Android APK** | Neither | Do not run Android ADB installer commands |
 
 **Verification:** After installing, open another app and press the physical Home key; check reboot, standby/wake and long-press Home cleanup separately. If Home does not return to Tigris, keep the stock launcher enabled and use the [brand install and recovery guide](docs/installation-compatibility.md). Preserve the existing APK signing identity and user data; **do not uninstall merely to bypass installation restrictions**.
+
+## v2.0.15: Home returns to Tigris
+
+A Home press on the remote is no longer limited by the automatic boot-takeover budget. Automatic retries during the first three minutes are still capped so the factory launcher is not fought forever. Android 12 and newer can turn on “Keep filtering the Home key”; it is off by default and is not offered on Xiaomi. The installer enables the guard for Xiaomi, TCL/FFalcon, Coocaa and Hisense, and adds `repair`. The website guide has “Home still opens the original screen”. The stock launcher is not disabled. See the [v2.0.15 release notes](docs/releases/v2.0.15.md).
 
 ## v2.0.14: Glass Settings and sky welcome
 
