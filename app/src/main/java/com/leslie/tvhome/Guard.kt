@@ -1,25 +1,22 @@
 package com.leslie.tvhome
 
 import android.Manifest
-import android.accessibilityservice.AccessibilityService
-import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.AppOpsManager
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.Process
 import android.os.SystemClock
+import android.os.UserManager
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.util.Log
-import android.view.KeyEvent
-import android.view.accessibility.AccessibilityEvent
-import com.leslie.tvhome.tv.CoocaaAdapter
 import com.leslie.tvhome.tv.TclAdapter
 import com.leslie.tvhome.tv.XiaomiAdapter
 
@@ -79,19 +76,41 @@ object Guard {
             Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), PackageManager.MATCH_DEFAULT_ONLY,
         )?.activityInfo?.packageName == ctx.packageName
 
+    /** Credential-backed preferences and accounts are unreadable until the user is unlocked. */
+    fun isUserUnlocked(ctx: Context): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.N ||
+            ctx.getSystemService(UserManager::class.java)?.isUserUnlocked != false
+
+    fun guardOn(ctx: Context): Boolean =
+        isUserUnlocked(ctx) && runCatching { Prefs(ctx).guard }.getOrDefault(false)
+
+    fun usageStatsAllowed(ctx: Context): Boolean = runCatching {
+        val ops = ctx.getSystemService(AppOpsManager::class.java) ?: return false
+        ops.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, Process.myUid(), ctx.packageName) ==
+            AppOpsManager.MODE_ALLOWED
+    }.getOrDefault(false)
+
     /**
      * What a computer would grant over adb, done through the TV's own adb instead. Blocking.
-     * The two TCL app ops let Tigris start at boot there (TclAppBootManager refuses third-party
-     * apps otherwise); other firmwares don't know them and refuse, which is fine.
+     * TCL's autostart ops use either name; other firmwares don't know them and refuse, which is fine.
+     * GET_USAGE_STATS lets the guard see a launcher that raises no window. ACCESS_RESTRICTED_SETTINGS
+     * is what Android 13 requires before a sideloaded accessibility service may be enabled.
      */
     fun grantViaLocalAdb(ctx: Context): Boolean {
         val p = ctx.packageName
         val script = listOf(
             "pm grant $p ${Manifest.permission.WRITE_SECURE_SETTINGS}",
+            "pm grant $p android.permission.PACKAGE_USAGE_STATS",
             "cmd notification allow_listener $p/$p.RevivalListener",
             "appops set $p SYSTEM_ALERT_WINDOW allow",
+            "appops set $p WRITE_SETTINGS allow",
+            "appops set $p GET_USAGE_STATS allow",
+            "appops set $p android:get_usage_stats allow",
+            "appops set $p ACCESS_RESTRICTED_SETTINGS allow",
             "appops set $p APP_AUTO_START allow",
             "appops set $p APP_ASSOC_START allow",
+            "appops set $p AUTO_START allow",
+            "appops set $p ASSOC_START allow",
         ).joinToString("; ") + "; echo done"
         LocalAdb.shell(ctx, script, 10_000) ?: return false
         return hasSecureSettings(ctx)
@@ -99,6 +118,7 @@ object Guard {
 
     /** Turns the guard on or off for good. Returns false when the permission to do so is missing. */
     fun setEnabled(ctx: Context, on: Boolean): Boolean {
+        if (!isUserUnlocked(ctx)) return false
         recovery?.cancel()
         Prefs(ctx).guard = on
         if (!hasSecureSettings(ctx)) return false
@@ -116,14 +136,16 @@ object Guard {
             .split(':').filter { it.isNotBlank() }
 
     /** Puts back whatever the firmware switched off: ADB, the photo-frame screensaver, the guard. */
-    fun ensure(ctx: Context) {
+    fun ensure(ctx: Context): Boolean {
+        if (!isUserUnlocked(ctx)) return false
         ensureAdb(ctx)
-        if (!hasSecureSettings(ctx)) return
+        if (!hasSecureSettings(ctx)) return false
         keepScreensaver(ctx)
-        if (!Prefs(ctx).guard) return
+        if (!Prefs(ctx).guard) return false
+        RevivalSync.ensure(ctx)
         val me = service(ctx)
         val entries = enabledServices(ctx)
-        runCatching {
+        return runCatching {
             if (entries.none { ComponentName.unflattenFromString(it)?.flattenToString() == me }) {
                 lastRevivedAt = SystemClock.elapsedRealtime()
                 // Appended, so the firmware's own services (小爱, TCL's 小T助手) stay on.
@@ -131,11 +153,64 @@ object Guard {
                 Log.i(TAG, "home guard had been switched off; turned it back on")
             }
             Settings.Secure.putInt(ctx.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED, 1)
-        }.onFailure { Log.w(TAG, "could not switch the home guard on", it) }
+            entries.none { ComponentName.unflattenFromString(it)?.flattenToString() == me }
+        }.onFailure { Log.w(TAG, "could not switch the home guard on", it) }.getOrDefault(false)
+    }
+
+    /** Whether the firmware has stopped Tigris often enough that an unknown front should be left alone. */
+    fun revivedOften(ctx: Context): Boolean {
+        if (!isUserUnlocked(ctx)) return false
+        val now = System.currentTimeMillis()
+        return RevivalBudget.often(revivalStamps(ctx), now, now - SystemClock.elapsedRealtime())
+    }
+
+    private var revivalNoted = false
+
+    fun noteRevival(ctx: Context) {
+        if (!isUserUnlocked(ctx)) return
+        val now = System.currentTimeMillis()
+        val interactive = ctx.getSystemService(PowerManager::class.java)?.isInteractive != false
+        val updated = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).lastUpdateTime }.getOrDefault(0L)
+        if (!RevivalBudget.shouldCount(now, SystemClock.elapsedRealtime(), interactive, updated, revivalNoted)) return
+        revivalNoted = true
+        val stamps = revivalStamps(ctx).filter { now - it in 0..RevivalBudget.WINDOW_MS } + now
+        Prefs(ctx).revivals = stamps.joinToString(",")
+    }
+
+    private fun revivalStamps(ctx: Context): List<Long> =
+        Prefs(ctx).revivals.split(',').mapNotNull { it.toLongOrNull() }
+
+    /**
+     * Switches the guard out of the accessibility list and back, so a deaf binding is replaced.
+     * From Android 7, toggling the global accessibility switch does not rebind services.
+     */
+    fun restartAccessibility(ctx: Context) {
+        if (!hasSecureSettings(ctx)) return
+        val me = service(ctx)
+        val resolver = ctx.contentResolver
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
+            fun others() = enabledServices(ctx).filter { ComponentName.unflattenFromString(it)?.flattenToString() != me }
+            runCatching {
+                Settings.Secure.putString(resolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, others().joinToString(":"))
+                Handler(Looper.getMainLooper()).postDelayed({
+                    runCatching {
+                        Settings.Secure.putString(resolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, (others() + me).joinToString(":"))
+                    }.onFailure { Log.w(TAG, "could not put the home guard back", it) }
+                }, 1500)
+            }.onFailure { Log.w(TAG, "could not restart the home guard", it) }
+            return
+        }
+        runCatching {
+            Settings.Secure.putInt(resolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0)
+            Handler(Looper.getMainLooper()).postDelayed({
+                runCatching { Settings.Secure.putInt(resolver, Settings.Secure.ACCESSIBILITY_ENABLED, 1) }
+                    .onFailure { Log.w(TAG, "could not switch accessibility back on", it) }
+            }, 1500)
+        }.onFailure { Log.w(TAG, "could not switch accessibility off", it) }
     }
 
     fun ensureAdb(ctx: Context) {
-        if (!Prefs(ctx).keepAdb || !hasSecureSettings(ctx)) return
+        if (!isUserUnlocked(ctx) || !Prefs(ctx).keepAdb || !hasSecureSettings(ctx)) return
         val r = ctx.contentResolver
         if (Settings.Global.getInt(r, Settings.Global.ADB_ENABLED, 0) == 1) return
         runCatching {
@@ -180,181 +255,16 @@ object Guard {
 }
 
 /**
- * 1. When the stock launcher's home activity comes to the front (the Home key, an app exiting to
- *    it, the TV waking into it), Tigris is brought back on top. On Xiaomi the user sees PatchWall
- *    for about half a second.
- * 2. The stock launcher can still be opened on purpose from its tile. While it is in front the Home
- *    key is taken before the system sees it and answered with Tigris.
- *
- * Key filtering is on only in that second case (and always up to Android 11, see [filterKeys]).
- * With it on every key press detours through this service, and some apps then see a press as held
- * and move twice (云视听小电视 on Xiaomi, reported to Aerial).
- */
-class HomeGuardService : AccessibilityService() {
-    /** HOME activities that are not ours: package to class names. */
-    private var stockHomes: Map<String, Set<String>> = emptyMap()
-    private var allowStockUntil = 0L
-    /** Tracks confirmed windows and bounds automatic takeover attempts. */
-    private val takeoverPolicy = HomeTakeoverPolicy()
-    private val handler = Handler(Looper.getMainLooper())
-    private var takeOverReason = ""
-    private val takeOver = Runnable { takeOverIfStockInFront(takeOverReason) }
-
-    private val screenOn = object : BroadcastReceiver() {
-        override fun onReceive(c: Context, i: Intent) {
-            // Firmwares put their own launcher back in front during standby, and no window change follows.
-            takeoverPolicy.observe(HomeTakeoverPolicy.Window.UNKNOWN, SystemClock.elapsedRealtime())
-            handler.removeCallbacks(takeOver)
-        }
-    }
-
-    override fun onServiceConnected() {
-        instance = this
-        refreshStockHomes()
-        filterKeys(false)
-        registerReceiver(screenOn, IntentFilter(Intent.ACTION_SCREEN_ON))
-        // Wait for a real window event: binding does not prove what is on screen.
-        Log.i(TAG, "connected; waiting for a confirmed stock HOME window")
-    }
-
-    /**
-     * Waits a moment and takes Home only if nothing but the stock launcher came to the front. At
-     * power-on an HDMI-CEC source switches the TV to its input just as the guard is bound again;
-     * taking Home at once bounced the viewer straight out of the input (Aerial, Xiaomi MFTR0).
-     */
-    private fun takeOverOnceSettled(reason: String) {
-        takeOverReason = reason
-        handler.removeCallbacks(takeOver)
-        handler.postDelayed(takeOver, HomeTakeoverPolicy.SETTLE_MS)
-    }
-
-    private fun takeOverIfStockInFront(reason: String) {
-        val awake = getSystemService(PowerManager::class.java)?.isInteractive == true
-        if (!takeoverPolicy.request(SystemClock.elapsedRealtime(), Prefs(this).guard,
-                awake, SystemClock.uptimeMillis() < allowStockUntil)) return
-        Log.i(TAG, "$reason: confirmed stock HOME; bringing Tigris back")
-        goHome()
-    }
-
-    override fun onDestroy() {
-        runCatching { unregisterReceiver(screenOn) }
-        handler.removeCallbacksAndMessages(null)
-        if (instance === this) instance = null
-        super.onDestroy()
-    }
-
-    override fun onUnbind(intent: Intent?): Boolean {
-        if (instance === this) instance = null
-        return super.onUnbind(intent)
-    }
-
-    override fun onInterrupt() = Unit
-
-    /**
-     * Android 11 and earlier normally intercept Home to avoid delayed activity launches.
-     * On Coocaa / Skyworth Android 11, however, the firmware consumes Home before
-     * onKeyEvent, so filtering other keys can interfere with volume KEY_UP (issue #15).
-     * That device uses the existing window-based home takeover instead.
-     */
-    private fun filterKeys(on: Boolean) {
-        val info = serviceInfo ?: return
-        val flag = AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
-        val request = HomeKeyFilterPolicy.shouldRequestFilter(
-            Build.VERSION.SDK_INT, CoocaaAdapter.isCoocaa(), on,
-        )
-        val want = if (request) info.flags or flag else info.flags and flag.inv()
-        if (want == info.flags) return
-        info.flags = want
-        serviceInfo = info
-    }
-
-    override fun onKeyEvent(event: KeyEvent): Boolean {
-        if (!Prefs(this).guard) return false
-        if (event.keyCode != KeyEvent.KEYCODE_HOME || Guard.isDefaultHome(this)) return false
-        if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) goHome()
-        return true
-    }
-
-    override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        if (!Prefs(this).guard || event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
-        val pkg = event.packageName?.toString() ?: return
-        val cls = event.className?.toString() ?: return
-        // Dialogs and overlays cancel a pending takeover too; never act on stale HOME evidence.
-        val stockHome = stockHomes[pkg]?.contains(cls) == true
-        takeoverPolicy.observe(if (stockHome) HomeTakeoverPolicy.Window.STOCK_HOME
-            else HomeTakeoverPolicy.Window.OTHER, SystemClock.elapsedRealtime())
-        handler.removeCallbacks(takeOver)
-        val allowed = SystemClock.uptimeMillis() < allowStockUntil
-        if (pkg in stockHomes) {
-            filterKeys(allowed)
-            if (cls !in stockHomes.getValue(pkg) || allowed) return
-            Log.i(TAG, "stock HOME observed: $pkg/$cls; waiting for it to settle")
-            takeOverOnceSettled("stock HOME window")
-            return
-        }
-        filterKeys(false)
-        // Leaving the stock launcher for a real app ends the visit: Home goes to Tigris again.
-        if (allowed && pkg != packageName && isApp(pkg)) allowStockUntil = 0L
-    }
-
-    private fun isApp(pkg: String): Boolean =
-        packageManager.getLeanbackLaunchIntentForPackage(pkg) != null || packageManager.getLaunchIntentForPackage(pkg) != null
-
-    private fun refreshStockHomes() {
-        stockHomes = packageManager.queryIntentActivities(
-            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), PackageManager.MATCH_DEFAULT_ONLY,
-        )
-            // Negative priorities are fallbacks shown only while nothing else can be Home.
-            .filter { it.activityInfo.packageName != packageName && it.priority >= 0 }
-            .groupBy({ it.activityInfo.packageName }) {
-                StockHomeActivities.classes(it.activityInfo.packageName, it.activityInfo.name, it.activityInfo.targetActivity)
-            }
-            .mapValues { it.value.flatten().toSet() }
-    }
-
-    private fun goHome() {
-        runCatching { startActivity(HomeActivity.bringBack(this)) }
-            .onFailure { Log.w(TAG, "could not bring the home screen back", it) }
-    }
-
-    companion object {
-        private const val TAG = "TigrisGuard"
-
-        @Volatile
-        private var instance: HomeGuardService? = null
-
-        val isRunning: Boolean get() = instance != null
-
-        fun isStockHome(pkg: String): Boolean = instance?.stockHomes?.containsKey(pkg) == true
-
-        /**
-         * Opens the stock launcher on purpose, from its tile. Xiaomi's launcher activities require
-         * a signature permission, so an app cannot start them; the system Home action can.
-         */
-        fun openStockLauncher(): Boolean {
-            val s = instance ?: return false
-            s.allowStockUntil = SystemClock.uptimeMillis() + 60 * 60 * 1000L
-            return s.performGlobalAction(GLOBAL_ACTION_HOME)
-        }
-
-        /** The home screen is in front again: the stock launcher is fair game. */
-        fun onHomeResumed() {
-            val s = instance ?: return
-            s.allowStockUntil = 0L
-            s.filterKeys(false)
-        }
-    }
-}
-
-/**
  * Brings the guard back after the firmware kills Tigris. Android drops a force-stopped app's
  * accessibility services for good, but keeps a notification listener approved and binds it again
- * shortly after its process dies. No notification is read or touched.
+ * shortly after its process dies. No notification is read or touched. On low-RAM Android 9 the
+ * listener never binds; [RevivalSync] is the other way back.
  */
 class RevivalListener : NotificationListenerService() {
     override fun onListenerConnected() {
         Log.i("TigrisGuard", "revived by the notification listener binding")
-        Guard.ensure(this)
+        val broughtBack = Guard.ensure(this)
+        if (broughtBack) Guard.noteRevival(this)
         runCatching { KeeperService.start(this) }
         Handler(Looper.getMainLooper()).postDelayed({ Guard.rebindIfStalled(this) }, 5_000)
     }
@@ -372,6 +282,12 @@ class ConfigReceiver : BroadcastReceiver() {
         val prefs = Prefs(c)
         if (i.hasExtra("keep_adb")) prefs.keepAdb = i.getBooleanExtra("keep_adb", false)
         if (i.hasExtra("guard")) Guard.setEnabled(c, i.getBooleanExtra("guard", false))
+        if (i.hasExtra("home_filter")) {
+            val on = i.getBooleanExtra("home_filter", false) &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !Guard.isXiaomi()
+            prefs.persistentHomeFilter = on
+            HomeGuardService.onFilterChanged()
+        }
         // Looks (主屏幕设置 → 外观 / 开机动画), mostly for agents setting a TV up.
         i.getStringExtra("cc_style")?.let { prefs.ccStyle = it }
         i.getStringExtra("focus_style")?.let { prefs.focusStyle = it }
@@ -388,7 +304,7 @@ class ConfigReceiver : BroadcastReceiver() {
         if (i.hasExtra("intro_sound")) prefs.introSound = i.getBooleanExtra("intro_sound", true)
         if (i.hasExtra("wake_delay")) prefs.wakeDelay = i.getIntExtra("wake_delay", 5000)
         Guard.ensure(c)
-        resultData = "guard=${prefs.guard} keep_adb=${prefs.keepAdb} secure_settings=${Guard.hasSecureSettings(c)} " +
+        resultData = "guard=${prefs.guard} keep_adb=${prefs.keepAdb} home_filter=${prefs.persistentHomeFilter} secure_settings=${Guard.hasSecureSettings(c)} " +
             "background=${prefs.background} cc_style=${prefs.ccStyle} focus_style=${prefs.focusStyle} clock_style=${prefs.clockStyle} clock_24=${prefs.clock24} " +
             "intro=${prefs.intro} intro_source=${prefs.introSource} wake_delay=${prefs.wakeDelay} own_icon=${prefs.ownIcon} settings_bg=${prefs.settingsBg} low_end=${Device.isLowEnd(c)}"
     }

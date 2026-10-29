@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.14 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.14)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.14/Tigris-v2.0.14.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.14/Tigris-guard-v2.0.14.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.14/SHA256SUMS-v2.0.14.txt)）
+- 最新正式版：**[v2.0.15 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.15)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/Tigris-v2.0.15.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/Tigris-guard-v2.0.15.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/SHA256SUMS-v2.0.15.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **正式版为 v2.0.14。** 安装包名称沿用 `Tigris-v2.0.14.apk`（标准版）和 `Tigris-guard-v2.0.14.apk`（兼容守护版）。名称中的 *Guard* 指运行方式，**不是所有 TCL 必装或小米通用的破解包**。本版统一液态玻璃 Settings 与更新页，修复滚动底色跳动，并加入蓝天白云的首次手写欢迎动画；已在 Sony 电视展示验证。
+> **正式版为 v2.0.15。** 安装包名称沿用 `Tigris-v2.0.15.apk`（标准版）和 `Tigris-guard-v2.0.15.apk`（兼容守护版）。名称中的 *Guard* 指运行方式，**不是所有 TCL 必装或小米通用的破解包**。本版让遥控器上的主页键不受自动接管次数限制，并增加安装修复和「按主页键还是原来的」说明。构建和测试已通过；实体遥控器、待机和重启尚未在真电视上验收。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
@@ -36,6 +36,10 @@
 | Samsung **Tizen**、海信**原生 VIDAA** | **无兼容的 Android APK 安装方式** | 不适用 | 请勿执行 Android ADB 安装命令 |
 
 **如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
+
+## v2.0.15：主页键回到 Tigris
+
+遥控器上的主页键不再和开机时的自动接管共用次数限制。开机头三分钟里的自动来回跳仍会停住，避免和原厂桌面抢画面。Android 12 及以上可以在设置里打开「持续过滤主页键」，默认关闭，小米不提供。安装器对小米、TCL/雷鸟、酷开和海信打开桌面守护，并增加 `repair`。官网安装说明有「按主页键还是原来的」。不关闭原厂桌面。完整内容见 [v2.0.15 更新说明](docs/releases/v2.0.15.md)。
 
 ## v2.0.14：液态玻璃设置与蓝天欢迎
 
@@ -78,7 +82,7 @@ Settings 和「应用与更新」统一使用透明折射玻璃及当前主屏�
 
 - **主屏幕**：默认 5 列，可选 6 列的 16:9 圆角图标，选中时弹性放大、倾斜并带高光和投影。右上角显示时间、网络与可选头像；时间支持 12 / 24 小时制，也可改成左上角大时钟或隐藏。
 - **Liquid Glass Dock**：第一排应用放在液态玻璃 Dock 中，下一排露出上沿。玻璃模糊、边缘折射和高光会按当前背景预先生成，低配电视可改用更省性能的样式。
-- **顶部内容**：选中 Dock 中的云视听小电视或斗鱼时，上半屏轮播对应的热门内容。数据来自服务公开的网页接口，使用前需要安装对应的 TV 版 App。
+- **顶部内容**：选中 Dock 第一排的云视听小电视、第三方哔哩哔哩客户端（`com.tutu.myblbl`）或斗鱼时，上半屏轮播对应内容。也可以在设置里给一个 Dock 应用填写 JSON 地址。格式、失败时的回退，以及 Jellyfin / Emby 需要转换服务的说明见 [docs/top-shelf.md](docs/top-shelf.md)。
 - **主屏幕设置**：仿 tvOS 的分组布局，可分别调整时钟、聚焦动画、控制中心样式、背景、相框、开机动画、头像和桌面守护。
 - **最近打开自动置顶（可开启）**：v2.0.6 首次安装或从旧版升级时默认关闭；可在「主屏幕设置 → App → 最近打开的 App 自动置顶」开启，之后成功打开的 App 或文件夹会移到第一位。关闭后固定当前排序，长按「编辑主屏幕」可自行调整；已有的个人布局和开关选择会保留。
 - **编辑、文件夹与删除**：长按图标可移动、放入文件夹或删除。电视预装 App 也可用 `pm uninstall --user 0` 从当前用户空间移除，并可在设置中恢复；系统运行必需组件受到保护。
@@ -379,7 +383,7 @@ curl.exe -s -u ':<PIN>' http://192.168.1.20/sony/accessControl --data-binary '@b
 
 小米、TCL、海信、创维等国产固件常常只认自家桌面。小米上 `set-home-activity` 可能显示成功，但主页键仍回 PatchWall；待机时还会清理第三方 App。Tigris 用以下方式接管前台，不 root、不修改系统分区、不卸载或停用原厂桌面：
 
-1. **桌面守护**：无障碍服务只监听前台窗口变化，不读取屏幕内容。只在确认原厂首页持续出现时接管；应用、输入源或弹窗出现会取消等待。开机、唤醒和服务恢复本身不会触发接管，短时间反复跳转会暂缓自动接管。
+1. **桌面守护**：无障碍服务只监听前台窗口变化，不读取屏幕内容。遥控器上的主页键一定会切回 Tigris。开机、唤醒和被系统清掉之后，只有确认前台是原厂桌面才会自动切回；看不到前台、正在用应用或 HDMI 时不会切。开机头三分钟里的自动来回跳会被停住，避免和原厂桌面抢画面。主页键本身不受这条例限制。
 2. **后台恢复**：通知监听服务不读取通知。系统结束 Tigris 进程后，Android 会重新绑定监听器，从而拉起进程并恢复桌面守护。
 3. **保持 ADB 开启**：小米唤醒后会关闭 ADB。启用该选项后，Tigris 用 `WRITE_SECURE_SETTINGS` 自动重新打开，方便以后升级。
 4. **TCL 守护版**：TCL 拒绝标准 HOME APK，因此使用不声明 HOME 的守护版（发布文件名如 `Tigris-guard-v2.0.6.apk`），通过「多屏互动」安装，并放行 `APP_AUTO_START` / `APP_ASSOC_START`。
@@ -471,7 +475,7 @@ adb -s 192.168.1.20:5555 uninstall com.leslie.tvhome
 | 功能 | Android TV 9+ | 需要本机调试授权 | 索尼 BRAVIA |
 |---|:-:|:-:|:-:|
 | 主屏幕、Dock、玻璃效果、投影 | ✅ | | |
-| 顶部内容（B站 / 斗鱼） | ✅ 需安装对应 TV 版 App | | |
+| 顶部内容（B站 / 斗鱼 / 自定义） | ✅ 对应 TV 版 App，或设置里的 JSON 地址 | | |
 | 风景 / 二次元背景、相框 | ✅ | | |
 | 控制中心界面、时钟 | ✅ | | |
 | 释放内存 | ✅ 只清缓存 | ✅ 可结束后台 App | |
@@ -502,10 +506,11 @@ adb -s 192.168.1.20:5555 uninstall com.leslie.tvhome
 <!-- TV_COMPATIBILITY_AUTO_START -->
 | 品牌与型号 | Android | Tigris / 安装包 | 安装结果 | Issue 状态 | 来源 |
 |---|---|---|---|---|---|
+| Sony XR-55A80K &#124; BRAVIA 4K VH21 | Android 12 (API level 31) | v2.0.15 / 标准版 | 已安装且能启动（自报） | 未关闭 | [#69](https://github.com/lesnolie/Tigris/issues/69) |
 | Sony BRAVIA 4K GB（BRAVIA_ATV2_CN，国行，2017 平台） | Android 9 (API 28) | v2.0.11 / 标准版 | 已安装且能启动（自报） | 未关闭 | [#53](https://github.com/lesnolie/Tigris/issues/53) |
 | GOOJODOQ HY300 Pro+ | Android 14 | v2.0.9 / 标准版 | 已安装且能启动（自报） | 未关闭 | [#47](https://github.com/lesnolie/Tigris/issues/47) |
-| 创维酷开 85P3DMAX | Android 11 | 2.0.2 / 自定义 Fork | 已安装且能启动（自报） | 未关闭 | [#15](https://github.com/lesnolie/Tigris/issues/15) |
-| 雷鸟 75S545C | Android 9 | V2.0.2 / 守护版 | 已安装且能启动（自报） | 未关闭 | [#14](https://github.com/lesnolie/Tigris/issues/14) |
+| 创维酷开 85P3DMAX | Android 11 | 2.0.2 / 自定义 Fork | 已安装且能启动（自报） | 已关闭（未验证修复） | [#15](https://github.com/lesnolie/Tigris/issues/15) |
+| 雷鸟 75S545C | Android 9 | V2.0.2 / 守护版 | 已安装且能启动（自报） | 已关闭（未验证修复） | [#14](https://github.com/lesnolie/Tigris/issues/14) |
 <!-- TV_COMPATIBILITY_AUTO_END -->
 
 ### 适配新品牌

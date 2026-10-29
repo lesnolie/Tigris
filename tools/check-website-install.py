@@ -24,18 +24,49 @@ for locale, name in (("zh", "index.html"), ("en", "en/index.html")):
     p = Page()
     p.feed(html)
     text = " ".join(p.text)
-    assert html.index('class="downloads') < html.index('apk-limits') < html.index('agent-card')
+    beginner, _advanced = html.split('id="advanced-install"', 1)
+    assert html.index('id="install-wizard"') < html.index('id="ads-by-brand"') < html.index('id="restore-home"') < html.index('id="advanced-install"')
+    assert html.index('id="advanced-install"') < html.index('class="downloads') < html.index("apk-limits")
     assert p.links.count("https://github.com/lesnolie/Tigris/releases") >= 2
     assert "APK" in text and "≠" in text and "webOS" in text and "Tizen" in text
-    assert "--platform android --serial 192.168.1.20:5555" in text
-    assert "python tools/install-plan.py" in text and "python3 tools/install-plan.py" in text
-    assert "install.sh restore" in text and "--execute" in text
-    assert "v2.0.14" in text
-    assert "Tigris-guard-v2.0.14.apk" in text and "Tigris-v2.0.14.apk" in text
+    assert "tools/install-plan.py" in text and "--execute" in text and "192.168.1.20:5555" in text
+    assert "python3" in text and "install.sh restore" in text
+    assert "v2.0.15" in text
+    assert "Tigris-guard-v2.0.15.apk" in text and "Tigris-v2.0.15.apk" in text
     assert ("兼容守护版" if locale == "zh" else "Compatibility Guard") in text
     assert "Sony" in text and "TCL" in text and "Redmi" in text
     assert 'id="install-host"' in html and 'id="install-system"' in html
     assert 'id="install-action"' in html and 'id="android-quick-commands"' in html
     assert 'class="prereq hisense-report"' in html and "WorkBuddy" in text
     assert "Keep ADB enabled: yes" not in text and "保持 ADB 常开：要" not in text
-    print(f"PASS {locale}: adjacent APK limits, official downloads, shared strategies, shell variants and restore")
+    assert 'id="cmd-agent-xiaomi"' in html and 'data-brand-pick="ffalcon"' in html
+    assert 'id="gloss-adb"' in html and 'class="see-now"' in html and 'class="stuck"' in html
+    assert ("你现在应该看到" if locale == "zh" else "You should now see") in text
+    assert ("卡住了？" if locale == "zh" else "Stuck?") in text
+    assert ("下面的小图是示意图" if locale == "zh" else "not photos of a TV") in text
+    assert ("先准备两样东西" if locale == "zh" else "Two things first") in text
+    assert ("文档没有" if locale == "zh" else "The guide does not") not in beginner
+    for banned in ("PatchWall", "FallbackHome", "T-Cast", "set-home", "接管"):
+        assert banned not in beginner, banned
+    assert "classList.remove(" not in html
+    nav_end = html.index("</nav>")
+    assert html.index("<dialog") > nav_end, "search dialog is inside the nav"
+    cta = html[html.index('class="nav-cta"'):nav_end]
+    assert "<dialog" not in cta
+    assert 'class="nav-search"' in html[:nav_end]
+    print(f"PASS {locale}: beginner wizard, ad table, restore, and one advanced source")
+
+css = "\n".join(path.read_text(encoding="utf-8") for path in (root / "website/dist/_astro").glob("*.css"))
+compact = "".join(css.split())
+assert ".search-dialog:not([open]){display:none}" in compact, compact[compact.find("search-dialog"):compact.find("search-dialog") + 240]
+assert ".search-dialog{display:flex" not in compact
+assert ".search-dialog[open]{display:flex}" in compact
+assert ".nav-cta{display:contents}" in compact
+js = "\n".join(path.read_text(encoding="utf-8") for path in (root / "website/dist/_astro").glob("*.js"))
+assert "Escape" in js
+headers = (root / "website/public/_headers").read_text(encoding="utf-8")
+assert "script-src 'self'" in headers and "script-src 'self' 'unsafe-inline'" not in headers
+for page in (root / "website/dist").rglob("*.html"):
+    text = page.read_text(encoding="utf-8")
+    assert "document.documentElement.classList.remove" not in text, page
+print("PASS search dialog stays closed until opened, and the header script is external")

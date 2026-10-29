@@ -1,3 +1,6 @@
+import { initHeroMotion } from "./hero-motion";
+import { searchHelp } from "../data/site-search";
+
 /* Tigris website — progressive enhancement only. No framework, ~8 KB.
    All user-visible strings come from data-* attributes so the same script
    speaks Chinese on / and English on /en/. */
@@ -203,6 +206,105 @@
     });
     select(0);
   });
+
+  /* ---------- beginner install wizard ---------- */
+  const wizard = doc.querySelector<HTMLElement>("[data-wizard]");
+  if (wizard) {
+    const picks = Array.from(wizard.querySelectorAll<HTMLButtonElement>("[data-brand-pick]"));
+    const panels = Array.from(wizard.querySelectorAll<HTMLElement>("[data-brand-panel]"));
+    const live = wizard.querySelector<HTMLElement>("[data-wizard-live]");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const selectBrand = (id: string, focus = false) => {
+      picks.forEach((btn, i) => {
+        const on = btn.dataset.brandPick === id;
+        btn.setAttribute("aria-checked", on ? "true" : "false");
+        btn.classList.toggle("is-on", on);
+        btn.tabIndex = on || (!id && i === 0) ? 0 : -1;
+        if (on && focus) btn.focus();
+      });
+      panels.forEach((panel) => {
+        panel.hidden = panel.dataset.brandPanel !== id;
+      });
+      const picked = picks.find((btn) => btn.dataset.brandPick === id);
+      if (live && picked) {
+        const name = picked.textContent?.trim() ?? "";
+        live.textContent = isEnglish
+          ? `${name} selected. The steps are below.`
+          : `已选出${name}。步骤在下面。`;
+      }
+      if (id) {
+        wizard.querySelector<HTMLElement>(`#steps-${id}`)?.scrollIntoView({
+          behavior: reduceMotion ? "auto" : "smooth",
+          block: "start",
+        });
+      }
+    };
+
+    picks.forEach((btn) => btn.addEventListener("click", () => selectBrand(btn.dataset.brandPick || "")));
+    wizard.querySelector("[data-brand-group]")?.addEventListener("keydown", (event) => {
+      const key = (event as KeyboardEvent).key;
+      if (!["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Home", "End"].includes(key)) return;
+      event.preventDefault();
+      const checked = picks.findIndex((btn) => btn.getAttribute("aria-checked") === "true");
+      const current = checked >= 0 ? checked : Math.max(0, picks.indexOf(document.activeElement as HTMLButtonElement));
+      let next = current < 0 ? 0 : current;
+      if (key === "ArrowRight" || key === "ArrowDown") next = (next + 1) % picks.length;
+      else if (key === "ArrowLeft" || key === "ArrowUp") next = (next - 1 + picks.length) % picks.length;
+      else if (key === "Home") next = 0;
+      else if (key === "End") next = picks.length - 1;
+      selectBrand(picks[next].dataset.brandPick || "", true);
+    });
+
+    const inputs = Array.from(wizard.querySelectorAll<HTMLInputElement>(".tv-ip"));
+    const fills = Array.from(wizard.querySelectorAll<HTMLElement>("[data-ip-fill]"));
+    const originals = new Map(fills.map((el) => [el, el.textContent || ""]));
+    const applyIp = (raw: string) => {
+      const ip = raw.trim();
+      const slot = inputs[0]?.dataset.ipSlot || "";
+      const example = inputs[0]?.dataset.ipExample || "";
+      fills.forEach((el) => {
+        let text = originals.get(el) || "";
+        if (el.dataset.ipFill === "slot" && slot) text = text.split(slot).join(ip || slot);
+        if (el.dataset.ipFill === "example" && example) text = text.split(example).join(ip || example);
+        el.textContent = text;
+      });
+    };
+    inputs.forEach((input) => {
+      input.addEventListener("input", () => {
+        inputs.forEach((other) => {
+          if (other !== input) other.value = input.value;
+        });
+        applyIp(input.value);
+      });
+    });
+
+    const closeTerms = () => {
+      doc.querySelectorAll("a.term.is-open").forEach((el) => {
+        el.classList.remove("is-open");
+        el.setAttribute("aria-expanded", "false");
+      });
+    };
+    doc.addEventListener("click", (event) => {
+      const target = event.target as HTMLElement;
+      const wrap = target.closest(".term-wrap");
+      if (!wrap) {
+        closeTerms();
+        return;
+      }
+      const term = target.closest("a.term");
+      if (!term) return;
+      const mouse = event as MouseEvent;
+      if (mouse.metaKey || mouse.ctrlKey || mouse.shiftKey || mouse.altKey || mouse.button) return;
+      event.preventDefault();
+      const willOpen = !term.classList.contains("is-open");
+      closeTerms();
+      if (willOpen) {
+        term.classList.add("is-open");
+        term.setAttribute("aria-expanded", "true");
+      }
+    });
+  }
 
   /* ---------- install shell switch (PowerShell / macOS · Linux) ---------- */
   let currentShell: "posix" | "powershell" = initialShell;
@@ -433,4 +535,131 @@
     );
     items.forEach((el) => io.observe(el));
   }
+
+  /* ---------- site search (Spotlight overlay; no shortcut is shown) ---------- */
+  const searchDialog = doc.querySelector<HTMLDialogElement>("[data-search-dialog]");
+  const searchInput = searchDialog?.querySelector<HTMLInputElement>("[data-search-input]");
+  const searchResults = searchDialog?.querySelector<HTMLElement>("[data-search-results]");
+  const searchNote = searchDialog?.querySelector<HTMLElement>("[data-search-note]");
+  const searchLocale = isEnglish ? "en" : "zh";
+
+  const clearSearchMark = () => {
+    doc.querySelectorAll(".is-search-hit").forEach((el) => el.classList.remove("is-search-hit"));
+  };
+
+  const showBrandPanel = (id: string) => {
+    doc.querySelectorAll<HTMLButtonElement>("[data-brand-pick]").forEach((btn, i) => {
+      const on = btn.dataset.brandPick === id;
+      btn.setAttribute("aria-checked", on ? "true" : "false");
+      btn.classList.toggle("is-on", on);
+      btn.tabIndex = on || i === 0 ? 0 : -1;
+    });
+    doc.querySelectorAll<HTMLElement>("[data-brand-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.brandPanel !== id;
+    });
+  };
+
+  const jumpToHit = (hit: { stuckKey?: string; elementId?: string }) => {
+    clearSearchMark();
+    let node: HTMLElement | null = null;
+    if (hit.stuckKey) {
+      const nodes = Array.from(doc.querySelectorAll<HTMLElement>(`[data-stuck-key="${hit.stuckKey}"]`));
+      const selected = doc.querySelector<HTMLElement>('[data-brand-pick][aria-checked="true"]')?.dataset.brandPick;
+      node = nodes.find((item) => item.closest<HTMLElement>("[data-brand-panel]")?.dataset.brandPanel === selected) || nodes[0] || null;
+    } else if (hit.elementId) {
+      node = doc.getElementById(hit.elementId);
+    }
+    if (!node) return;
+    const panel = node.closest<HTMLElement>("[data-brand-panel]");
+    if (panel?.hidden && panel.dataset.brandPanel) showBrandPanel(panel.dataset.brandPanel);
+    const details = node instanceof HTMLDetailsElement ? node : node.querySelector<HTMLDetailsElement>("details.stuck, details.faq");
+    if (details) details.open = true;
+    const mark = node.closest<HTMLElement>(".wizard-step") || node;
+    mark.classList.add("is-search-hit");
+    mark.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
+
+  const renderSearch = (query: string) => {
+    if (!searchResults || !searchNote) return;
+    const hits = searchHelp(searchLocale, query);
+    searchResults.replaceChildren();
+    const suggested = hits.length > 0 && hits.every((hit) => hit.suggested);
+    searchNote.hidden = !suggested;
+    hits.forEach((hit) => {
+      const link = doc.createElement("a");
+      link.href = hit.elementId ? `#${hit.elementId}` : `#stuck-${hit.stuckKey || "install"}`;
+      link.className = "search-hit";
+      const answer = doc.createElement("strong");
+      answer.textContent = hit.label || hit.answer;
+      link.append(answer);
+      if (hit.label) {
+        const fix = doc.createElement("em");
+        fix.textContent = hit.answer;
+        link.append(fix);
+      }
+      const section = doc.createElement("span");
+      section.textContent = hit.section;
+      link.append(section);
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        searchDialog?.close();
+        jumpToHit(hit);
+      });
+      searchResults.append(link);
+    });
+  };
+
+  const openSearch = (query: string) => {
+    if (!searchDialog || !searchInput) return;
+    if (!searchDialog.open) searchDialog.showModal();
+    searchInput.value = query;
+    renderSearch(query);
+    searchInput.focus();
+    const end = query.length;
+    searchInput.setSelectionRange(end, end);
+  };
+
+  doc.addEventListener("click", (event) => {
+    const opener = (event.target as Element | null)?.closest<HTMLElement>("[data-search-open]");
+    if (!opener || !searchDialog) return;
+    event.preventDefault();
+    openSearch(opener.dataset.searchQuery || "");
+  });
+
+  searchInput?.addEventListener("input", () => renderSearch(searchInput.value));
+  searchInput?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    const first = searchResults?.querySelector<HTMLAnchorElement>("a.search-hit");
+    if (!first) return;
+    event.preventDefault();
+    first.click();
+  });
+  searchDialog?.addEventListener("click", (event) => {
+    if (event.target === searchDialog) searchDialog.close();
+  });
+  searchDialog?.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !searchDialog.open) return;
+    event.preventDefault();
+    searchDialog.close();
+  }, true);
+  searchDialog?.addEventListener("close", () => {
+    if (searchInput) searchInput.value = "";
+    renderSearch("");
+  });
+  doc.addEventListener("keydown", (event) => {
+    const key = event.key.toLowerCase();
+    const metaK = (event.metaKey || event.ctrlKey) && key === "k";
+    const target = event.target instanceof HTMLElement ? event.target : null;
+    const typing = !!target?.closest("input, textarea, select, [contenteditable='true']");
+    const slash = key === "/" && !typing && !event.metaKey && !event.ctrlKey && !event.altKey;
+    if (!metaK && !slash) return;
+    event.preventDefault();
+    if (metaK && searchDialog?.open) {
+      searchDialog.close();
+      return;
+    }
+    openSearch("");
+  });
+
+  initHeroMotion();
 })();

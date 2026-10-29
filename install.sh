@@ -13,7 +13,7 @@ ACK_RECOVERY=0
 ALLOW_FIRMWARE_CHANGE=0
 while (($#)); do
   case "$1" in
-    install|restore|inspect|verify|full-inspect|full-plan|full-apply-ads|full-restore-ads|full-home-inspect|full-home-probe|full-home-activate|full-home-restore) MODE=$1 ;;
+    install|restore|inspect|verify|repair|full-inspect|full-plan|full-apply-ads|full-restore-ads|full-home-inspect|full-home-probe|full-home-activate|full-home-restore) MODE=$1 ;;
     --ad-package) shift; AD_PACKAGES+=("${1:?Missing ad package}") ;;
     --confirm-fingerprint) shift; AD_FINGERPRINT=${1:?Missing fingerprint} ;;
     --acknowledge-recovery) ACK_RECOVERY=1 ;;
@@ -95,8 +95,74 @@ fi
 verify() {
   python3 "$CHECKER" verify --serial "$SERIAL" --expected "${1:-$PKG/.HomeActivity}" --report "$STATE/verification.json"
 }
+brand_blob() {
+  echo "$(shread getprop ro.product.manufacturer) $(shread getprop ro.product.brand) $(shread getprop ro.product.model)" | tr '[:upper:]' '[:lower:]'
+}
+# Xiaomi/Redmi, TCL/雷鸟, Coocaa/Skyworth and Hisense keep their own launcher in front
+# even after set-home-activity. The guard stays available for recovery; it does not disable that launcher.
+guard_always() {
+  local blob
+  blob=$(brand_blob)
+  [[ "$blob" == *xiaomi* || "$blob" == *redmi* || "$blob" == *tcl* || "$blob" == *ffalcon* || "$blob" == *coocaa* || "$blob" == *skyworth* || "$blob" == *hisense* || "$blob" == *vidaa* ]]
+}
+# Google TV and Sony: turn the guard on when a stock launcher still has HOME priority above 0.
+stock_priority_gt_zero() {
+  local dump
+  dump=$(ad shell cmd package query-activities -a android.intent.action.MAIN -c android.intent.category.HOME 2>/dev/null || true)
+  printf '%s\n' "$dump" | python3 -c '
+import re, sys
+ours = sys.argv[1]
+yes = False
+for line in sys.stdin:
+    if ours in line:
+        continue
+    match = re.search(r"\bp=(-?\d+)\b", line)
+    if match and int(match.group(1)) > 0:
+        yes = True
+print("yes" if yes else "no")
+' "$PKG"
+}
+guard_for_priority() {
+  local blob
+  blob=$(brand_blob)
+  [[ "$blob" == *sony* || "$blob" == *bravia* || "$blob" == *google* ]] || return 1
+  [[ "$(stock_priority_gt_zero)" == yes ]]
+}
+# Grants only adb can give. Unknown app-op names fail on firmwares that do not have them.
+grant_runtime() {
+  ad shell pm grant "$PKG" android.permission.WRITE_SECURE_SETTINGS || true
+  ad shell pm grant "$PKG" android.permission.PACKAGE_USAGE_STATS || true
+  ad shell cmd notification allow_listener "$PKG/$PKG.RevivalListener" || true
+  ad shell appops set "$PKG" SYSTEM_ALERT_WINDOW allow || true
+  ad shell appops set "$PKG" WRITE_SETTINGS allow || true
+  ad shell appops set "$PKG" GET_USAGE_STATS allow || true
+  ad shell appops set "$PKG" android:get_usage_stats allow || true
+  ad shell appops set "$PKG" ACCESS_RESTRICTED_SETTINGS allow || true
+  local op
+  for op in APP_AUTO_START APP_ASSOC_START AUTO_START ASSOC_START; do
+    ad shell appops set "$PKG" "$op" allow || true
+  done
+}
 if [[ "$MODE" == inspect ]]; then python3 "$CHECKER" inspect --serial "$SERIAL"; exit $?; fi
 if [[ "$MODE" == verify ]]; then verify; exit $?; fi
+if [[ "$MODE" == repair ]]; then
+  shread pm path "$PKG" | grep -q '^package:' || fail 'Tigris is not installed. Install it before repair. Do not disable the stock launcher.'
+  grant_runtime
+  ad shell am broadcast -a "$PKG.CONFIG" -n "$PKG/.ConfigReceiver" --ez guard true
+  ad shell am force-stop "$PKG" || true
+  sleep 1
+  ad shell am start -n "$PKG/.HomeActivity" || true
+  sleep 2
+  FOCUS=$(ad shell dumpsys activity activities | tr -d '\r' | grep -m1 mFocusedApp || true)
+  echo "mFocusedApp: ${FOCUS:-unavailable}"
+  echo "Press Home once on the remote. On Xiaomi a short flash of the original launcher can be normal."
+  echo "Physical remote, standby/wake and reboot: UNVERIFIED. Do not disable the stock launcher."
+  case "$FOCUS" in
+    *"$PKG"*) exit 0 ;;
+  esac
+  echo "Foreground does not show Tigris yet. In Tigris open Settings, turn 桌面守护 off and on, and on Android 13 allow restricted settings. Then run repair again." >&2
+  exit 1
+fi
 if [[ "$MODE" == restore ]]; then
   [[ -f "$STATE/home" ]] || fail "No saved original launcher at $STATE. Follow AGENTS.md; do not guess the original launcher."
   ORIGINAL=$(cat "$STATE/home")
@@ -217,27 +283,23 @@ if (( APK_ONLY )); then
 fi
 GUARD=false
 if [[ "$FLAVOR" == standard ]]; then
+  # The HOME role is held before set-home-activity. Some firmwares have no role command; that is fine.
+  ad shell cmd role add-role-holder --user 0 android.app.role.HOME "$PKG" >/dev/null 2>&1 || true
   ad shell cmd package set-home-activity "$PKG/.HomeActivity" || true
+  if guard_always || guard_for_priority; then GUARD=true; fi
   # A resolver or command saying Success is not evidence that HOME actually works.
   if verify; then :; else
     CHECK_STATUS=$?
     if [[ "$CHECK_STATUS" == 1 ]]; then GUARD=true
-    else fail 'APK installed, but HOME is unverified. Complete any TV prompts and retry verify; no guard workaround applied.'
+    elif [[ "$GUARD" != true ]]; then
+      fail 'APK installed, but HOME is unverified. Complete any TV prompts and retry verify; no guard workaround applied.'
     fi
   fi
 else GUARD=true
 fi
 if [[ "$GUARD" == true || "$KEEP_ADB" == 1 ]]; then
-  ad shell pm grant "$PKG" android.permission.WRITE_SECURE_SETTINGS
-fi
-if [[ "$GUARD" == true ]]; then
-  ad shell cmd notification allow_listener "$PKG/$PKG.RevivalListener"
-  ad shell appops set "$PKG" SYSTEM_ALERT_WINDOW allow
-  BRAND="$(shread getprop ro.product.manufacturer) $(shread getprop ro.product.brand)"
-  BRAND=$(echo "$BRAND" | tr '[:upper:]' '[:lower:]')
-  if [[ "$BRAND" == *tcl* || "$BRAND" == *ffalcon* ]]; then
-    ad shell appops set "$PKG" APP_AUTO_START allow || true
-    ad shell appops set "$PKG" APP_ASSOC_START allow || true
+  if [[ "$GUARD" == true ]]; then grant_runtime
+  else ad shell pm grant "$PKG" android.permission.WRITE_SECURE_SETTINGS
   fi
 fi
 # An upgrade never turns off a guard the user previously enabled.

@@ -121,8 +121,8 @@ export const zh = {
 
     install: {
       eyebrow: "INSTALL",
-      title: "选一种方式，把 Tigris 带回家。",
-      lede: "一台和电视连在同一个 Wi-Fi 的电脑、电视的 IP 地址、打开的 ADB 调试，就够了。支持 Android 9 及以上，不需要 root。",
+      title: "选出你的电视。",
+      lede: "点下面的一个品牌。",
       packages: [
         {
           name: "标准版 APK",
@@ -356,7 +356,7 @@ adb -s 192.168.x.x:5555 shell appops set com.leslie.tvhome SYSTEM_ALERT_WINDOW a
       head: ["功能", "任意 Android TV", "需要本机调试授权", "仅索尼 BRAVIA"],
       rows: [
         { feature: "主屏幕、Dock、玻璃效果、投影", any: "支持", debug: "—", sony: "—" },
-        { feature: "顶部内容（B 站 / 斗鱼）", any: "支持，需装对应 TV 版 App", debug: "—", sony: "—" },
+        { feature: "顶部内容（B 站 / 斗鱼 / 自定义）", any: "对应 TV 版 App，或自定义 JSON 地址", debug: "—", sony: "—" },
         { feature: "风景 / 二次元背景、相框", any: "支持", debug: "—", sony: "—" },
         { feature: "Apple TV 航拍视频屏保", any: "支持，需联网", debug: "—", sony: "—" },
         { feature: "控制中心界面、时钟", any: "支持", debug: "—", sony: "—" },
@@ -472,7 +472,7 @@ adb -s 192.168.x.x:5555 shell appops set com.leslie.tvhome SYSTEM_ALERT_WINDOW a
           q: "网站和 App 会收集数据吗？",
           a: [
             "网站是纯静态页面，不使用 Cookie、不加载第三方统计或广告脚本，字体使用系统字体。",
-            "App 需要联网获取壁纸（必应、Wallhaven）与顶部内容（哔哩哔哩、斗鱼的公开网页接口）；选择航拍屏保时视频从 Apple 的服务器在线播放。没有账号体系。",
+            "App 需要联网获取壁纸（必应、Wallhaven）与顶部内容（哔哩哔哩、斗鱼的公开网页接口）。自定义顶部内容只在你填写地址之后，由电视向该地址请求。选择航拍屏保时视频从 Apple 的服务器在线播放。没有账号体系。",
           ],
         },
         {

@@ -135,30 +135,49 @@ If GitHub is unreachable, build from source instead: clone the repo, then `./gra
 
 ## 4. Make it the home screen
 
-Standard build:
+Standard build. Hold the HOME role first; some firmwares have no `cmd role` and that line fails harmlessly:
 
 ```sh
+adb -s <TV_IP>:5555 shell cmd role add-role-holder --user 0 android.app.role.HOME com.leslie.tvhome
 adb -s <TV_IP>:5555 shell cmd package set-home-activity com.leslie.tvhome/.HomeActivity
 adb -s <TV_IP>:5555 shell input keyevent KEYCODE_HOME
 ```
 
-First run the shared checker from docs/installation-compatibility.md. Only if Home fails, or the user requests features needing these permissions, apply the following grants. Do not enable guard just because of the brand.
+`install.sh` enables the guard for Xiaomi/Redmi, TCL/雷鸟, Coocaa/Skyworth and Hisense even when this Home check passes. On Sony and Google TV it enables the guard when a stock launcher still has HOME priority above 0. Other Android TVs get the guard when the Home check fails. The guard never disables the stock launcher.
+
+If Home still opens the original launcher later, re-grant and restart the guard without reinstalling:
+
+```sh
+TV=<TV_IP> bash install.sh repair
+```
+
+First run the shared checker from docs/installation-compatibility.md. Apply these grants whenever the guard is turned on (the repair command and `Guard.grantViaLocalAdb` do the same set):
 
 ```sh
 P=com.leslie.tvhome
 adb -s <TV_IP>:5555 shell pm grant $P android.permission.WRITE_SECURE_SETTINGS
+adb -s <TV_IP>:5555 shell pm grant $P android.permission.PACKAGE_USAGE_STATS
 adb -s <TV_IP>:5555 shell cmd notification allow_listener $P/$P.RevivalListener
 adb -s <TV_IP>:5555 shell appops set $P SYSTEM_ALERT_WINDOW allow
-adb -s <TV_IP>:5555 shell appops set $P APP_AUTO_START allow      # TCL only; other firmwares print an error, ignore it
-adb -s <TV_IP>:5555 shell appops set $P APP_ASSOC_START allow     # TCL only
+adb -s <TV_IP>:5555 shell appops set $P WRITE_SETTINGS allow
+adb -s <TV_IP>:5555 shell appops set $P GET_USAGE_STATS allow
+adb -s <TV_IP>:5555 shell appops set $P android:get_usage_stats allow
+adb -s <TV_IP>:5555 shell appops set $P ACCESS_RESTRICTED_SETTINGS allow
+adb -s <TV_IP>:5555 shell appops set $P APP_AUTO_START allow      # TCL; other names and firmwares may error
+adb -s <TV_IP>:5555 shell appops set $P APP_ASSOC_START allow
+adb -s <TV_IP>:5555 shell appops set $P AUTO_START allow
+adb -s <TV_IP>:5555 shell appops set $P ASSOC_START allow
 ```
 
 | Grant | What it is for |
 |---|---|
 | `WRITE_SECURE_SETTINGS` | Switches the home guard back on after the system turns it off; keeps the photo frame as screensaver; keeps ADB on; Xiaomi's backlight slider |
-| Notification listener | Helps recover after process cleanup; timing and boot behavior need testing. No notification is read |
+| `PACKAGE_USAGE_STATS` / `GET_USAGE_STATS` | Sees a launcher that raises no accessibility window (older PatchWall, some VIDAA) |
+| `ACCESS_RESTRICTED_SETTINGS` | Android 13+ otherwise blocks a sideloaded accessibility service. The TV may also need 允许受限设置 / Allow restricted settings on the app |
+| `WRITE_SETTINGS` | System settings the guard and picture controls write |
+| Notification listener | Helps recover after process cleanup; low-RAM Android 9 also uses the sync adapter. No notification is read |
 | `SYSTEM_ALERT_WINDOW` | Opening the home screen from the background after boot |
-| TCL `APP_AUTO_START` / `APP_ASSOC_START` | TCL blocks third-party apps from starting at boot otherwise |
+| TCL `APP_AUTO_START` / `APP_ASSOC_START` and `AUTO_START` / `ASSOC_START` | TCL blocks third-party apps from starting at boot otherwise. Unknown names error on other brands; ignore that |
 
 If step 5 shows the stock launcher coming back, turn on the home guard (section 10). On Xiaomi, also ask whether to keep ADB on: Xiaomi switches ADB off on every wake, which makes later updates through adb impossible until the user turns it on again in settings.
 
@@ -313,7 +332,9 @@ adb -s <TV_IP>:5555 shell dumpsys activity activities | grep -m1 ResumedActivity
 adb -s <TV_IP>:5555 logcat -d -s TigrisGuard                                     # what the guard did and why
 ```
 
-Then ask the user to put the TV in standby and wake it, and check again that Tigris is in front and the guard is still listed. If the user agrees to a reboot, check after boot too. The guard waits for a confirmed stock HOME window, then a short settling interval. Boot or wake alone never authorizes takeover. If no window event arrives, open Tigris or press Home; do not claim automatic boot takeover was verified. See docs/guard-stability.md.
+Then ask the user to put the TV in standby and wake it, and check again that Tigris is in front and the guard is still listed. If the user agrees to a reboot, check after boot too. A real Home press is always answered. Boot, wake and revival take over only when the front is a stock home (a window event or usage stats); an unknown front, an app or HDMI is left alone. During the first three minutes, repeated automatic takeovers pause so a boot fight with the factory launcher stops (issue #14). If no window event arrives, press Home once; do not claim automatic boot takeover was verified. See docs/guard-stability.md.
+
+On Android 12 and newer, except Xiaomi, 设置 → 持续过滤主页键 is an optional extra filter. It is off by default. Warn that some apps may move twice per press. Do not enable it on Xiaomi.
 
 If the guard is listed but `dumpsys accessibility` shows no bound service for it, Tigris re-registers it by itself within a few seconds of opening; if it stays unbound, toggle it off and on in 设置 → 桌面守护.
 
@@ -345,9 +366,9 @@ Run all commands with `adb -s <TV_IP>:5555 shell`. Paste their raw output to the
 
 1. `cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME`
 2. `settings get secure enabled_accessibility_services`
-3. Send `input keyevent KEYCODE_HOME`, wait two seconds, then `dumpsys window | grep mCurrentFocus`.
+3. Send `input keyevent KEYCODE_HOME`, wait two seconds, then `dumpsys activity activities | grep -m1 mFocusedApp` and `dumpsys window | grep mCurrentFocus`.
 
-After installation, actual foreground should contain `com.leslie.tvhome`; guard installations may retain the vendor HOME resolver. Report installation, Home-key behavior, standby/wake and boot separately. Never claim an untested check passed. Do not reboot/sleep/power off without consent.
+`install.sh` treats `mFocusedApp` as the foreground check. Paste both lines. After installation, actual foreground should contain `com.leslie.tvhome`; guard installations may retain the vendor HOME resolver. Report installation, Home-key behavior, standby/wake and boot separately. Never claim an untested check passed. Do not reboot/sleep/power off without consent. Do not disable the stock launcher.
 
 ## Avatar uploads
 

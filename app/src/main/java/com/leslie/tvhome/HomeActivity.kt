@@ -125,7 +125,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     @Volatile private var homeDock: Bitmap? = null
     private var dockShown: Drawable? = null
 
-    /** Top Shelf: content of the focused dock app filling the screen above the dock. */
+    /** Top Shelf: content of the focused first-row dock app filling the screen above the dock. */
     private lateinit var shelf: FrameLayout
     private lateinit var shelfPics: FrameLayout
     private var shelfFront: ImageView? = null
@@ -712,10 +712,12 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         backdrop.addView(shelf, FrameLayout.LayoutParams(-1, -1))
     }
 
+    private fun shelfCustom() = Shelf.Custom(prefs.shelfCustomPkg, prefs.shelfCustomUrl)
+
     private fun showShelf(pkg: String) {
         shelfPkg = pkg
         net.execute {
-            val items = Shelf.items(pkg)
+            val items = Shelf.items(pkg, shelfCustom())
             val first = items.firstOrNull()?.let { Shelf.image(this, it.image) }
             main.post {
                 if (shelfPkg != pkg || first == null || control.isOpen) return@post
@@ -899,7 +901,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         focusedPos = pos
         val pkg = adapter.apps.getOrNull(pos)?.pkg
         main.removeCallbacks(shelfShow)
-        if (pos < cols && pkg != null && Shelf.has(pkg) && moving < 0) {
+        if (pos < cols && pkg != null && Shelf.has(pkg, shelfCustom()) && moving < 0) {
             if (pkg != shelfPkg || !shelfShown) {
                 if (shelfShown) hideShelf()
                 pendingShelf = pkg
@@ -1252,6 +1254,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     }
 
     override fun onPause() {
+        HomeGuardService.onHomePaused()
         resumed = false
         prefs.unobserve(wallpaperChanges)
         videoWallpaper.stop()

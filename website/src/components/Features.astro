@@ -50,11 +50,17 @@ const items = [
         : "For supported dock apps, the upper half cycles through what is actually on: live rooms and trending videos, not a static poster.",
     bullets:
       locale === "zh"
-        ? ["云视听小电视：哔哩哔哩热门视频", "斗鱼：正在直播的热门直播间", "内容来自两个服务公开的网页接口，不需要登录"]
+        ? [
+            "云视听小电视和第三方哔哩哔哩客户端：热门视频",
+            "斗鱼：正在直播的热门直播间",
+            "设置里可以填一个 JSON 地址，挂到一个 Dock 应用上",
+            "Jellyfin / Emby 的原生接口不是这个格式，需要一层转换",
+          ]
         : [
-            "Bilibili trending videos through the 云视听小电视 TV app",
+            "Bilibili trending, for 云视听小电视 and a third-party TV client",
             "Live rooms on Douyu",
-            "Read from the services' public web endpoints; no account needed",
+            "Or one JSON address in Settings, shown for a dock app you pick",
+            "Jellyfin and Emby need a small proxy; their own API is a different shape",
           ],
     clip: clips.shelf,
     alt:

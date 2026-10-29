@@ -12,7 +12,7 @@
 - `webos/app/weather.js`: optional Open-Meteo search, weather refresh and cache.
 - `webos/app/runtime.js`: tvOS-inspired lightweight dock, remote keys and settings.
 
-**Why no active Home interception in the first source preview?** Real non-root interception needs a separately packaged native Helper, tested input-event relaying, a hardware watchdog and a verified escape route. The readonly preflight checks *whether we can connect*, not whether input interception succeeds. See [AI/Helper technical contract](../docs/WEBOS_AI_INSTALL.md). Root mode is an additional module, not an excuse to install untested native input code.
+**Why no active Home interception in the first source preview?** Real non-root interception needs a separately packaged native Helper, tested input-event relaying, a hardware watchdog and a verified escape route. The read-only preflight checks *whether we can connect*, not whether input interception succeeds. See [AI/Helper technical contract](../docs/WEBOS_AI_INSTALL.md). Root mode is an additional module, not an excuse to install untested native input code.
 
 ## Prerequisites
 

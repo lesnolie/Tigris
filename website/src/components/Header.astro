@@ -2,6 +2,7 @@
 import { brand, assets } from "../data/site";
 import type { Copy, Locale } from "../data/lang";
 import { uiStrings } from "../data/strings";
+import SiteSearch from "./SiteSearch.astro";
 
 interface Props {
   copy: Copy;
@@ -61,6 +62,7 @@ const home = locale === "zh" ? "/" : "/en/";
       <li class="nav-mobile-note">{copy.menuNote}</li>
     </ul>
     <div class="nav-cta">
+      <SiteSearch locale={locale} part="button" />
       <a class="nav-lang" href={copy.langSwitch.href} hreflang={copy.langSwitch.lang} lang={copy.langSwitch.lang}>{copy.langSwitch.label}</a>
       <a class="btn btn-primary btn-sm" href={brand.apk} rel="noopener">
         <svg aria-hidden="true"><use href="#i-download"></use></svg>
@@ -71,4 +73,5 @@ const home = locale === "zh" ? "/" : "/en/";
       </button>
     </div>
   </nav>
+  <SiteSearch locale={locale} part="dialog" />
 </header>

@@ -14,7 +14,7 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeover fixes and video optimizations still need model-level verification. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.14 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.14)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.14/Tigris-v2.0.14.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.14/Tigris-guard-v2.0.14.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.14/SHA256SUMS-v2.0.14.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.15 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.15)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/Tigris-v2.0.15.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/Tigris-guard-v2.0.15.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.15/SHA256SUMS-v2.0.15.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -22,7 +22,7 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 ## Which APK should I install? Check the TV OS and firmware
 
-> **Latest official release: v2.0.14.** The APK filenames remain `Tigris-v2.0.14.apk` (Standard) and `Tigris-guard-v2.0.14.apk` (Compatibility Guard). Guard describes the launcher mode: **not every TCL needs it, and it is not a universal Xiaomi workaround**. This release unifies Liquid Glass Settings and Apps & Updates, fixes scrolling texture jumps, and adds a handwritten first-use welcome on a blue sky, displayed and checked on a Sony TV.
+> **Latest official release: v2.0.15.** The APK filenames remain `Tigris-v2.0.15.apk` (Standard) and `Tigris-guard-v2.0.15.apk` (Compatibility Guard). Guard describes the launcher mode: **not every TCL needs it, and it is not a universal Xiaomi workaround**. This release answers a real Home press without the automatic-takeover cap, and adds installer repair plus a guide for when Home still opens the original screen. Builds and tests passed. Physical remote, standby and reboot were not tested on a television.
 
 | TV / platform | First choice | When to use another build | Important limits |
 |---|---|---|---|
@@ -35,6 +35,10 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 | Samsung **Tizen**, Hisense **native VIDAA** | **No supported Android APK** | Neither | Do not run Android ADB installer commands |
 
 **Verification:** After installing, open another app and press the physical Home key; check reboot, standby/wake and long-press Home cleanup separately. If Home does not return to Tigris, keep the stock launcher enabled and use the [brand install and recovery guide](docs/installation-compatibility.md). Preserve the existing APK signing identity and user data; **do not uninstall merely to bypass installation restrictions**.
+
+## v2.0.15: Home returns to Tigris
+
+A Home press on the remote is no longer limited by the automatic boot-takeover budget. Automatic retries during the first three minutes are still capped so the factory launcher is not fought forever. Android 12 and newer can turn on “Keep filtering the Home key”; it is off by default and is not offered on Xiaomi. The installer enables the guard for Xiaomi, TCL/FFalcon, Coocaa and Hisense, and adds `repair`. The website guide has “Home still opens the original screen”. The stock launcher is not disabled. See the [v2.0.15 release notes](docs/releases/v2.0.15.md).
 
 ## v2.0.14: Glass Settings and sky welcome
 
@@ -66,7 +70,7 @@ The redesigned **Apps & Updates** screen presents one tvOS-style card per app wi
 | TV model | Android / firmware | Installation / launch result | Evidence and limitations | Source |
 |---|---|---|---|---|
 | **Sony BRAVIA XR-55A80J** | Android TV 12 | ✅ Maintainer-tested on real hardware | Primary supported test TV; not a promise for every Sony model | Maintainer's project notes |
-| **Sony BRAVIA VH1** | Android TV 10 / API 29 | ✅ Running on v1.9; rapid Back presses no longer reproduced crash | Rapid Back had crashed v1.8; this does not certify every v2.0.2 feature | [#2](https://github.com/lesnolie/Tigris/issues/2) |
+| **Sony BRAVIA VH1** | Android TV 10 / API 29 | ✅ Running on v1.9; rapid Back presses no longer reproduce the crash | Rapid Back had crashed v1.8; this does not certify every v2.0.2 feature | [#2](https://github.com/lesnolie/Tigris/issues/2) |
 | **Sony KD-55X9500H** | Android TV 10 / API 29 | ✅ Reported running v1.9 | Glass capsule clipping was observed; fix landed on `main` via [#11](https://github.com/lesnolie/Tigris/pull/11), but no new-TV retest confirmed | [#10](https://github.com/lesnolie/Tigris/pull/10) |
 | **FFalcon 75R685C** (`tcl_mt5879_cn`) | Android 11 / API 30, China firmware | ✅ Community hardware-tested with Guard build and TCL installation method | Direct `adb install` rejected; TCL T-Cast sideload used. Tested volume, vendor settings and source picker. Brightness slider intentionally hidden | [#1](https://github.com/lesnolie/Tigris/pull/1) |
 | **Xiaomi MiTV-ANSP0** | Android 9 / API 28 | ⚠️ APK installed but **older release crashed on startup** | `BlendMode` API crash fixed in v2.0+; **no confirmed v2.0.2 retest on this TV** | [#9](https://github.com/lesnolie/Tigris/issues/9) |
@@ -85,10 +89,11 @@ Please [open a structured TV compatibility report](https://github.com/lesnolie/T
 <!-- TV_COMPATIBILITY_AUTO_START -->
 | TV model | Android | Tigris / APK | Installation result | Issue state | Source |
 |---|---|---|---|---|---|
+| Sony XR-55A80K &#124; BRAVIA 4K VH21 | Android 12 (API level 31) | v2.0.15 / Standard | Installed and launched (reported) | Open | [#69](https://github.com/lesnolie/Tigris/issues/69) |
 | Sony BRAVIA 4K GB（BRAVIA_ATV2_CN，国行，2017 平台） | Android 9 (API 28) | v2.0.11 / Standard | Installed and launched (reported) | Open | [#53](https://github.com/lesnolie/Tigris/issues/53) |
 | GOOJODOQ HY300 Pro+ | Android 14 | v2.0.9 / Standard | Installed and launched (reported) | Open | [#47](https://github.com/lesnolie/Tigris/issues/47) |
-| 创维酷开 85P3DMAX | Android 11 | 2.0.2 / Custom fork | Installed and launched (reported) | Open | [#15](https://github.com/lesnolie/Tigris/issues/15) |
-| 雷鸟 75S545C | Android 9 | V2.0.2 / Guard | Installed and launched (reported) | Open | [#14](https://github.com/lesnolie/Tigris/issues/14) |
+| 创维酷开 85P3DMAX | Android 11 | 2.0.2 / Custom fork | Installed and launched (reported) | Closed (fix unverified) | [#15](https://github.com/lesnolie/Tigris/issues/15) |
+| 雷鸟 75S545C | Android 9 | V2.0.2 / Guard | Installed and launched (reported) | Closed (fix unverified) | [#14](https://github.com/lesnolie/Tigris/issues/14) |
 <!-- TV_COMPATIBILITY_AUTO_END -->
 
 ## Install with an AI coding agent
@@ -155,7 +160,7 @@ App folders, phone-based avatar upload, an update center for Tigris and Miracast
 - **Recently opened apps first (optional):** off by default when installing v2.0.6 or first upgrading from an older release; after that, your saved preference is retained. Turn it on under Settings → App → Recently opened apps first to move successfully launched apps or folders to the front; turn it off to preserve the current manual order. Long-press a tile and choose Edit Home Screen to rearrange it. Focus changes, failed launches and HDMI switching never reorder apps.
 - **Manage apps:** long-press items for actions including removing preinstalled user-visible packages with `pm uninstall --user 0` when allowed (system partition APKs are not deleted). Restore them from the deleted-preinstalled-apps section. Essential TV system components are protected from this action.
 - **Liquid Glass Dock:** precomputed blur, refraction, highlights and shadows from the wallpaper avoid expensive per-frame GPU effects.
-- **Top Shelf-style content:** selected app tiles can show public-feed content from Bilibili and Douyu. Their corresponding TV apps are required.
+- **Top Shelf-style content:** focusing 云视听小电视, the third-party Bilibili client `com.tutu.myblbl`, or Douyu in the first dock row cycles that service's public feed. Settings can also attach one JSON URL to a dock app. The format, fallback, and the Jellyfin / Emby proxy note are in [docs/top-shelf.md](docs/top-shelf.md).
 - **Control Center:** open with Back or the top-right icon. Floating glass controls or a lower-overhead dark panel; network, sleep, shutdown, restart, memory cleanup, photo frame, settings, brightness, volume and TV inputs.
 - **Boot/wake animation:** optional video uploaded from your phone, or a built-in Tigris wordmark animation. Choose startup only or startup and wake, with adjustable wake delay; skip with any key.
 - **Wallpapers:** Bing daily imagery, 360 scenery and pet images, all-ages anime (Wallhaven, falling back to China-accessible sources), artworks, personal photos, custom image sources and gradient themes. Download photos as needed and clean old cached files.
@@ -172,7 +177,7 @@ These are **implementation capabilities**, not proof of hardware compatibility o
 | Feature | Standard Android TV 9+ | Local ADB approval | Sony-specific |
 |---|:---:|:---:|:---:|
 | Home screen, Dock, focus effects | ✓ | | |
-| Bilibili / Douyu Top Shelf | With corresponding TV apps | | |
+| Bilibili / Douyu / custom Top Shelf | Matching TV app, or a JSON URL in Settings | | |
 | Wallpapers, photo frame and basic Control Center | ✓ | | |
 | Cache cleanup | ✓ | | |
 | Force-stop selected background apps | | ✓ | |
@@ -188,7 +193,7 @@ Sony TVs can use the local BRAVIA IP-control endpoint for brightness, TV volume 
 
 ### Home guard and permissions
 
-On firmware that enforces the manufacturer's launcher, Tigris uses an accessibility service to watch foreground window changes without reading screen content. Automatic takeover requires a confirmed stock HOME window; app windows, HDMI inputs and dialogs cancel pending takeovers. Boot, wake and service recovery alone do not initiate a takeover, and repeated attempts are rate-limited. The notification listener helps recover the process after OEM termination without reading notifications.
+On firmware that enforces the manufacturer's launcher, Tigris uses an accessibility service to watch foreground window changes without reading screen content. A physical Home press always returns to Tigris. Boot, wake and process recovery take over only when the front is a confirmed stock home; an unknown front, an app or HDMI is left alone. Automatic retries during the first three minutes are rate-limited so a boot fight with the factory launcher stops. The Home key itself is not rate-limited. The notification listener helps recover the process after OEM termination without reading notifications.
 
 | Permission or service | Purpose |
 |---|---|

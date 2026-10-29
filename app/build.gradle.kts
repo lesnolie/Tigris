@@ -10,8 +10,8 @@ android {
         applicationId = "com.leslie.tvhome"
         minSdk = 28
         targetSdk = 31
-        versionCode = 20
-        versionName = "2.0.14"
+        versionCode = 21
+        versionName = "2.0.15"
     }
 
     // standard declares itself a home screen. guard does not: TCL's package verifier refuses any
@@ -55,6 +55,8 @@ android {
 
 dependencies {
     testImplementation("junit:junit:4.13.2")
+    // android.jar stubs org.json in JVM unit tests. This jar is tests only.
+    testImplementation("org.json:json:20240303")
     implementation("androidx.recyclerview:recyclerview:1.4.0")
     implementation("androidx.palette:palette:1.0.0")
     implementation("dev.mobile:dadb:2.0.0")

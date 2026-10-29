@@ -1,0 +1,40 @@
+---
+import type { Locale } from "../data/lang";
+import { searchLabel, searchPlaceholder, searchSuggest } from "../data/site-search";
+
+interface Props {
+  locale: Locale;
+  /** The dialog must not live inside the nav bar, or a closed dialog is laid out there. */
+  part?: "button" | "dialog";
+}
+
+const { locale, part = "button" } = Astro.props;
+const placeholder = searchPlaceholder(locale);
+const label = searchLabel(locale);
+const suggest = searchSuggest(locale);
+---
+{part === "button" && (
+<button type="button" class="nav-search" data-search-open aria-haspopup="dialog" aria-controls="site-search">
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+    <circle cx="11" cy="11" r="6.5"></circle>
+    <path d="m16 16 4 4"></path>
+  </svg>
+  <span>{placeholder}</span>
+</button>
+)}
+
+{part === "dialog" && (
+<dialog id="site-search" class="search-dialog" data-search-dialog aria-label={label}>
+  <div class="search-panel">
+    <label class="search-field">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <circle cx="11" cy="11" r="6.5"></circle>
+        <path d="m16 16 4 4"></path>
+      </svg>
+      <input type="search" data-search-input placeholder={placeholder} autocomplete="off" enterkeyhint="search" aria-label={label} />
+    </label>
+    <p class="search-note" data-search-note hidden>{suggest}</p>
+    <div data-search-results></div>
+  </div>
+</dialog>
+)}

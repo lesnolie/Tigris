@@ -111,8 +111,16 @@ class KeeperService : Service() {
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
+        val action = i.action
+        if (action != Intent.ACTION_BOOT_COMPLETED &&
+            action != Intent.ACTION_LOCKED_BOOT_COMPLETED &&
+            action != Intent.ACTION_MY_PACKAGE_REPLACED) return
+        // Direct Boot: credential storage is still locked. The guard catches up on unlock.
+        if (!Guard.isUserUnlocked(c)) return
         KeeperService.start(c)
         Guard.ensure(c)
-        // The guard waits for a confirmed stock HOME event. Boot alone must not steal an input.
+        // A running guard looks at what is in front before taking Home, so HDMI-CEC is left alone.
+        // Boot alone, with no stock window and no usage-stats evidence, does not start an activity.
+        if (action == Intent.ACTION_BOOT_COMPLETED) HomeGuardService.onBootCompleted()
     }
 }
