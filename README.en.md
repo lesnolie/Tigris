@@ -14,7 +14,7 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeover fixes and video optimizations still need model-level verification. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.16 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.16)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.16/Tigris-v2.0.16.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.16/Tigris-guard-v2.0.16.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.16/SHA256SUMS-v2.0.16.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.17 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.17)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.17/Tigris-v2.0.17.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.17/Tigris-guard-v2.0.17.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.17/SHA256SUMS-v2.0.17.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -22,7 +22,7 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 ## Which APK should I install? Check the TV OS and firmware
 
-> **Latest official release: v2.0.16.** Download `Tigris-v2.0.16.apk` (Standard) or `Tigris-guard-v2.0.16.apk` (Compatibility Guard) and upgrade in place with the matching flavor. This release limits repeated Sony BRAVIA registration, adds a safe HDMI fallback, and improves local ADB authorization failure messages. Device-level acceptance is still pending; Guard is not universal.
+> **Latest official release: v2.0.17.** Download `Tigris-v2.0.17.apk` (Standard) or `Tigris-guard-v2.0.17.apk` (Compatibility Guard) and upgrade in place with the matching flavor. This release declares `READ_SYNC_SETTINGS` and `WRITE_SYNC_SETTINGS` so RevivalSync can configure its sync adapter on Sony BRAVIA Android 9 without the SecurityException in #53. Device-level acceptance is still pending; Guard is not universal.
 
 | TV / platform | First choice | When to use another build | Important limits |
 |---|---|---|---|
@@ -35,6 +35,10 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 | Samsung **Tizen**, Hisense **native VIDAA** | **No supported Android APK** | Neither | Do not run Android ADB installer commands |
 
 **Verification:** After installing, open another app and press the physical Home key; check reboot, standby/wake and long-press Home cleanup separately. If Home does not return to Tigris, keep the stock launcher enabled and use the [brand install and recovery guide](docs/installation-compatibility.md). Preserve the existing APK signing identity and user data; **do not uninstall merely to bypass installation restrictions**.
+
+## v2.0.17: Sony Android 9 sync permissions
+
+The manifest declares the normal permissions `READ_SYNC_SETTINGS` and `WRITE_SYNC_SETTINGS`. `RevivalSync.ensure()` can read and set the sync adapter on Android 9 without the `SecurityException` recorded in [#53](https://github.com/lesnolie/Tigris/issues/53). Android grants them at install time. There is no new runtime prompt, and the guard and sync lifecycle are unchanged. See [PR #72](https://github.com/lesnolie/Tigris/pull/72). Physical Home, boot, and accessibility revival on that TV still need a retest, so #53 stays open. See the [v2.0.17 release notes](docs/releases/v2.0.17.md).
 
 ## v2.0.16: Sony controls and ADB diagnostics
 

@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.16 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.16)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.16/Tigris-v2.0.16.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.16/Tigris-guard-v2.0.16.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.16/SHA256SUMS-v2.0.16.txt)）
+- 最新正式版：**[v2.0.17 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.17)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.17/Tigris-v2.0.17.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.17/Tigris-guard-v2.0.17.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.17/SHA256SUMS-v2.0.17.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **正式版为 v2.0.16。** 标准版 `Tigris-v2.0.16.apk`，兼容守护版 `Tigris-guard-v2.0.16.apk`，沿用原有签名，可对应类型覆盖升级。本版修复部分 Sony BRAVIA 注册循环、增加 HDMI 切换回退及更准确的 ADB 授权失败提示。不同型号仍需实机验收；Guard 不是所有电视的通用安装包。
+> **正式版为 v2.0.17。** 标准版 `Tigris-v2.0.17.apk`，兼容守护版 `Tigris-guard-v2.0.17.apk`，沿用原有签名，可对应类型覆盖升级。本版为 Sony BRAVIA Android 9 的同步恢复声明 `READ_SYNC_SETTINGS` / `WRITE_SYNC_SETTINGS`，消除 #53 日志中的 SecurityException。不同型号仍需实机验收；Guard 不是所有电视的通用安装包。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
@@ -36,6 +36,10 @@
 | Samsung **Tizen**、海信**原生 VIDAA** | **无兼容的 Android APK 安装方式** | 不适用 | 请勿执行 Android ADB 安装命令 |
 
 **如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
+
+## v2.0.17：Sony Android 9 同步权限
+
+清单声明普通权限 `READ_SYNC_SETTINGS` 与 `WRITE_SYNC_SETTINGS`。`RevivalSync.ensure()` 因此可以在 Android 9 上读取并设置同步适配器，不再抛出 [#53](https://github.com/lesnolie/Tigris/issues/53) 里记录的 `SecurityException`。安装时自动授予，不增加运行时弹窗，也不改守护或同步生命周期。对应 [PR #72](https://github.com/lesnolie/Tigris/pull/72)。该机的实体主页键、开机与无障碍恢复仍需复测，#53 保持开放。请参阅 [v2.0.17 更新说明](docs/releases/v2.0.17.md)。
 
 ## v2.0.16：Sony 控制与 ADB 诊断
 
