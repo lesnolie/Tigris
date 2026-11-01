@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Rect
+import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
@@ -103,6 +104,15 @@ internal class VideoWallpaper(
         texture.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> crop() }
     }
 
+    /**
+     * API 31+ keeps the previous cadence (1 s on a low-end device, otherwise 500 ms).
+     * Older devices rebuild the dock from these frames, so they wait longer.
+     */
+    private fun captureIntervalMs(): Long =
+        if (Build.VERSION.SDK_INT < DockGlassFallback.MODERN_MIN_SDK)
+            DockGlassFallback.videoRefreshIntervalMs(lowEnd)
+        else if (lowEnd) 1_000L else 500L
+
     /** Called from the UI thread; only enqueues an asynchronous PixelCopy. */
     private fun capture(now: Long) {
         val surfaceTexture = texture.surfaceTexture ?: return
@@ -116,7 +126,7 @@ internal class VideoWallpaper(
         val generation = captureGeneration
         pendingCapture = true
         captureStartedAt = now
-        nextCaptureAt = now + if (lowEnd) 1_000L else 500L
+        nextCaptureAt = now + captureIntervalMs()
         val surface = Surface(surfaceTexture)
         captureSurface = surface
         try {

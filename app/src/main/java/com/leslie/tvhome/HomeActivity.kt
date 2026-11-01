@@ -21,9 +21,11 @@ import android.graphics.Rect
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.Gravity
 import android.view.KeyEvent
@@ -124,6 +126,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     /** The glass baked over the home picture, kept for when the shelf goes away. */
     @Volatile private var homeDock: Bitmap? = null
     private var dockShown: Drawable? = null
+    /** Last pre-31 video dock rebuild. API 31+ does not read this. */
+    private var lastLegacyDockGlassMs = 0L
 
     /** Top Shelf: content of the focused first-row dock app filling the screen above the dock. */
     private lateinit var shelf: FrameLayout
@@ -582,9 +586,21 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val key = if (Wallpapers.isPhoto(theme)) "$theme:${photo?.name}" else theme
         if (key == shownBackground) return
         shownBackground = key
+        val modernDock = DockGlassFallback.usesModernPipeline(Build.VERSION.SDK_INT)
+        val lowEnd = Device.isLowEnd(this)
+        val videoTheme = prefs.background in VideoWallpaper.SOURCES
         io.execute {
             val bmp = photo?.let { Wallpapers(this, Wallpapers.sourceFor(theme)).forHome(it) } ?: Backgrounds.render(if (Wallpapers.isPhoto(theme)) "green" else theme)
-            val glass = LiquidGlass.bake(bmp, sw, sh, dockRect, dockRadius).also { it.prepareToDraw() }
+            // API 31+ is the existing full-resolution bake. Older TVs composite a
+            // small software blur into a full-size mask; a video with no frame yet
+            // uses the frosted tint (the snapshot may never arrive).
+            val glass = (if (modernDock) {
+                LiquidGlass.bake(bmp, sw, sh, dockRect, dockRadius)
+            } else if (videoTheme) {
+                DockGlassFallback.frosted(dockRect.width(), dockRect.height(), dockRadius)
+            } else {
+                DockGlassFallback.fromBackdrop(bmp, sw, sh, dockRect, dockRadius, video = false, lowEnd = lowEnd)
+            }).also { it.prepareToDraw() }
             val blurred = Wallpapers.blurred(bmp, darken = 0.22f)
             main.post {
                 if (isDestroyed || shownBackground != key) return@post
@@ -622,6 +638,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     /** Small video snapshots feed the existing glass renderers; never decode 4K bitmaps per frame. */
     private fun updateVideoGlass(frame: Bitmap?) {
         if (frame == null) {
+            lastLegacyDockGlassMs = 0L
             videoGlassFrames.invalidate()
             // A pause/restart must rebuild fallback textures if no video frame returns.
             shownBackground = null
@@ -633,22 +650,40 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         }
         val ticket = videoGlassFrames.begin() ?: return
         val source = prefs.background
+        val modernDock = DockGlassFallback.usesModernPipeline(Build.VERSION.SDK_INT)
+        if (!modernDock && !DockGlassFallback.shouldRefreshVideo(
+                SystemClock.uptimeMillis(), lastLegacyDockGlassMs, Device.isLowEnd(this),
+            )
+        ) {
+            videoGlassFrames.finish(ticket)
+            return
+        }
+        if (!modernDock) lastLegacyDockGlassMs = SystemClock.uptimeMillis()
+        val lowEnd = Device.isLowEnd(this)
         io.execute {
             val result = runCatching {
-                // Match the bake to the captured frame's resolution. Rendering a
-                // larger bitmap only stretched pixels that the snapshot did not have.
-                val scale = minOf(0.5f, frame.width / sw.toFloat())
-                val rect = Rect((dockRect.left * scale).toInt(), (dockRect.top * scale).toInt(),
-                    (dockRect.right * scale).toInt(), (dockRect.bottom * scale).toInt())
-                val renderW = (sw * scale).toInt().coerceAtLeast(1)
-                val renderH = (sh * scale).toInt().coerceAtLeast(1)
-                // Live video already provides motion and color; a lighter frost
-                // and partial opacity keep more of that detail visible while the
-                // asynchronous glass texture catches up with the video.
-                val glass = LiquidGlass.bake(frame, renderW, renderH, rect, dockRadius * scale,
-                    frostStrength = 0.3f, glassOpacity = 0.5f)
-                    .also { it.prepareToDraw() }
-                glass to Wallpapers.blurred(frame, darken = 0.22f)
+                if (modernDock) {
+                    // Match the bake to the captured frame's resolution. Rendering a
+                    // larger bitmap only stretched pixels that the snapshot did not have.
+                    val scale = minOf(0.5f, frame.width / sw.toFloat())
+                    val rect = Rect((dockRect.left * scale).toInt(), (dockRect.top * scale).toInt(),
+                        (dockRect.right * scale).toInt(), (dockRect.bottom * scale).toInt())
+                    val renderW = (sw * scale).toInt().coerceAtLeast(1)
+                    val renderH = (sh * scale).toInt().coerceAtLeast(1)
+                    // Live video already provides motion and color; a lighter frost
+                    // and partial opacity keep more of that detail visible while the
+                    // asynchronous glass texture catches up with the video.
+                    val glass = LiquidGlass.bake(frame, renderW, renderH, rect, dockRadius * scale,
+                        frostStrength = 0.3f, glassOpacity = 0.5f)
+                        .also { it.prepareToDraw() }
+                    glass to Wallpapers.blurred(frame, darken = 0.22f)
+                } else {
+                    // Full-size mask. The blurred fill is allowed to be coarse and slow.
+                    val glass = DockGlassFallback.fromBackdrop(
+                        frame, sw, sh, dockRect, dockRadius, video = true, lowEnd = lowEnd,
+                    )
+                    glass to Wallpapers.blurred(frame, darken = 0.22f)
+                }
             }
             main.post {
                 val current = videoGlassFrames.finish(ticket)
@@ -762,7 +797,14 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val pkg = shelfPkg
         io.execute {
             // The picture already carries the scrim (see Shelf.darken).
-            val glass = LiquidGlass.bake(b, sw, sh, dockRect, dockRadius).also { it.prepareToDraw() }
+            // API 31+ keeps the original bake. Older TVs use the full-size mask.
+            val glass = (if (DockGlassFallback.usesModernPipeline(Build.VERSION.SDK_INT)) {
+                LiquidGlass.bake(b, sw, sh, dockRect, dockRadius)
+            } else {
+                DockGlassFallback.fromBackdrop(
+                    b, sw, sh, dockRect, dockRadius, video = false, lowEnd = Device.isLowEnd(this@HomeActivity),
+                )
+            }).also { it.prepareToDraw() }
             main.post { if (shelfShown && shelfPkg == pkg && shelfIndex == i) setDock(glass, 600) }
         }
         // Fetch the next picture ahead of time.
