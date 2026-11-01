@@ -14,46 +14,77 @@ import kotlin.math.sqrt
  * Dock glass for Android 11 and older (API < 31).
  *
  * API 31+ keeps [LiquidGlass.bake] exactly, including the scaled video bake.
- * There is no RenderEffect path on any API. Pre-31 video was that same bake
- * run on a low-end PixelCopy (often 320 px on Android 10, because
- * [Device.isLowEnd] is true for every SDK below 30) and then stretched with
- * [android.widget.ImageView.ScaleType.FIT_XY]. The rounded mask, the 1 px
- * coverage ramp and the refraction were all in that tiny bitmap, so the left
- * corner stair-stepped and the right corner dissolved. See
+ * On older versions the moving picture stays on the TextureView under the dock.
+ * A small PixelCopy is box-blurred and drawn at about 55% opacity inside a
+ * mask and rim that are the dock's own pixels, so the corners stay smooth and
+ * the live video shows through. A copy that takes longer than [SLOW_COPY_MS]
+ * is not used: the dock becomes a light veil and a rim. See
  * docs/dock-glass-fallback.md.
- *
- * This fallback blurs a small backdrop (a stack of box blurs — the in-process
- * stand-in for RenderScript) and composites the slab at the dock's own pixel
- * size, so the corner mask and the rim stay in screen pixels. Video that
- * cannot be snapshotted gets a frosted tint with the same mask. Nothing here
- * blurs the full screen, and video rebuilds are rate-limited.
  */
 internal object DockGlassFallback {
     const val MODERN_MIN_SDK = 31
 
+    /** Width of the video snapshot that is blurred. Height follows the view. */
+    const val VIDEO_CAPTURE_WIDTH = 320
+
+    /** How often a new frost is taken while video plays on Home. */
+    const val VIDEO_REFRESH_MS = 4_000L
+
+    /** Same gap on a TV with very little RAM or only one or two cores. */
+    const val WEAK_REFRESH_MS = 10_000L
+
+    /** A copy slower than this is dropped, and frost sampling stops. */
+    const val SLOW_COPY_MS = 150L
+
+    /** Interior of a video frost, about 55%, so the TextureView shows through. */
+    const val VIDEO_FROST_ALPHA = 140
+
+    /** Interior of the veil used when no frost is available. */
+    const val VEIL_ALPHA = 46
+
+    /** Rim alpha on a see-through plate. The body stays at the frost or veil alpha. */
+    const val RIM_ALPHA = 220
+
+    /** Crossfade when a new video frost replaces the previous one. */
+    const val FROST_FADE_MS = 700
+
+    const val VIDEO_BLUR_RADIUS = 12
+    const val VIDEO_BLUR_PASSES = 3
+
     fun usesModernPipeline(sdkInt: Int): Boolean = sdkInt >= MODERN_MIN_SDK
 
-    /** Minimum gap between video-dock rebuilds. Static wallpapers ignore this. */
-    fun videoRefreshIntervalMs(lowEnd: Boolean): Long = if (lowEnd) 1_500L else 800L
+    /**
+     * Low RAM, under 1.8 GB, or one or two cores. An old SDK by itself is not
+     * enough: Android 10 on a normal TV still gets the 4 s frost.
+     */
+    fun weakHardware(lowRam: Boolean, totalMemBytes: Long, cores: Int): Boolean =
+        lowRam || (totalMemBytes in 1 until 1_800L * 1024 * 1024) || cores <= 2
 
-    fun shouldRefreshVideo(nowMs: Long, lastMs: Long, lowEnd: Boolean): Boolean =
-        lastMs == 0L || nowMs - lastMs >= videoRefreshIntervalMs(lowEnd)
+    fun videoRefreshIntervalMs(weak: Boolean): Long = if (weak) WEAK_REFRESH_MS else VIDEO_REFRESH_MS
+
+    fun shouldRefreshVideo(nowMs: Long, lastMs: Long, weak: Boolean): Boolean =
+        lastMs == 0L || nowMs - lastMs >= videoRefreshIntervalMs(weak)
+
+    fun copyIsSlow(elapsedMs: Long): Boolean = elapsedMs > SLOW_COPY_MS
 
     /**
-     * Longest edge of the backdrop that is actually blurred. The dock mask is
-     * never reduced to this size.
+     * Longest edge of a still backdrop that is blurred. Video snapshots use
+     * [VIDEO_CAPTURE_WIDTH] instead. The dock mask is never reduced to this size.
      */
     fun blurSampleEdge(lowEnd: Boolean, video: Boolean): Int = when {
-        video && lowEnd -> 96
-        video -> 144
+        video -> VIDEO_CAPTURE_WIDTH
         lowEnd -> 160
         else -> 240
     }
 
     fun sampleSize(screenW: Int, screenH: Int, lowEnd: Boolean, video: Boolean = false): Pair<Int, Int> {
-        val edge = blurSampleEdge(lowEnd, video)
         val sw = screenW.coerceAtLeast(1)
         val sh = screenH.coerceAtLeast(1)
+        if (video) {
+            val w = VIDEO_CAPTURE_WIDTH.coerceAtMost(sw)
+            return w to (w.toLong() * sh / sw).toInt().coerceAtLeast(1)
+        }
+        val edge = blurSampleEdge(lowEnd, video = false)
         return if (sw >= sh) {
             val w = edge.coerceAtMost(sw)
             w to (w.toLong() * sh / sw).toInt().coerceAtLeast(1)
@@ -63,10 +94,14 @@ internal object DockGlassFallback {
         }
     }
 
-    fun blurPasses(video: Boolean): Int = if (video) 3 else 2
+    fun blurPasses(video: Boolean): Int = if (video) VIDEO_BLUR_PASSES else 2
 
-    /** In sample pixels. A smaller backdrop makes the same radius a wider frost on screen. */
-    fun blurRadius(lowEnd: Boolean): Int = if (lowEnd) 2 else 3
+    /**
+     * In sample pixels. Video uses a wide kernel so a frame that is a few
+     * seconds old does not draw a second sharp picture over the live video.
+     */
+    fun blurRadius(lowEnd: Boolean, video: Boolean = false): Int =
+        if (video) VIDEO_BLUR_RADIUS else if (lowEnd) 2 else 3
 
     /**
      * Full-resolution dock slab. [backdrop] is an opaque blurred image of the
@@ -101,7 +136,11 @@ internal object DockGlassFallback {
         val sh = screenH.coerceAtLeast(1).toFloat()
         val image = backdrop
         val hasBackdrop = image != null && backdropW > 0 && backdropH > 0 && image.size >= backdropW * backdropH
-        val interiorAlpha = if (hasBackdrop) 255 else 242
+        val bodyAlpha = when {
+            !video -> 255
+            hasBackdrop -> VIDEO_FROST_ALPHA
+            else -> VEIL_ALPHA
+        }
         for (j in 0 until height) {
             val py = j + 0.5f
             for (i in 0 until width) {
@@ -164,14 +203,18 @@ internal object DockGlassFallback {
                     val k = (1f - depth / zone) * 0.16f * max(facing, 0f)
                     r += (255f - r) * k; g += (255f - g) * k; b += (255f - b) * k
                 }
-                val a = (coverage * interiorAlpha).toInt().coerceIn(0, 255)
+                // Alpha follows the edge, not the light direction, so the right
+                // corner is not more transparent than the left. Colour still is.
+                val rim = if (video && depth < rimW) (1f - depth / rimW).coerceIn(0f, 1f) else 0f
+                val plate = bodyAlpha + (RIM_ALPHA - bodyAlpha) * rim
+                val a = (coverage * plate).toInt().coerceIn(0, 255)
                 out[j * width + i] = (a shl 24) or (clamp(r) shl 16) or (clamp(g) shl 8) or clamp(b)
             }
         }
         return out
     }
 
-    /** Frosted slab used when a video frame cannot be read. */
+    /** Light veil and rim, used before the first frame and when copies are too slow. */
     fun frosted(width: Int, height: Int, radius: Float): Bitmap {
         val w = width.coerceAtLeast(1)
         val h = height.coerceAtLeast(1)
@@ -222,7 +265,7 @@ internal object DockGlassFallback {
             canvas.drawBitmap(readable, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
             val px = IntArray(bw * bh)
             sample.getPixels(px, 0, bw, 0, 0, bw, bh)
-            val radiusPx = blurRadius(lowEnd)
+            val radiusPx = blurRadius(lowEnd, video)
             repeat(blurPasses(video)) { boxBlur(px, bw, bh, radiusPx) }
             bitmapFrom(
                 compose(w, h, radius, px, bw, bh, screenW, screenH, dock.left, dock.top, video),

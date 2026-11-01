@@ -25,13 +25,13 @@ longer than the sampling interval, the next one waits until it finishes.
 
 ## Android 11 and older
 
-API 31+ still bakes those snapshots with `LiquidGlass` at the snapshot's own
-scale. API 30 and below do not: the snapshot is only a small blur, and the dock
-mask is drawn at the dock's full size so the corners are not the stretched
-1 px ramp from the old video bake. The rules and the X9500G photos are in
-[dock-glass-fallback.md](dock-glass-fallback.md). Capture width is unchanged.
-The capture gap on API < 31 follows the fallback interval (800 ms, or 1.5 s on
-a low-end device, which includes every Android 10 TV).
+API 31+ still bakes snapshots with `LiquidGlass` at the snapshot's own scale,
+on the previous cadence. API 30 and below keep the TextureView playing under
+the dock. A copy about 320 px wide is blurred and drawn at about 55% opacity
+inside a mask and rim at the dock's real size, about every 4 s (10 s when the
+TV is short on memory or cores). A copy that takes longer than 150 ms is
+dropped; the dock then stays a light veil and a rim, and further copies stop.
+Details are in [dock-glass-fallback.md](dock-glass-fallback.md).
 
 ## Validation
 

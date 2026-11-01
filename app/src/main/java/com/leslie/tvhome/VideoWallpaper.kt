@@ -1,5 +1,6 @@
 package com.leslie.tvhome
 
+import android.app.ActivityManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -43,6 +44,7 @@ internal class VideoWallpaper(
     host: FrameLayout,
     private val canSample: () -> Boolean,
     private val onFrame: (Bitmap?) -> Unit,
+    private val onFrostSuspended: () -> Unit = {},
 ) {
     private val texture = TextureView(ctx).apply { alpha = 0f; isOpaque = false }
     var frame: Bitmap? = null
@@ -74,6 +76,17 @@ internal class VideoWallpaper(
     private var failedCopies = 0
     private var nextCaptureAt = 0L
     private val lowEnd by lazy { Device.isLowEnd(ctx) }
+    /** A pre-31 copy was slow enough that further frost snapshots would stall playback. */
+    var frostSuspended = false
+        private set
+
+    /** Short on memory or cores. Not the same as [Device.isLowEnd], which also treats Android 10 as low-end. */
+    internal val weakForFrost: Boolean get() = weakHardware
+    private val weakHardware by lazy {
+        val am = ctx.getSystemService(ActivityManager::class.java)
+        val info = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
+        DockGlassFallback.weakHardware(am.isLowRamDevice, info.totalMem, Runtime.getRuntime().availableProcessors())
+    }
     private val timeout = Runnable { nextAfterError() }
 
     private val sample = object : Runnable {
@@ -89,6 +102,7 @@ internal class VideoWallpaper(
                 failedCopies++
                 nextCaptureAt = now + 5_000L
             }
+            if (frostSuspended && Build.VERSION.SDK_INT < DockGlassFallback.MODERN_MIN_SDK) return
             if (!pendingCapture && now >= nextCaptureAt && texture.alpha > 0f &&
                 texture.isAvailable && canSample() && texture.width > 0 && texture.height > 0
             ) {
@@ -106,17 +120,24 @@ internal class VideoWallpaper(
 
     /**
      * API 31+ keeps the previous cadence (1 s on a low-end device, otherwise 500 ms).
-     * Older devices rebuild the dock from these frames, so they wait longer.
+     * Older devices take a new frost about every 4 s, or every 10 s when the TV
+     * itself is short on memory or cores.
      */
     private fun captureIntervalMs(): Long =
         if (Build.VERSION.SDK_INT < DockGlassFallback.MODERN_MIN_SDK)
-            DockGlassFallback.videoRefreshIntervalMs(lowEnd)
+            DockGlassFallback.videoRefreshIntervalMs(weakHardware)
         else if (lowEnd) 1_000L else 500L
+
+    /** API 31+ keeps 480 px, or 320 px on a low-end device. Older docks always copy about 320 px. */
+    private fun captureWidth(): Int =
+        if (Build.VERSION.SDK_INT < DockGlassFallback.MODERN_MIN_SDK)
+            minOf(DockGlassFallback.VIDEO_CAPTURE_WIDTH, texture.width)
+        else minOf(if (lowEnd) 320 else 480, texture.width)
 
     /** Called from the UI thread; only enqueues an asynchronous PixelCopy. */
     private fun capture(now: Long) {
         val surfaceTexture = texture.surfaceTexture ?: return
-        val width = minOf(if (lowEnd) 320 else 480, texture.width)
+        val width = captureWidth()
         val height = (width.toLong() * texture.height / texture.width).toInt().coerceAtLeast(1)
         val bitmap = runCatching { Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888) }
             .getOrNull() ?: run {
@@ -129,8 +150,10 @@ internal class VideoWallpaper(
         nextCaptureAt = now + captureIntervalMs()
         val surface = Surface(surfaceTexture)
         captureSurface = surface
+        val startedAt = now
         try {
             PixelCopy.request(surface, bitmap, { result ->
+                val took = SystemClock.uptimeMillis() - startedAt
                 surface.release()
                 main.post {
                     if (captureSurface === surface) captureSurface = null
@@ -139,6 +162,16 @@ internal class VideoWallpaper(
                         return@post
                     }
                     pendingCapture = false
+                    if (Build.VERSION.SDK_INT < DockGlassFallback.MODERN_MIN_SDK &&
+                        DockGlassFallback.copyIsSlow(took)
+                    ) {
+                        bitmap.recycle()
+                        if (!frostSuspended) {
+                            frostSuspended = true
+                            onFrostSuspended()
+                        }
+                        return@post
+                    }
                     if (result == PixelCopy.SUCCESS) {
                         failedCopies = 0
                         frame = bitmap
