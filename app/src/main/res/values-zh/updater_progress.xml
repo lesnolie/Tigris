@@ -9,5 +9,8 @@
     <string name="update_continue_product">继续安装确认 · %1$s</string>
     <string name="update_retry_product">取消旧任务并重试 · %1$s</string>
     <string name="update_no_confirmation">没有可打开的确认页。若安装卡住，请选择「取消旧任务并重试」。</string>
+    <string name="update_no_install_ui">这台电视没有安装确认页，应用内无法完成更新。已校验的安装包保存在 %1$s。请在电脑上执行：%2$s</string>
+    <string name="update_no_install_ui_saving">这台电视没有安装确认页，应用内无法完成更新。正在保存已校验的安装包…</string>
+    <string name="update_no_install_ui_missing_copy">这台电视没有安装确认页，应用内无法完成更新。已校验的安装包未能保存。请重试，或在电脑上下载正式版后执行 adb install -r。</string>
     <string name="update_download_failed">下载不完整或超出安装包大小，请重试。</string>
 </resources>
