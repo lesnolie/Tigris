@@ -23,6 +23,16 @@ still active, but had no current video image to refract.
 The Dock uses sampled frames rather than video-rate refraction. If a bake takes
 longer than the sampling interval, the next one waits until it finishes.
 
+## Android 11 and older
+
+API 31+ still bakes those snapshots with `LiquidGlass` at the snapshot's own
+scale. API 30 and below do not: the snapshot is only a small blur, and the dock
+mask is drawn at the dock's full size so the corners are not the stretched
+1 px ramp from the old video bake. The rules and the X9500G photos are in
+[dock-glass-fallback.md](dock-glass-fallback.md). Capture width is unchanged.
+The capture gap on API < 31 follows the fallback interval (800 ms, or 1.5 s on
+a low-end device, which includes every Android 10 TV).
+
 ## Validation
 
 Android CI passed for both release flavors, including the `VideoGlassFrames`

@@ -19,6 +19,13 @@ class FrostGlass(private val owner: View, private val radius: Float) : Drawable(
         bitmap = image; texture = BitmapShader(image, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP); invalidateSelf()
     }
     override fun draw(canvas: Canvas) {
+        // Hardware clipPath is not anti-aliased, and the stroke below was inset
+        // without reducing its radius, so pre-31 corners (the scroll dock) went
+        // jagged. API 31+ keeps the original draw.
+        if (!DockGlassFallback.usesModernPipeline(android.os.Build.VERSION.SDK_INT)) {
+            drawFullResolution(canvas)
+            return
+        }
         rect.set(bounds)
         val r = radius.coerceAtMost(minOf(rect.width(), rect.height()) / 2)
         path.reset(); path.addRoundRect(rect, r, r, Path.Direction.CW)
@@ -40,6 +47,52 @@ class FrostGlass(private val owner: View, private val radius: Float) : Drawable(
         paint.color = Color.argb(if (focused) 240 else 100, 255, 255, 255)
         rect.inset(paint.strokeWidth / 2, paint.strokeWidth / 2)
         canvas.drawRoundRect(rect, r, r, paint); paint.style = Paint.Style.FILL
+    }
+
+    /**
+     * Same fill, sheen and rim as [draw], masked with an anti-aliased round rect
+     * instead of [Canvas.clipPath]. The stroke radius shrinks with the inset so
+     * it stays on the fill's corner.
+     */
+    private fun drawFullResolution(canvas: Canvas) {
+        rect.set(bounds)
+        val r = radius.coerceAtMost(minOf(rect.width(), rect.height()) / 2f)
+        bitmap?.let { b ->
+            owner.getLocationInWindow(location)
+            val screen = owner.rootView
+            val scale = maxOf(screen.width.toFloat() / b.width, screen.height.toFloat() / b.height)
+            matrix.setScale(scale, scale)
+            matrix.postTranslate(
+                (screen.width - b.width * scale) / 2f - location[0],
+                (screen.height - b.height * scale) / 2f - location[1],
+            )
+            texture?.setLocalMatrix(matrix)
+            paint.shader = texture
+            paint.alpha = 255
+            paint.style = Paint.Style.FILL
+            canvas.drawRoundRect(rect, r, r, paint)
+        }
+        paint.shader = LinearGradient(
+            0f, rect.top, rect.right, rect.bottom,
+            intArrayOf(
+                Color.argb(if (focused) 100 else 48, 255, 255, 255),
+                Color.argb(26, 210, 224, 255),
+                Color.argb(55, 12, 18, 34),
+            ),
+            null, Shader.TileMode.CLAMP,
+        )
+        paint.alpha = 255
+        paint.style = Paint.Style.FILL
+        canvas.drawRoundRect(rect, r, r, paint)
+        paint.shader = null
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = if (focused) 3f else 1.5f
+        paint.color = Color.argb(if (focused) 240 else 100, 255, 255, 255)
+        val inset = paint.strokeWidth / 2f
+        rect.inset(inset, inset)
+        val strokeRadius = (r - inset).coerceAtLeast(0f)
+        canvas.drawRoundRect(rect, strokeRadius, strokeRadius, paint)
+        paint.style = Paint.Style.FILL
     }
     override fun setAlpha(alpha: Int) {}
     override fun setColorFilter(colorFilter: ColorFilter?) {}
