@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.PersistableBundle
+import android.util.Log
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
@@ -19,6 +20,7 @@ import java.util.concurrent.Executors
 
 /** Checks official stable releases; APK identity and signature are verified before installation. */
 object Updates {
+    private const val TAG = "TigrisUpdate"
     data class Product(val name: String, val repo: String, val pkg: String, val optional: Boolean = false)
     val products get() = listOf(
         Product(I18n.text(R.string.i18n_updates_001), "lesnolie/Tigris", "com.leslie.tvhome"),
@@ -146,6 +148,7 @@ object Updates {
     private fun performInstall(c: Context, p: Product) {
         val sp = prefs(c)
         val ui = confirmationUiAvailable(c.packageManager)
+        Log.i(TAG, "install ${p.pkg} confirmationUi=$ui sdk=${Build.VERSION.SDK_INT}")
         // The unknown-sources grant only matters when a confirmation page can actually open.
         if (ui) check(c.packageManager.canRequestPackageInstalls()) { I18n.text(R.string.i18n_updates_008) }
         if (pending(c, p)) {
@@ -230,6 +233,7 @@ object Updates {
             }
             if (!InstallConfirmation.sessionAllowed(ui)) {
                 val saved = publishVerifiedApk(c, p, file, releaseDigest)
+                Log.w(TAG, "no install confirmation page; saved ${saved.absolutePath}")
                 throw SideloadRequired(sideloadMessage(saved.absolutePath))
             }
             val installer = pm.packageInstaller
@@ -249,6 +253,7 @@ object Updates {
                     val pending = PendingIntent.getBroadcast(c, id, intent, flags)
                     stage(c, p, "pending", I18n.text(R.string.i18n_updates_022))
                     session.commit(pending.intentSender)
+                    Log.i(TAG, "session committed id=$id pkg=${p.pkg}")
                     // Keep the verified cache until the confirmation page actually opens.
                     submitted = true
                 }
@@ -322,8 +327,9 @@ object Updates {
         return dest
     }
 
-    private fun confirmationUiAvailable(pm: PackageManager): Boolean =
-        InstallConfirmation.probes.any { probe ->
+    private fun confirmationUiAvailable(pm: PackageManager): Boolean {
+        var found = false
+        for (probe in InstallConfirmation.probes) {
             val intent = Intent(probe.action).addCategory(Intent.CATEGORY_DEFAULT)
             when {
                 probe.data != null && probe.mime != null -> intent.setDataAndType(Uri.parse(probe.data), probe.mime)
@@ -331,8 +337,13 @@ object Updates {
                 probe.mime != null -> intent.type = probe.mime
             }
             if (probe.packageName != null) intent.setPackage(probe.packageName)
-            resolves(pm, intent)
+            if (!resolves(pm, intent)) continue
+            found = true
+            Log.i(TAG, "confirmation probe hit action=${probe.action}")
         }
+        if (!found) Log.w(TAG, "no install confirmation activity")
+        return found
+    }
 
     private fun resolves(pm: PackageManager, intent: Intent): Boolean =
         pm.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY) != null ||
@@ -352,6 +363,7 @@ object Updates {
     internal fun reportMissingInstallUi(c: Context, p: Product) {
         val app = c.applicationContext
         val id = prefs(app).getInt(p.pkg + ".session", -1)
+        Log.w(TAG, "pending confirmation intent cannot start pkg=${p.pkg} session=$id")
         val existing = prefs(app).getString(p.pkg + ".sideload", null)?.takeIf { File(it).isFile }
         val immediate = if (existing != null) sideloadMessage(existing) else I18n.text(R.string.update_no_install_ui_saving)
         // Clear the expected session before abandon so a failure callback cannot overwrite this status.
@@ -376,6 +388,7 @@ object Updates {
             }
             prefs(app).edit().putString(p.pkg + ".phase", "failed").putInt(p.pkg + ".progress", -1)
                 .putString(p.pkg + ".status", message).putBoolean(p.pkg + ".available", true).apply()
+            Log.w(TAG, "sideload status: $message")
             notify(app, p, message)
         }
     }
