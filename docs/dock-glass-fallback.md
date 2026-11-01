@@ -1,6 +1,6 @@
 # Dock glass on Android 12 and older / Android 12 及更早的 Dock 玻璃
 
-Issue [#77](https://github.com/lesnolie/Tigris/issues/77). Sony BRAVIA X9500G (KD-65X9500G), Android 10, Tigris 2.0.17, standard APK, Apple TV aerial wallpaper. The photos are the left and right ends of the bottom dock over a night-city aerial. The left corner is chunky; the right corner fades out instead of turning a clean rounded corner.
+Issue [#77](https://github.com/lesnolie/Tigris/issues/77). Sony BRAVIA X9500G (KD-65X9500G), Android 10, Tigris 2.0.17, standard APK, a moving video wallpaper. The photos are the left and right ends of the bottom dock over a night-city video. The left corner is chunky; the right corner fades out instead of turning a clean rounded corner.
 
 索尼 BRAVIA X9500G，Android 10，Tigris 2.0.17 标准版，背景是 Apple TV 航拍。照片里 Dock 左端圆角发碎，右端圆角发虚、像没封上。
 
@@ -19,7 +19,7 @@ Dock **没有**按 API 31 分叉去用 `RenderEffect`。Android 12 的模糊接�
 | Background | What runs |
 |---|---|
 | Still wallpaper or shelf art | `LiquidGlass.bake` at the dock's full pixel size. Frost 1, opacity 1. Blur radius 7, two box passes, on a strip a little larger than the dock. The rounded mask is a 1 px signed-distance ramp in those same pixels, so the corner stays smooth. Rim light is stronger toward the top left (`facing = -(nx * 0.45 + ny * 0.9)`), with a weaker reflection on the opposite edge. |
-| Aerial or local video | A `PixelCopy` of the `TextureView` (`VideoWallpaper`), at most 480 px wide, or 320 px when [Device.isLowEnd](../app/src/main/java/com/leslie/tvhome/Prefs.kt) is true. The bake is then scaled by `min(0.5, frameWidth / screenWidth)`, with frost 0.3 and opacity 0.5. One bake at a time (`VideoGlassFrames`). Capture gap 500 ms, or 1 s on a low-end device. |
+| Moving video (streamed or a local file) | A `PixelCopy` of the `TextureView` (`VideoWallpaper`), at most 480 px wide, or 320 px when [Device.isLowEnd](../app/src/main/java/com/leslie/tvhome/Prefs.kt) is true. The bake is then scaled by `min(0.5, frameWidth / screenWidth)`, with frost 0.3 and opacity 0.5. One bake at a time (`VideoGlassFrames`). Capture gap 500 ms, or 1 s on a low-end device. |
 
 `Device.isLowEnd` is true when the TV reports low RAM, has under about 2.5 GB, has fewer than 4 cores, **or SDK < 30**. Android 10 is always low-end for this switch, even on a 2019 BRAVIA. That flag also defaults the Control Center to the flat panel and focus animation to the simple style. The Control Center is a separate drawable (`ControlCenter.GlassSurface`): a quarter-size screen blur inside `drawRoundRect`, not the dock bitmap. This change does not touch it.
 
@@ -29,7 +29,7 @@ Dock **没有**按 API 31 分叉去用 `RenderEffect`。Android 12 的模糊接�
 
 ### API 30 and older, before this change / 改之前的 API 30 及更早
 
-The same functions. On the X9500G (API 29) a 1080p UI and a 320 px aerial snapshot produce `scale ≈ 320/1920 ≈ 1/6`. A dock on the order of 1700×200 px is baked at about 280×33 and stretched back up.
+The same functions. On the X9500G (API 29) a 1080p UI and a 320 px video snapshot produce `scale ≈ 320/1920 ≈ 1/6`. A dock on the order of 1700×200 px is baked at about 280×33 and stretched back up.
 
 X9500G（API 29）1080p 界面配 320 宽的航拍快照，缩放约 1/6。大约 1700×200 的 Dock 只烤成 280×33，再被拉回去。
 
@@ -44,18 +44,19 @@ X9500G（API 29）1080p 界面配 320 宽的航拍快照，缩放约 1/6。大�
 
 遮罩、1 像素抗锯齿、折射和高光都写在那张小图里，再被放大。左角台阶、右角发虚，就是放大后的遮罩加上 0.5 不透明度。视频层本身截不到软件画布，只能靠 `PixelCopy`；这台电视多半是拷到了，但拷贝被缩小烘焙。滚动时的 `FrostGlass` 用了没有抗锯齿的 `clipPath`，描边半径又没随内缩减小。照片是静止 Dock，主因是第 1–3 点；滚动路径在 API 31 以下一并改了。
 
-## Fallback added for API < 31 / API 31 以下的新回退
+## What API < 31 does now / API 31 以下现在怎么画
 
-`DockGlassFallback` (API 30 and below only):
+`DockGlassFallback` runs only on API 30 and below. The TextureView keeps playing under the dock.
 
-- Blur a **small** center-crop of the backdrop (longest edge 96–240 px, two or three box passes). This is the in-process replacement for RenderScript `ScriptIntrinsicBlur`, which is not a dependency. The full screen is never blurred.
-- Composite the dock at **its own pixel size**. The rounded mask and the rim use the same lighting formula as `LiquidGlass`, in screen pixels, so the corner radius matches the tiles' glass and both ends keep an edge.
-- Still wallpapers and shelf art rebuild when the picture changes, not on a timer.
-- Video rebuilds at most every 1.5 s on a low-end device and every 800 ms otherwise (`shouldRefreshVideo`). `VideoWallpaper`'s capture gap uses that interval only when SDK < 31. API 31+ stays at 500 ms / 1 s, and the capture width is unchanged on every API.
-- If no frame can be read, the dock is a frosted tint (cool gray, lighter at the top, same rim) at about 95% alpha. Interior alpha does not fade toward the corners; only the 1 px coverage ramp does. A successful snapshot replaces the tint with the blurred frame inside that same mask.
-- `Glass.kt`, the API 31+ bake arguments (`frostStrength = 0.3`, `glassOpacity = 0.5`, scaled rect), Control Center glass, and low-end defaults are untouched.
+- **Video frost.** A PixelCopy about 320 px wide (180 px tall on 16:9) is box-blurred on the CPU (radius 12, three passes). That is strong enough that a frame a few seconds old does not draw a second sharp picture over the moving video. The dock is composited at **its own pixel size**: the rounded mask is a 1 px coverage ramp, and the rim is brighter than the body. The body's alpha is about **55%** (`VIDEO_FROST_ALPHA` 140), so the live video shows through. A new frost crossfades in over 700 ms.
+- **How often.** About every 4 s on Home. A TV with the low-RAM flag, under 1.8 GB, or only one or two cores waits 10 s. Android 10 by itself is not treated as weak. API 31+ still copies every 500 ms (1 s on a low-end device) at the old width and still bakes with `LiquidGlass`.
+- **Slow copy.** If a PixelCopy takes longer than 150 ms, that frame is discarded, further copies stop, and the dock becomes a light translucent veil plus the same full-size rim. No frost.
+- **Before the first frame**, the dock is that veil, not an opaque slab.
+- **Scrolling** on API 30 and below uses an anti-aliased `drawRoundRect` and a stroke whose radius shrinks with the inset. While video is showing, the scrolled fill uses the same 55% alpha, or the veil if copies were too slow. API 31+ scroll drawing is unchanged.
+- Still wallpapers and shelf art are still a full-size mask over a small blur, rebuilt when the picture changes, and they stay opaque because nothing is moving underneath.
+- `Glass.kt` and the API 31+ bake arguments are untouched.
 
-只在 API 30 及以下启用。先把背景缩成一条短边最多 96–240 的图做盒式模糊（不模糊整屏，也不引入 RenderScript），再按 Dock 的真实尺寸合成圆角和边缘高光。静态壁纸只在换图时重算。视频低配最多 1.5 秒一次，其它 800 毫秒一次；API 31+ 的采样间隔和烘焙参数不动。拷不到帧时用均匀的磨砂色，角上只有 1 像素遮罩，不会一边实一边虚。
+视频继续在 Dock 下面的 TextureView 里播。API 30 及以下大约每 4 秒拷一张约 320×180 的图，在 CPU 上做比较重的盒式模糊，再按 Dock 的真实像素画圆角和亮边。底板大约 55% 不透明，所以能看见正在动的画面；新的一层用 700 毫秒淡入。内存很少、不到 1.8 GB、或只有一两个核时改成 10 秒一次。某次 PixelCopy 超过 150 毫秒就丢掉这一帧，不再继续拷，Dock 改成一层很淡的罩加上同一条亮边。静态壁纸仍然是不透明的全尺寸遮罩。API 31+ 的烘焙和采样不变。
 
 ## Checks / 验证
 
@@ -65,8 +66,8 @@ Unit tests cover the API gate, the blur size, the refresh cap, symmetric corner 
 
 - `01-api31-static-reference.png` — reproduction of full-size `LiquidGlass.bake` (what API 31+ still does for a still wallpaper).
 - `02-api29-video-before.png` — reproduction of the old video path: bake at `160/960` (the same ratio as 320 px on a 1920 px Android 10 UI), opacity 0.5, then stretch.
-- `03-api29-video-after.png` — new video fallback with a blurred snapshot.
-- `04-api29-video-tint-only.png` — new fallback when the snapshot is missing.
+- `03-api29-video-after.png` — software rendering of the new video frost: full-size corners, about 55% opacity, so the picture shows through. Not a photograph of a TV.
+- `04-api29-video-veil.png` — software rendering of the light veil used when a snapshot is missing or too slow.
 - `05-api29-static-after.png` — new still-wallpaper fallback.
 - `06-corners-before-after.png` — 3× nearest zoom of the left and right corners, before on the top row and after on the bottom row.
 

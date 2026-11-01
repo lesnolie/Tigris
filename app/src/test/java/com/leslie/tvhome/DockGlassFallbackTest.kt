@@ -29,14 +29,20 @@ class DockGlassFallbackTest {
     }
 
     @Test fun videoRebuildsStayWellUnderFrameRate() {
-        assertTrue(DockGlassFallback.videoRefreshIntervalMs(lowEnd = true) >= 1_500L)
-        assertTrue(DockGlassFallback.videoRefreshIntervalMs(lowEnd = false) >= 800L)
-        assertTrue(DockGlassFallback.videoRefreshIntervalMs(true) >= DockGlassFallback.videoRefreshIntervalMs(false))
-        assertTrue(DockGlassFallback.shouldRefreshVideo(nowMs = 5_000L, lastMs = 0L, lowEnd = true))
-        assertFalse(DockGlassFallback.shouldRefreshVideo(nowMs = 1_000L, lastMs = 100L, lowEnd = true))
-        assertTrue(DockGlassFallback.shouldRefreshVideo(nowMs = 1_700L, lastMs = 100L, lowEnd = true))
-        assertFalse(DockGlassFallback.shouldRefreshVideo(nowMs = 500L, lastMs = 100L, lowEnd = false))
-        assertTrue(DockGlassFallback.shouldRefreshVideo(nowMs = 900L, lastMs = 100L, lowEnd = false))
+        assertEquals(4_000L, DockGlassFallback.videoRefreshIntervalMs(weak = false))
+        assertEquals(10_000L, DockGlassFallback.videoRefreshIntervalMs(weak = true))
+        assertTrue(DockGlassFallback.shouldRefreshVideo(nowMs = 5_000L, lastMs = 0L, weak = true))
+        assertFalse(DockGlassFallback.shouldRefreshVideo(nowMs = 5_000L, lastMs = 100L, weak = true))
+        assertTrue(DockGlassFallback.shouldRefreshVideo(nowMs = 10_200L, lastMs = 100L, weak = true))
+        assertFalse(DockGlassFallback.shouldRefreshVideo(nowMs = 3_000L, lastMs = 100L, weak = false))
+        assertTrue(DockGlassFallback.shouldRefreshVideo(nowMs = 4_200L, lastMs = 100L, weak = false))
+        assertFalse(DockGlassFallback.copyIsSlow(150))
+        assertTrue(DockGlassFallback.copyIsSlow(151))
+        val gb = 1024L * 1024 * 1024
+        assertFalse(DockGlassFallback.weakHardware(lowRam = false, totalMemBytes = 3 * gb, cores = 4))
+        assertTrue(DockGlassFallback.weakHardware(lowRam = true, totalMemBytes = 3 * gb, cores = 4))
+        assertTrue(DockGlassFallback.weakHardware(lowRam = false, totalMemBytes = gb, cores = 4))
+        assertTrue(DockGlassFallback.weakHardware(lowRam = false, totalMemBytes = 3 * gb, cores = 2))
     }
 
     @Test fun blurSampleIsASmallBackdropNotTheScreen() {
@@ -44,17 +50,17 @@ class DockGlassFallbackTest {
         val video = DockGlassFallback.sampleSize(1920, 1080, lowEnd = false, video = true)
         val stillLow = DockGlassFallback.sampleSize(1920, 1080, lowEnd = true, video = false)
         val still = DockGlassFallback.sampleSize(1920, 1080, lowEnd = false, video = false)
-        assertTrue(videoLow.first <= 96)
-        assertTrue(video.first <= 144)
+        assertEquals(320, videoLow.first)
+        assertEquals(320, video.first)
+        assertEquals(180, video.first * 1080 / 1920)
         assertTrue(stillLow.first <= 160)
         assertTrue(still.first <= 240)
         for ((w, h) in listOf(videoLow, video, stillLow, still)) {
             assertTrue(w >= 8 && h >= 8)
-            assertTrue(w * h < 1920 * 1080 / 30)
+            assertTrue(w * h < 1920 * 1080 / 8)
         }
-        // 1080p is wider than it is tall, so the cap applies to the width.
-        assertEquals(96, videoLow.first)
-        assertEquals((96L * 1080 / 1920).toInt(), videoLow.second)
+        assertEquals(160, stillLow.first)
+        assertEquals((160L * 1080 / 1920).toInt(), stillLow.second)
     }
 
     @Test fun cornersAreTransparentAndTheStraightEdgeIsSymmetric() {
@@ -68,15 +74,15 @@ class DockGlassFallbackTest {
         assertEquals(0, alpha(px, w, w - 1, 0))
         assertEquals(0, alpha(px, w, 0, h - 1))
         assertEquals(0, alpha(px, w, w - 1, h - 1))
-        assertEquals(242, alpha(px, w, w / 2, h / 2))
+        assertEquals(DockGlassFallback.VEIL_ALPHA, alpha(px, w, w / 2, h / 2))
         val y = h / 2
         for (i in 0 until 16) {
             assertEquals("column $i", alpha(px, w, i, y), alpha(px, w, w - 1 - i, y))
         }
         val diagonal = (0 until 24).map { alpha(px, w, it, it) }
         assertEquals(0, diagonal.first())
-        assertTrue(diagonal.last() >= 230)
-        val partial = diagonal.count { it in 8..230 }
+        assertTrue(diagonal.last() >= DockGlassFallback.VEIL_ALPHA)
+        val partial = diagonal.dropWhile { it == 0 }.takeWhile { it != DockGlassFallback.VEIL_ALPHA }.size
         assertTrue("aa band should be a couple of pixels, was $diagonal", partial in 1..3)
     }
 
@@ -88,9 +94,9 @@ class DockGlassFallbackTest {
         )
         val y = h / 2
         var left = 0
-        while (left < w && alpha(tint, w, left, y) < 230) left++
+        while (left < w && alpha(tint, w, left, y) < DockGlassFallback.VEIL_ALPHA) left++
         var right = w - 1
-        while (right > 0 && alpha(tint, w, right, y) < 230) right--
+        while (right > 0 && alpha(tint, w, right, y) < DockGlassFallback.VEIL_ALPHA) right--
         val edgeL = luma(tint[y * w + (left + 1).coerceAtMost(w - 1)])
         val edgeR = luma(tint[y * w + (right - 1).coerceAtLeast(0)])
         val mid = luma(tint[y * w + w / 2])
@@ -110,6 +116,14 @@ class DockGlassFallbackTest {
         val center = glass[(h / 2) * w + w / 2]
         assertTrue("bottom of the screen should read as the light half, was ${red(center)}", red(center) > 180)
         assertEquals(255, alpha(glass, w, w / 2, h / 2))
+
+        val frost = DockGlassFallback.compose(
+            w, h, 18f, backdrop, bw, bh,
+            screenW = 100, screenH = 100, dockLeft = 0, dockTop = 70, video = true,
+        )
+        assertEquals(DockGlassFallback.VIDEO_FROST_ALPHA, alpha(frost, w, w / 2, h / 2))
+        assertEquals(0, alpha(frost, w, 0, 0))
+        assertTrue(alpha(frost, w, 0, h / 2) > DockGlassFallback.VIDEO_FROST_ALPHA)
     }
 
     @Test fun stretchingALowResolutionMaskWidensTheCorner() {
@@ -162,7 +176,7 @@ class DockGlassFallbackTest {
         val (bw, bh) = DockGlassFallback.sampleSize(screenW, screenH, lowEnd = true, video = true)
         val blurred = downscale(city, screenW, screenH, bw, bh)
         repeat(DockGlassFallback.blurPasses(video = true)) {
-            DockGlassFallback.boxBlur(blurred, bw, bh, DockGlassFallback.blurRadius(lowEnd = true))
+            DockGlassFallback.boxBlur(blurred, bw, bh, DockGlassFallback.blurRadius(lowEnd = true, video = true))
         }
         val after = DockGlassFallback.compose(
             dockW, dockH, radius, blurred, bw, bh, screenW, screenH, dockL, dockT, video = true,
@@ -200,7 +214,7 @@ class DockGlassFallbackTest {
             "01-api31-static-reference.png" to referenceScene,
             "02-api29-video-before.png" to beforeScene,
             "03-api29-video-after.png" to afterScene,
-            "04-api29-video-tint-only.png" to tintScene,
+            "04-api29-video-veil.png" to tintScene,
             "05-api29-static-after.png" to stillScene,
             "06-corners-before-after.png" to corners.second,
         )
@@ -214,8 +228,12 @@ class DockGlassFallbackTest {
                 assertTrue("$file is empty", file.length() > 1000)
             }
         }
-        // The new video mask must not inherit the stretched fringe.
-        assertTrue(diagonalPartial(alphasOf(after), dockW) < diagonalPartial(alphasOf(before), dockW))
+        // The new mask reaches its interior alpha within a few pixels. The old
+        // bake's 1 px ramp is stretched, so the diagonal stays partial for longer.
+        val afterBand = bandBeforePlateau(after, dockW, DockGlassFallback.VIDEO_FROST_ALPHA)
+        val beforeBand = bandBeforePlateau(before, dockW, 120)
+        assertTrue("after band $afterBand", afterBand <= 3)
+        assertTrue("before band $beforeBand", beforeBand >= 4)
     }
 
     private fun previewDirs(): List<File> {
@@ -278,6 +296,22 @@ private fun diagonalPartial(alpha: IntArray, width: Int): Int {
 
 private fun alphasOf(argb: IntArray): IntArray =
     IntArray(argb.size) { i -> (argb[i] ushr 24) and 255 }
+
+/** Partial pixels along the corner diagonal, after the outside of the curve. */
+private fun bandBeforePlateau(argb: IntArray, width: Int, plateau: Int): Int {
+    var n = 0
+    var started = false
+    for (i in 0 until 40) {
+        val a = (argb[i * width + i] ushr 24) and 255
+        if (!started) {
+            if (a == 0) continue
+            started = true
+        }
+        if (a >= plateau - 12) break
+        n++
+    }
+    return n
+}
 
 /**
  * Test-only reproduction of [com.leslie.tvhome.LiquidGlass.bake]: the mask, rim
