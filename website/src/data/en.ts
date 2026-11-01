@@ -87,11 +87,11 @@ export const en = {
   aerial: {
     eyebrow: "AERIAL SCREENSAVER",
     title: "Apple TV aerials, as your screensaver.",
-    lede: "When the TV goes quiet it drifts over the planet instead: coastlines, glaciers and city lights unfold with the location name following each shot. Use the arrow keys to change scene; offline it falls back to photos, and it never interrupts something already playing.",
+    lede: "When the Tigris home screen sits idle it drifts over the planet instead: coastlines, glaciers and city lights unfold with the location name following each shot. Use the arrow keys to change scene; offline it falls back to photos. It stays away while another app, a cast, or a video is already in front.",
     bullets: [
       "Choose aerial films as the screensaver content; they stream from Apple's servers at roughly 15–20 Mbps",
       "Offline or on a failed buffer it falls back to the photo frame, without blocking the next idle transition",
-      "After 1–30 minutes of idle time the photo frame appears, with the clock and caption moving periodically to protect OLED panels",
+      "After 1–30 minutes idle on the Tigris home screen the photo frame appears. It stays hidden during casting, video playback, or any other app in front",
     ],
     caption: "Photo frame · Bing daily photograph (photo mode shown; aerial films are video)",
     frameAlt: "Photo frame screensaver: an underwater octopus photograph with the time and date in the corner.",
@@ -313,7 +313,8 @@ adb -s 192.168.x.x:5555 shell appops set com.leslie.tvhome SYSTEM_ALERT_WINDOW a
       { feature: "Memory cleanup", any: "Cache only", debug: "Kills background apps", sony: "—" },
       { feature: "Remove preinstalled apps", any: "—", debug: "Yes", sony: "—" },
       { feature: "Standby, power off, restart", any: "—", debug: "Yes", sony: "—" },
-      { feature: "Frame as system screensaver, idle time", any: "—", debug: "Yes", sony: "—" },
+      { feature: "Photo-frame idle timer (home screen only)", any: "Yes", debug: "—", sony: "—" },
+      { feature: "Frame as the system screensaver", any: "—", debug: "Yes", sony: "—" },
       { feature: "Volume slider", any: "Android standard", debug: "—", sony: "TV volume" },
       { feature: "HDMI input switching", any: "Most TVs", debug: "—", sony: "Plus input status" },
       { feature: "Brightness slider", any: "Xiaomi, after ADB grant", debug: "—", sony: "Yes" },

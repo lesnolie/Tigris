@@ -1,0 +1,82 @@
+package com.leslie.tvhome
+
+import android.content.ComponentName
+import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.AudioPlaybackConfiguration
+import android.media.session.MediaSessionManager
+import android.os.Process
+import android.provider.Settings
+
+/**
+ * Reads playback signals the idle policy can use. Session and foreign-uid playback lists
+ * require the revival notification listener; the music-stream booleans do not.
+ */
+internal object FrameIdleProbe {
+    fun media(ctx: Context, hint: FrameIdlePolicy.Media = FrameIdlePolicy.Media()): FrameIdlePolicy.Media {
+        val am = ctx.getSystemService(AudioManager::class.java)
+        val sessionsVisible = listenerEnabled(ctx)
+        return hint.copy(
+            musicActive = runCatching { am?.isMusicActive == true }.getOrDefault(false),
+            remoteMusicActive = remoteMusic(am),
+            foreignSessionPlaying = if (sessionsVisible) foreignSession(ctx) else null,
+            foreignPlayback = foreignPlayback(am, Process.myUid(), sessionsVisible),
+        )
+    }
+
+    /** Removed from current SDK stubs; still present on the TVs this app runs on. */
+    private fun remoteMusic(am: AudioManager?): Boolean {
+        if (am == null) return false
+        return runCatching {
+            AudioManager::class.java.getMethod("isMusicActiveRemotely").invoke(am) as Boolean
+        }.getOrDefault(false)
+    }
+
+    private fun listenerEnabled(ctx: Context): Boolean {
+        val flat = Settings.Secure.getString(ctx.contentResolver, "enabled_notification_listeners").orEmpty()
+        val mine = ComponentName(ctx, RevivalListener::class.java).flattenToString()
+        return flat.split(':').any { ComponentName.unflattenFromString(it)?.flattenToString() == mine }
+    }
+
+    private fun foreignSession(ctx: Context): Boolean? {
+        val manager = ctx.getSystemService(MediaSessionManager::class.java) ?: return null
+        val component = ComponentName(ctx, RevivalListener::class.java)
+        val controllers = runCatching { manager.getActiveSessions(component) }.getOrNull() ?: return null
+        return controllers.any {
+            it.packageName != ctx.packageName && FrameIdlePolicy.sessionActive(it.playbackState?.state)
+        }
+    }
+
+    private fun foreignPlayback(am: AudioManager?, ourUid: Int, listComplete: Boolean): Boolean? {
+        if (am == null) return null
+        val configs = runCatching { am.activePlaybackConfigurations }.getOrNull() ?: return null
+        val uids = configs.filter { playbackActive(it) && mediaUsage(it) }.map { clientUid(it) }
+        return FrameIdlePolicy.foreignFromUids(uids, ourUid, listComplete)
+    }
+
+    private fun playbackActive(config: AudioPlaybackConfiguration): Boolean {
+        val reflected = runCatching {
+            AudioPlaybackConfiguration::class.java.getMethod("isActive").invoke(config) as Boolean
+        }.getOrNull()
+        return FrameIdlePolicy.summaryLooksActive(config.toString(), reflected)
+    }
+
+    private fun mediaUsage(config: AudioPlaybackConfiguration): Boolean {
+        val usage = config.audioAttributes.usage
+        return usage == AudioAttributes.USAGE_MEDIA ||
+            usage == AudioAttributes.USAGE_GAME ||
+            usage == AudioAttributes.USAGE_UNKNOWN ||
+            usage == AudioAttributes.USAGE_ASSISTANT ||
+            usage == AudioAttributes.USAGE_VOICE_COMMUNICATION ||
+            usage == AudioAttributes.USAGE_ALARM
+    }
+
+    private fun clientUid(config: AudioPlaybackConfiguration): Int? {
+        val reflected = runCatching {
+            AudioPlaybackConfiguration::class.java.getMethod("getClientUid").invoke(config) as Int
+        }.getOrNull()
+        if (reflected != null) return reflected
+        return FrameIdlePolicy.clientUidFromSummary(config.toString())
+    }
+}

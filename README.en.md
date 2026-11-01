@@ -174,7 +174,7 @@ App folders, phone-based avatar upload, an update center for Tigris and Miracast
 - **Boot/wake animation:** optional video uploaded from your phone, or a built-in Tigris wordmark animation. Choose startup only or startup and wake, with adjustable wake delay; skip with any key.
 - **Wallpapers:** Bing daily imagery, 360 scenery and pet images, all-ages anime (Wallhaven, falling back to China-accessible sources), artworks, personal photos, custom image sources and gradient themes. Download photos as needed and clean old cached files.
 - **Wallpaper picker and phone setup:** select previews on TV, scan a QR code to upload photos, provide custom photo/image-feed URLs, change wallpapers/screensavers, upload a boot movie or customize the settings icon and backdrop. The LAN configuration page runs while the picker is open and for five minutes afterward. **The phone companion page now automatically follows the phone browser's language (Chinese or English)**, independently of the TV's system language, including upload buttons, wallpaper labels, status messages and errors.
-- **Photo frame and Apple TV aerial screensaver:** slowly pan/zoom photos or stream aerial footage from Apple with location labels. Can become the system screensaver; video playback is not intentionally interrupted.
+- **Photo frame and Apple TV aerial screensaver:** slowly pan/zoom photos or stream aerial footage from Apple with location labels. It can be the system screensaver. It starts on its own only after the Tigris home screen has been idle. “Start After” is an in-app countdown and does not change the TV’s screen-off timeout. It does not appear while another app is in front, while media or a cast is playing, or while another window holds the screen on.
 - **HDMI shortcuts on the home screen:** Control Center → Inputs → Show on Home, where available.
 - **Home guard:** helps keep Tigris in front on OEM firmware that forces its own launcher. Does not require root and is off by default.
 - **Background memory cleanup:** periodic cleanup and a configurable keep-alive list.
@@ -192,7 +192,8 @@ These are **implementation capabilities**, not proof of hardware compatibility o
 | Force-stop selected background apps | | ✓ | |
 | Remove certain preinstalled apps for current user | | ✓ | |
 | Sleep, shutdown and restart | | ✓ | |
-| Set photo frame as screensaver / idle schedule | | ✓ | |
+| Photo-frame idle timer (home screen only; does not change screen-off) | ✓ | | |
+| Set photo frame as the system screensaver | | ✓ | |
 | Volume | Android media stream | | BRAVIA volume |
 | Inputs / HDMI | When exposed by system TV framework | | Current input and switching |
 | Backlight slider | Xiaomi adapter may use an approved ADB grant | | BRAVIA backlight |
@@ -221,7 +222,7 @@ For this specific firmware, `adb install` rejects the package and APKs declaring
 
 ### Xiaomi / Redmi China firmware
 
-The Xiaomi adapter can use `picture_backlight` for brightness after `WRITE_SECURE_SETTINGS` approval, Xiaomi's external-source player for input switching, and Xiaomi's settings/Wi-Fi screens. It also has a workaround for the manufacturer's screensaver. **These paths have not been comprehensively tested by this project's maintainers on Xiaomi hardware.** See the issue reports above for observed problems.
+The Xiaomi adapter can use `picture_backlight` for brightness after `WRITE_SECURE_SETTINGS` approval, Xiaomi's external-source player for input switching, and Xiaomi's settings/Wi-Fi screens. The photo frame keeps its own idle timer and appears only while the home screen is in front, with nothing playing and no other window holding the screen on. A missing or non-positive `screen_saver_timeout` uses the in-app minutes; a positive value still starts 15 seconds early so Xiaomi's screensaver does not win. The setting does not write the system screen-off timeout. **These paths have not been comprehensively tested by this project's maintainers on Xiaomi hardware.** See the issue reports above for observed problems.
 
 **Never disable Xiaomi's stock launcher** (`com.mitv.tvhome` / PatchWall); it can leave the TV with a black screen on boot. Use Tigris's optional home guard instead. The guard uses an accessibility service to detect vendor-home foreground changes, a notification listener to help restart after OEM process termination, and optional secure settings/overlay permissions. Those operations require user authorization and can behave differently across firmware versions.
 

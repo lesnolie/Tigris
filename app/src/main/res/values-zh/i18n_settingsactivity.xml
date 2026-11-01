@@ -72,7 +72,7 @@
     <string name="i18n_settingsactivity_070" formatted="false">正在下载…</string>
     <string name="i18n_settingsactivity_071">已有 %1$s 张</string>
     <string name="i18n_settingsactivity_072" formatted="false">电视空闲时显示相框</string>
-    <string name="i18n_settingsactivity_073" formatted="false">电视空闲一段时间后全屏轮播照片或航拍视频，代替电视自带的屏保。</string>
+    <string name="i18n_settingsactivity_073" formatted="false">只在 Tigris 主屏幕空闲后全屏轮播照片或航拍，代替电视自带的屏保。其他应用在前台、正在播放或保持亮屏时不会出现。</string>
     <string name="i18n_settingsactivity_074" formatted="false">正在设置…</string>
     <string name="i18n_settingsactivity_075" formatted="false">需要先授权本机调试</string>
     <string name="i18n_settingsactivity_076" formatted="false">屏保内容</string>
@@ -80,9 +80,7 @@
     <string name="i18n_settingsactivity_078" formatted="false">Apple TV 航拍视频</string>
     <string name="i18n_settingsactivity_079" formatted="false">照片</string>
     <string name="i18n_settingsactivity_080" formatted="false">空闲多久显示相框</string>
-    <string name="i18n_settingsactivity_081" formatted="false">多久没有操作后显示相框。</string>
-    <string name="i18n_settingsactivity_082" formatted="false">正在设置…</string>
-    <string name="i18n_settingsactivity_083" formatted="false">需要先授权本机调试</string>
+    <string name="i18n_settingsactivity_081" formatted="false">Tigris 在自己的主屏幕上等待多久后显示相框。只改应用内倒计时，不改电视熄屏时间。固件如果公布了屏保超时，相框会提前，以免被系统屏保抢先。</string>
     <string name="i18n_settingsactivity_084" formatted="false">相框每张照片停留</string>
     <string name="i18n_settingsactivity_085" formatted="false">相框里每张照片显示多久。</string>
     <string name="i18n_settingsactivity_086">%1$s 秒</string>

@@ -72,7 +72,7 @@
     <string name="i18n_settingsactivity_070" formatted="false">Downloading…</string>
     <string name="i18n_settingsactivity_071">%1$s photos</string>
     <string name="i18n_settingsactivity_072" formatted="false">Start Screen Saver When Idle</string>
-    <string name="i18n_settingsactivity_073" formatted="false">Show photos or Aerials when your TV is idle.</string>
+    <string name="i18n_settingsactivity_073" formatted="false">Show photos or Aerials only after the Tigris home screen has been idle. It does not appear while another app is in front, media is playing, or the screen is held on.</string>
     <string name="i18n_settingsactivity_074" formatted="false">Setting up…</string>
     <string name="i18n_settingsactivity_075" formatted="false">Local debugging must be authorized first</string>
     <string name="i18n_settingsactivity_076" formatted="false">Screen Saver Content</string>
@@ -80,9 +80,7 @@
     <string name="i18n_settingsactivity_078" formatted="false">Aerials</string>
     <string name="i18n_settingsactivity_079" formatted="false">Photos</string>
     <string name="i18n_settingsactivity_080" formatted="false">Start After</string>
-    <string name="i18n_settingsactivity_081" formatted="false">How long without input before the frame appears.</string>
-    <string name="i18n_settingsactivity_082" formatted="false">Setting up…</string>
-    <string name="i18n_settingsactivity_083" formatted="false">Local debugging must be authorized first</string>
+    <string name="i18n_settingsactivity_081" formatted="false">How long Tigris waits on its own home screen before showing the frame. This timer does not change the TV screen-off timeout. If the firmware publishes a screensaver timeout, the frame starts early enough to come up first.</string>
     <string name="i18n_settingsactivity_084" formatted="false">Time per Photo</string>
     <string name="i18n_settingsactivity_085" formatted="false">How long each photo is shown in the frame.</string>
     <string name="i18n_settingsactivity_086">%1$s s</string>

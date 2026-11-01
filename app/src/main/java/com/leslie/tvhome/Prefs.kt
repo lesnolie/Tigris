@@ -114,6 +114,14 @@ class Prefs(ctx: Context) {
         get() = sp.getInt("frame_seconds", 30)
         set(v) = sp.edit().putInt("frame_seconds", v).apply()
 
+    /**
+     * Minutes the home screen must sit idle before the photo frame.
+     * This is Tigris's timer. It is not written to the system screen-off timeout.
+     */
+    var frameIdleMinutes: Int
+        get() = FrameIdlePolicy.minutes(sp.getInt("frame_idle_minutes", FrameIdlePolicy.DEFAULT_MINUTES))
+        set(v) = sp.edit().putInt("frame_idle_minutes", FrameIdlePolicy.minutes(v)).apply()
+
     /** The photo frame is the system screensaver (instead of Sony's). */
     var frameScreensaver: Boolean
         get() = sp.getBoolean("frame_screensaver", false)

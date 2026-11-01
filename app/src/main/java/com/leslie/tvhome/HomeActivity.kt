@@ -24,7 +24,9 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
+import android.util.Log
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
@@ -68,6 +70,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private lateinit var backdrop: FrameLayout
     private lateinit var bg: ImageView
     private lateinit var videoWallpaper: VideoWallpaper
+    private var wallpaperPlaying = false
     private val videoGlassFrames = VideoGlassFrames()
     private val wallpaperChanges = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (resumed && (key == "background" || key == "wallpaper_video_revision")) applyBackground()
@@ -171,22 +174,122 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     }
 
     /**
-     * Xiaomi shows its own screensaver (with ads) after system/screen_saver_timeout instead of
-     * Android's, so the photo frame starts 15 s ahead of it when the home screen sits idle, and
-     * keeps the screen on so Xiaomi's does not follow. Elsewhere Android's screensaver applies.
+     * In-app idle timer for the photo frame. The deadline is [FrameIdlePolicy]: the minutes
+     * chosen in settings, brought forward only when the firmware's screensaver timeout is sooner.
+     * It runs only while this home screen is resumed. [PhotoDream] is the system dream and
+     * dismisses itself unless this same home screen was what it replaced.
      */
-    private val idleFrame = Runnable {
-        if (hasWindowFocus() && welcome == null && sheets.isEmpty() && !control.isOpen) openFrame()
-    }
+    private var idleToken = 0
+    private var idleDueAt = 0L
+    private var lastIdleLog: String? = null
+    private var lastSuppressLog: String? = null
+    private val idleFrame = Runnable { onIdleFired() }
 
-    private fun firmwareSaverDelay(): Long? {
-        val t = runCatching { Settings.System.getLong(contentResolver, "screen_saver_timeout") }.getOrNull() ?: return null
-        return if (t > 0) maxOf(30_000L, t - 15_000L) else null
-    }
+    private fun screenSaverTimeout(): Long? =
+        runCatching { Settings.System.getLong(contentResolver, "screen_saver_timeout") }.getOrNull()
 
-    private fun restartIdle() {
+    private fun readSchedule() = FrameIdlePolicy.schedule(prefs.frameScreensaver, prefs.frameIdleMinutes, screenSaverTimeout())
+
+    private fun cancelIdle() {
+        idleToken++
         main.removeCallbacks(idleFrame)
-        firmwareSaverDelay()?.let { main.postDelayed(idleFrame, it) }
+    }
+
+    /** [resetDeadline] is for a real key, a fresh resume, or the screen coming back on. */
+    private fun armIdle(resetDeadline: Boolean) {
+        if (!resumed) return
+        val now = SystemClock.elapsedRealtime()
+        if (resetDeadline) HomeForeground.interact(now)
+        val schedule = readSchedule()
+        if (schedule.logLine != lastIdleLog) {
+            lastIdleLog = schedule.logLine
+            Log.i(FrameIdlePolicy.TAG, schedule.logLine)
+        }
+        main.removeCallbacks(idleFrame)
+        val delay = schedule.delayMs
+        if (delay == null) {
+            idleDueAt = 0L
+            idleToken++
+            return
+        }
+        if (resetDeadline || idleDueAt == 0L) idleDueAt = now + delay
+        idleToken++
+        main.postDelayed(idleFrame, (idleDueAt - now).coerceAtLeast(0L))
+    }
+
+    private fun idleOverlays() = welcome != null || intro != null || sheets.isNotEmpty() || control.isOpen
+
+    private fun idleSuppression(): FrameIdlePolicy.Suppression? {
+        val now = SystemClock.elapsedRealtime()
+        val hint = HomeForeground.mediaHint(now)
+        val media = FrameIdleProbe.media(this, hint)
+        return FrameIdlePolicy.suppression(
+            resumed = resumed,
+            focused = hasWindowFocus(),
+            interactive = getSystemService(android.os.PowerManager::class.java).isInteractive,
+            overlays = idleOverlays(),
+            media = media,
+        )
+    }
+
+    private fun noteSuppressed(detail: String) {
+        if (detail == lastSuppressLog) return
+        lastSuppressLog = detail
+        Log.i(FrameIdlePolicy.TAG, "photo frame suppressed: $detail")
+    }
+
+    private fun onIdleFired() {
+        val token = idleToken
+        if (!resumed) return
+        val blocked = idleSuppression()
+        if (blocked != null) {
+            noteSuppressed(blocked.detail)
+            if (blocked.retry) main.postDelayed(idleFrame, FrameIdlePolicy.RETRY_MS)
+            return
+        }
+        if (!prefs.adbAuthorized) {
+            openFrameFromIdle(token)
+            return
+        }
+        io.execute {
+            val dump = LocalAdb.shell(applicationContext, "dumpsys window", 2500)
+            val foreign = FrameIdlePolicy.foreignHoldScreen(dump, packageName)
+            main.post {
+                if (token != idleToken || !resumed) return@post
+                val again = idleSuppression()
+                if (again != null) {
+                    noteSuppressed(again.detail)
+                    if (again.retry) main.postDelayed(idleFrame, FrameIdlePolicy.RETRY_MS)
+                    return@post
+                }
+                if (foreign == true) {
+                    noteSuppressed("another window holds the screen on")
+                    main.postDelayed(idleFrame, FrameIdlePolicy.RETRY_MS)
+                    return@post
+                }
+                if (foreign == null) {
+                    Log.i(FrameIdlePolicy.TAG, "frame idle: hold-screen window was not readable; other apps' FLAG_KEEP_SCREEN_ON may be invisible")
+                }
+                openFrameFromIdle(token)
+            }
+        }
+    }
+
+    private fun openFrameFromIdle(token: Int) {
+        if (token != idleToken || !resumed || isFinishing) return
+        val blocked = idleSuppression()
+        if (blocked != null) {
+            noteSuppressed(blocked.detail)
+            if (blocked.retry) main.postDelayed(idleFrame, FrameIdlePolicy.RETRY_MS)
+            return
+        }
+        lastSuppressLog = null
+        Log.i(FrameIdlePolicy.TAG, "opening photo frame; ${lastIdleLog.orEmpty()}")
+        openFrame()
+    }
+
+    private fun syncOwnPlayback() {
+        HomeForeground.setOwnPlayback(wallpaperPlaying || intro != null, SystemClock.elapsedRealtime())
     }
 
     fun openFrame() {
@@ -262,10 +365,14 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private val screenOn = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
             if (i.action == Intent.ACTION_SCREEN_OFF) {
+                wallpaperPlaying = false
                 videoWallpaper.stop()
+                syncOwnPlayback()
+                cancelIdle()
                 armWakeIntro()
                 return
             }
+            if (resumed) armIdle(resetDeadline = true)
             if (resumed && !wakeIntro) applyBackground()
             if (!wakeIntro) return
             if (resumed) { consumeWakeIntro(); return }
@@ -276,22 +383,28 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     /** Plays the boot animation over the home screen; [preview] is the one started from settings. */
     fun playIntro(preview: Boolean = false, wake: Boolean = false) {
         if (intro != null || welcome != null) return
+        wallpaperPlaying = false
         videoWallpaper.stop()
+        syncOwnPlayback()
         if (!preview) prefs.introBoot = Intro.bootStamp(this)
         sheets.toList().forEach { it.dismiss() }
         control.close()
         intro = Intro(this, root, scene, prefs.introSound) {
             intro = null
+            syncOwnPlayback()
             if (resumed) applyBackground()
             if (sheets.isEmpty() && !control.isOpen) focusAt(focusedPos)
         }.also { it.start(if (wake) prefs.wakeDelay.toLong() else 0) }
+        syncOwnPlayback()
     }
 
     /** Independent of the user's boot video and sound preferences. */
     private fun playWelcome(preview: Boolean = false) {
         welcome?.let { it.close(); root.removeView(it) }
         intro?.finish()
+        wallpaperPlaying = false
         videoWallpaper.stop()
+        syncOwnPlayback()
         pauseShelfRotation()
         sheets.toList().forEach { it.dismiss() }
         control.close()
@@ -323,6 +436,9 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     override fun onDestroy() {
         resumed = false
+        cancelIdle()
+        wallpaperPlaying = false
+        syncOwnPlayback()
         videoWallpaper.destroy()
         unregisterReceiver(pkgReceiver)
         main.removeCallbacksAndMessages(null)
@@ -561,11 +677,19 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val theme = prefs.background
         if (theme in VideoWallpaper.SOURCES) {
             showBackground("graphite", null)
-            if (resumed && intro == null && welcome == null && getSystemService(android.os.PowerManager::class.java).isInteractive)
+            if (resumed && intro == null && welcome == null && getSystemService(android.os.PowerManager::class.java).isInteractive) {
+                wallpaperPlaying = true
                 videoWallpaper.start(theme)
+            } else {
+                wallpaperPlaying = false
+                videoWallpaper.stop()
+            }
+            syncOwnPlayback()
             return
         }
+        wallpaperPlaying = false
         videoWallpaper.stop()
+        syncOwnPlayback()
         if (!Wallpapers.isPhoto(theme)) return showBackground(theme, null)
         if (refreshing) return
         refreshing = true
@@ -1175,8 +1299,23 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         focusAt(focusedPos)
     }
 
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        armIdle(resetDeadline = true)
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        val now = SystemClock.elapsedRealtime()
+        HomeForeground.windowFocus(hasFocus, now)
+        if (!resumed) return
+        if (!hasFocus) cancelIdle()
+        else if (HomeForeground.isDreamBounce(now)) armIdle(resetDeadline = false)
+        else armIdle(resetDeadline = true)
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        restartIdle()
+        armIdle(resetDeadline = true)
         welcome?.let { return it.key(event) }
         // Any key skips the intro to its closing zoom; nothing behind it reacts meanwhile.
         intro?.let { if (event.action == KeyEvent.ACTION_UP) it.skip(); return true }
@@ -1244,7 +1383,10 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         welcome?.resume()
         prefs.homeInFront = true
         HomeGuardService.onHomeResumed()
-        restartIdle()
+        val now = SystemClock.elapsedRealtime()
+        HomeForeground.resume(now)
+        if (HomeForeground.isDreamBounce(now)) armIdle(resetDeadline = false)
+        else armIdle(resetDeadline = true)
         applyBackground()
         updateNetworkIcon()
         main.removeCallbacks(ticker)
@@ -1257,14 +1399,17 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         HomeGuardService.onHomePaused()
         resumed = false
         prefs.unobserve(wallpaperChanges)
+        wallpaperPlaying = false
         videoWallpaper.stop()
         // Leaving for another app (or standby) ends the intro rather than leaving it half played.
         intro?.finish()
+        syncOwnPlayback()
         welcome?.pause()
         if (!getSystemService(android.os.PowerManager::class.java).isInteractive) armWakeIntro()
         resumed = false
         prefs.homeInFront = false
-        main.removeCallbacks(idleFrame)
+        HomeForeground.pause(SystemClock.elapsedRealtime())
+        cancelIdle()
         main.removeCallbacks(ticker)
         main.removeCallbacks(shelfAdvance)
         super.onPause()

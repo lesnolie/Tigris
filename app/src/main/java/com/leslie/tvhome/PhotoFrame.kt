@@ -7,7 +7,10 @@ import android.graphics.Color
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.provider.Settings
 import android.service.dreams.DreamService
+import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
@@ -189,12 +192,37 @@ class FrameActivity : Activity() {
     }
 }
 
-/** The same screensaver as the system one, shown after the TV has been idle. */
+/**
+ * System dream for the photo frame. Android may start it over any foreground app once the
+ * device is idle. It continues only when the Tigris home screen was what it replaced, the
+ * in-app idle time has elapsed, and nothing is playing. Otherwise it wakes straight back so
+ * a cast or video is not covered and the screen is not forced off.
+ */
 class PhotoDream : DreamService() {
     private var frame: SaverHost? = null
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        val now = SystemClock.elapsedRealtime()
+        val timeout = runCatching { Settings.System.getLong(contentResolver, "screen_saver_timeout") }.getOrNull()
+        val prefs = Prefs(this)
+        val schedule = FrameIdlePolicy.schedule(prefs.frameScreensaver, prefs.frameIdleMinutes, timeout)
+        val decision = FrameIdlePolicy.dreamDecision(
+            coversHome = HomeForeground.dreamCoversHome(now),
+            idleForMs = HomeForeground.idleFor(now),
+            delayMs = schedule.delayMs,
+            media = FrameIdleProbe.media(this, HomeForeground.mediaHint(now)),
+        )
+        if (!decision.show) {
+            Log.i(FrameIdlePolicy.TAG, "dismissing system photo dream: ${decision.reason}; ${schedule.logLine}")
+            if (HomeForeground.dreamCoversHome(now)) HomeForeground.noteDreamRejected(now)
+            runCatching { wakeUp() }.onFailure {
+                Log.w(FrameIdlePolicy.TAG, "could not dismiss photo dream", it)
+                finish()
+            }
+            return
+        }
+        Log.i(FrameIdlePolicy.TAG, "system photo dream starting: ${decision.reason}; ${schedule.logLine}")
         // Interactive so that left / right can skip a film; every other key ends the dream.
         isInteractive = true
         isFullscreen = true
