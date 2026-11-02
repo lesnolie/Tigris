@@ -18,15 +18,18 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.TransitionDrawable
 import android.graphics.Rect
+import android.hardware.display.DisplayManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
+import android.view.Display
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
@@ -338,12 +341,24 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     // Cover on screen-off, before MIUI can show the retained home frame on wake.
     // Consume the pending wake in onResume OR SCREEN_ON, never both.
+    // API 30 and below then wait for a lit display (Intro.startAfterDisplay). API 31+ does not.
     private var resumed = false
     private var wakeIntro = false
     private var wakeCover: View? = null
 
+    private fun displayState(): Int = runCatching {
+        getSystemService(DisplayManager::class.java)?.getDisplay(Display.DEFAULT_DISPLAY)?.state
+    }.getOrNull() ?: -1
+
+    private fun logPower(event: String) {
+        val interactive = runCatching { getSystemService(android.os.PowerManager::class.java).isInteractive }.getOrNull()
+        val introMode = if (::prefs.isInitialized) prefs.intro else "-"
+        BootLog.i("event=$event display=${BootIntroGate.displayLabel(displayState())} interactive=$interactive resumed=$resumed focused=${hasWindowFocus()} intro=$introMode")
+    }
+
     private fun armWakeIntro() {
         if (prefs.intro != Prefs.INTRO_WAKE) return
+        BootLog.i("wake armed")
         wakeIntro = true
         if (wakeCover == null) {
             wakeCover = View(this).apply {
@@ -356,6 +371,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     private fun consumeWakeIntro() {
         if (!wakeIntro) return
+        BootLog.i("wake consume")
         wakeIntro = false
         if (prefs.intro == Prefs.INTRO_WAKE) playIntro(wake = true)
         wakeCover?.let { root.removeView(it) }
@@ -364,6 +380,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     private val screenOn = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
+            logPower(if (i.action == Intent.ACTION_SCREEN_ON) "screen_on" else "screen_off")
             if (i.action == Intent.ACTION_SCREEN_OFF) {
                 wallpaperPlaying = false
                 videoWallpaper.stop()
@@ -389,12 +406,18 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         if (!preview) prefs.introBoot = Intro.bootStamp(this)
         sheets.toList().forEach { it.dismiss() }
         control.close()
+        BootLog.i("play wake=$wake preview=$preview delay=${if (wake) prefs.wakeDelay else 0} sdk=${Build.VERSION.SDK_INT}")
         intro = Intro(this, root, scene, prefs.introSound) {
             intro = null
             syncOwnPlayback()
             if (resumed) applyBackground()
             if (sheets.isEmpty() && !control.isOpen) focusAt(focusedPos)
-        }.also { it.start(if (wake) prefs.wakeDelay.toLong() else 0) }
+        }.also {
+            // API 31+ keeps the fixed delay from the wake signal. Older platforms wait until the
+            // display is on: screen-on there does not mean the panel is showing a picture.
+            if (Build.VERSION.SDK_INT >= 31) it.start(if (wake) prefs.wakeDelay.toLong() else 0)
+            else it.startAfterDisplay(wake, if (wake) prefs.wakeDelay.toLong() else 0L)
+        }
         syncOwnPlayback()
     }
 
@@ -1306,6 +1329,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        if (intro != null) BootLog.i("event=focus has=$hasFocus display=${BootIntroGate.displayLabel(displayState())}")
+        intro?.onWindowFocus(hasFocus)
         val now = SystemClock.elapsedRealtime()
         HomeForeground.windowFocus(hasFocus, now)
         if (!resumed) return
@@ -1379,7 +1404,9 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         applyClockStyle()
         control.applyStyle()
         if (getSystemService(android.os.PowerManager::class.java).isInteractive) consumeWakeIntro()
+        intro?.onWindowFocus(hasWindowFocus())
         resumed = true
+        logPower("resume")
         welcome?.resume()
         prefs.homeInFront = true
         HomeGuardService.onHomeResumed()
@@ -1396,13 +1423,16 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     }
 
     override fun onPause() {
+        logPower("pause")
         HomeGuardService.onHomePaused()
         resumed = false
         prefs.unobserve(wallpaperChanges)
         wallpaperPlaying = false
         videoWallpaper.stop()
         // Leaving for another app (or standby) ends the intro rather than leaving it half played.
-        intro?.finish()
+        // A not-yet-started clip on API 30- is kept: Sony pauses Home while the panel is still dark.
+        if (intro?.isWaitingForDisplay() == true) BootLog.i("pause during display wait")
+        else intro?.finish()
         syncOwnPlayback()
         welcome?.pause()
         if (!getSystemService(android.os.PowerManager::class.java).isInteractive) armWakeIntro()
