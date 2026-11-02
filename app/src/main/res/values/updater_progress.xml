@@ -9,5 +9,8 @@
     <string name="update_continue_product">Continue installation confirmation · %1$s</string>
     <string name="update_retry_product">Cancel pending task and retry · %1$s</string>
     <string name="update_no_confirmation">No confirmation screen is available. Use Cancel pending task and retry if installation is stuck.</string>
+    <string name="update_no_install_ui">This TV has no install confirmation page, so the update cannot finish in the app. The verified package is saved at %1$s. Install it from a computer with: %2$s</string>
+    <string name="update_no_install_ui_saving">This TV has no install confirmation page, so the update cannot finish in the app. Saving the verified package…</string>
+    <string name="update_no_install_ui_missing_copy">This TV has no install confirmation page, so the update cannot finish in the app. The verified package could not be saved. Retry, or download the release on a computer and install it with adb install -r.</string>
     <string name="update_download_failed">Download incomplete or larger than the expected package. Please retry.</string>
 </resources>
