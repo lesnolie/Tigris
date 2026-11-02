@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.17 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.17)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.17/Tigris-v2.0.17.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.17/Tigris-guard-v2.0.17.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.17/SHA256SUMS-v2.0.17.txt)）
+- 最新正式版：**[v2.0.18 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.18)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.18/Tigris-v2.0.18.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.18/Tigris-guard-v2.0.18.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.18/SHA256SUMS-v2.0.18.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **正式版为 v2.0.17。** 标准版 `Tigris-v2.0.17.apk`，兼容守护版 `Tigris-guard-v2.0.17.apk`，沿用原有签名，可对应类型覆盖升级。本版为 Sony BRAVIA Android 9 的同步恢复声明 `READ_SYNC_SETTINGS` / `WRITE_SYNC_SETTINGS`，消除 #53 日志中的 SecurityException。不同型号仍需实机验收；Guard 不是所有电视的通用安装包。
+> **正式版为 v2.0.18。** 标准版 `Tigris-v2.0.18.apk`，兼容守护版 `Tigris-guard-v2.0.18.apk`，沿用原有签名，可对应类型覆盖升级。本版修复没有安装确认页时的更新、主屏幕相框，以及 Android 9–11 唤醒时开机动画黑屏。不同型号仍需实机验收；Guard 不是所有电视的通用安装包。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
@@ -36,6 +36,10 @@
 | Samsung **Tizen**、海信**原生 VIDAA** | **无兼容的 Android APK 安装方式** | 不适用 | 请勿执行 Android ADB 安装命令 |
 
 **如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
+
+## v2.0.18：安装确认、相框和唤醒动画
+
+没有安装确认页的电视会保存校验过的 APK，并显示 `adb install -r` 命令。相框只在 Tigris 主屏幕空闲时出现，投屏或播放视频时不再被屏保打断。Android 9–11 从待机唤醒时，开机动画会等屏幕点亮再播放。应用内更新不会再提示安装 versionCode 不高于当前版本的正式版。请参阅 [v2.0.18 更新说明](docs/releases/v2.0.18.md)。
 
 ## v2.0.17：Sony Android 9 同步权限
 

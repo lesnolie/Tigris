@@ -14,7 +14,7 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeover fixes and video optimizations still need model-level verification. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.17 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.17)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.17/Tigris-v2.0.17.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.17/Tigris-guard-v2.0.17.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.17/SHA256SUMS-v2.0.17.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.18 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.18)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.18/Tigris-v2.0.18.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.18/Tigris-guard-v2.0.18.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.18/SHA256SUMS-v2.0.18.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -22,7 +22,7 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 ## Which APK should I install? Check the TV OS and firmware
 
-> **Latest official release: v2.0.17.** Download `Tigris-v2.0.17.apk` (Standard) or `Tigris-guard-v2.0.17.apk` (Compatibility Guard) and upgrade in place with the matching flavor. This release declares `READ_SYNC_SETTINGS` and `WRITE_SYNC_SETTINGS` so RevivalSync can configure its sync adapter on Sony BRAVIA Android 9 without the SecurityException in #53. Device-level acceptance is still pending; Guard is not universal.
+> **Latest official release: v2.0.18.** Download `Tigris-v2.0.18.apk` (Standard) or `Tigris-guard-v2.0.18.apk` (Compatibility Guard) and upgrade in place with the matching flavor. This release fixes updates on TVs with no install confirmation page, keeps the photo frame on the idle home screen, and waits for the panel before the wake animation on Android 9–11. Device-level acceptance is still pending; Guard is not universal.
 
 | TV / platform | First choice | When to use another build | Important limits |
 |---|---|---|---|
@@ -35,6 +35,10 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 | Samsung **Tizen**, Hisense **native VIDAA** | **No supported Android APK** | Neither | Do not run Android ADB installer commands |
 
 **Verification:** After installing, open another app and press the physical Home key; check reboot, standby/wake and long-press Home cleanup separately. If Home does not return to Tigris, keep the stock launcher enabled and use the [brand install and recovery guide](docs/installation-compatibility.md). Preserve the existing APK signing identity and user data; **do not uninstall merely to bypass installation restrictions**.
+
+## v2.0.18: install confirmation, photo frame, and wake animation
+
+TVs with no install confirmation page keep the verified APK and show an `adb install -r` command. The photo frame starts only on the idle Tigris home screen, including during casting or video. On Android 9–11 the wake animation waits until the panel is lit. The in-app updater no longer offers a release whose versionCode is not higher than the installed one. See the [v2.0.18 release notes](docs/releases/v2.0.18.md).
 
 ## v2.0.17: Sony Android 9 sync permissions
 
