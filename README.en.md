@@ -38,7 +38,7 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 ## v2.0.18: install confirmation, photo frame, and wake animation
 
-TVs with no install confirmation page keep the verified APK and show an `adb install -r` command. The photo frame starts only on the idle Tigris home screen, including during casting or video. On Android 9–11 the wake animation waits until the panel is lit. The in-app updater no longer offers a release whose versionCode is not higher than the installed one. See the [v2.0.18 release notes](docs/releases/v2.0.18.md).
+TVs with no install confirmation page keep the verified APK and show an `adb install -r` command. The photo frame starts only on the idle Tigris home screen, including during casting or video. On Android 9–11 the wake animation waits until the panel is lit. See the [v2.0.18 release notes](docs/releases/v2.0.18.md).
 
 ## v2.0.17: Sony Android 9 sync permissions
 
