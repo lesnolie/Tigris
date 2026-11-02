@@ -1,0 +1,190 @@
+package com.leslie.tvhome
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import java.io.File
+
+class FrameIdlePolicyTest {
+    @Before fun resetForeground() = HomeForeground.resetForTests()
+
+    @Test fun missingOrNonPositiveTimeoutUsesTheInAppMinutes() {
+        for (timeout in listOf(null, 0L, -1L)) {
+            val schedule = FrameIdlePolicy.schedule(frameEnabled = true, idleMinutes = 5, screenSaverTimeoutMs = timeout)
+            assertEquals(FrameIdlePolicy.Source.IN_APP, schedule.source)
+            assertEquals(5 * 60_000L, schedule.delayMs)
+            assertTrue(schedule.logLine.contains("in-app preference (5 min)"))
+            assertTrue(schedule.logLine.contains("screen_saver_timeout=${timeout ?: "missing"}"))
+        }
+    }
+
+    @Test fun positiveVendorTimeoutCanOnlyMakeTheFrameEarlier() {
+        val early = FrameIdlePolicy.schedule(true, 10, 120_000L)
+        assertEquals(FrameIdlePolicy.Source.VENDOR_LEAD, early.source)
+        assertEquals(105_000L, early.delayMs)
+        assertTrue(early.logLine.contains("screen_saver_timeout=120000 minus 15000"))
+
+        val preferenceWins = FrameIdlePolicy.schedule(true, 3, 600_000L)
+        assertEquals(FrameIdlePolicy.Source.IN_APP, preferenceWins.source)
+        assertEquals(3 * 60_000L, preferenceWins.delayMs)
+        assertTrue(preferenceWins.logLine.contains("would lead at 585000ms"))
+    }
+
+    @Test fun vendorLeadStaysAtLeastThirtySeconds() {
+        val schedule = FrameIdlePolicy.schedule(false, 10, 10_000L)
+        assertEquals(30_000L, schedule.delayMs)
+        assertEquals(FrameIdlePolicy.Source.VENDOR_LEAD, schedule.source)
+    }
+
+    @Test fun idleFrameStaysOffWithoutAPreferenceOrAVendorTimeout() {
+        val schedule = FrameIdlePolicy.schedule(false, 10, -1L)
+        assertNull(schedule.delayMs)
+        assertEquals(FrameIdlePolicy.Source.NOT_SCHEDULED, schedule.source)
+        assertTrue(schedule.logLine.contains("not scheduled"))
+        assertTrue(schedule.logLine.contains("screen_saver_timeout=-1"))
+        assertNull(FrameIdlePolicy.schedule(false, 10, null).delayMs)
+    }
+
+    @Test fun unknownMinutesFallBackToTenAndTheChoicesCycle() {
+        assertEquals(10, FrameIdlePolicy.minutes(0))
+        assertEquals(10, FrameIdlePolicy.minutes(60))
+        assertEquals(1, FrameIdlePolicy.nextMinutes(30))
+        assertEquals(3, FrameIdlePolicy.nextMinutes(1))
+        assertEquals(15, FrameIdlePolicy.nextMinutes(10))
+    }
+
+    @Test fun frameRequiresTheResumedFocusedHomeScreen() {
+        val clear = FrameIdlePolicy.Media()
+        assertEquals(FrameIdlePolicy.Block.HOME, FrameIdlePolicy.suppression(false, true, true, false, clear)!!.block)
+        assertEquals(FrameIdlePolicy.Block.FOCUS, FrameIdlePolicy.suppression(true, false, true, false, clear)!!.block)
+        assertEquals(FrameIdlePolicy.Block.ASLEEP, FrameIdlePolicy.suppression(true, true, false, false, clear)!!.block)
+        val overlay = FrameIdlePolicy.suppression(true, true, true, true, clear)!!
+        assertEquals(FrameIdlePolicy.Block.OVERLAY, overlay.block)
+        assertTrue(overlay.retry)
+        assertNull(FrameIdlePolicy.suppression(true, true, true, false, clear))
+    }
+
+    @Test fun mediaAndWakeLocksBlockEvenOnTheHomeScreen() {
+        val session = FrameIdlePolicy.suppression(true, true, true, false,
+            FrameIdlePolicy.Media(foreignSessionPlaying = true))!!
+        assertEquals(FrameIdlePolicy.Block.MEDIA, session.block)
+        assertTrue(session.retry)
+        assertTrue(session.detail.contains("media session"))
+
+        val remote = FrameIdlePolicy.mediaBlockReason(FrameIdlePolicy.Media(remoteMusicActive = true, ownPlayback = true))
+        assertTrue(remote!!.contains("isMusicActiveRemotely"))
+
+        assertNull(FrameIdlePolicy.mediaBlockReason(FrameIdlePolicy.Media(musicActive = true, ownPlayback = true)))
+        assertNull(FrameIdlePolicy.mediaBlockReason(
+            FrameIdlePolicy.Media(musicActive = true, ownPlaybackStoppedAgoMs = 500)))
+        val stranger = FrameIdlePolicy.mediaBlockReason(FrameIdlePolicy.Media(musicActive = true))
+        assertTrue(stranger!!.contains("isMusicActive"))
+        assertNull(FrameIdlePolicy.mediaBlockReason(FrameIdlePolicy.Media(
+            musicActive = true,
+            foreignSessionPlaying = false,
+            foreignPlayback = false,
+        )))
+        assertTrue(FrameIdlePolicy.sessionActive(3))
+        assertFalse(FrameIdlePolicy.sessionActive(2))
+        assertFalse(FrameIdlePolicy.sessionActive(null))
+    }
+
+    @Test fun playbackSummariesExposeUidAndStartedState() {
+        val summary = "AudioPlaybackConfiguration piid:12 type:android.media.AudioTrack u/pid:10123/4321 state:started attr:usage=USAGE_MEDIA"
+        assertEquals(10123, FrameIdlePolicy.clientUidFromSummary(summary))
+        assertTrue(FrameIdlePolicy.summaryLooksActive(summary))
+        assertFalse(FrameIdlePolicy.summaryLooksActive(summary.replace("started", "paused")))
+        assertTrue(FrameIdlePolicy.summaryLooksActive("no state here"))
+        assertFalse(FrameIdlePolicy.summaryLooksActive("state:started", reflectedActive = false))
+        assertNull(FrameIdlePolicy.clientUidFromSummary("no uid"))
+    }
+
+    @Test fun playbackUidsAreForeignOnlyWhenTheListShowsAnotherApp() {
+        assertEquals(true, FrameIdlePolicy.foreignFromUids(listOf(10, 20), ourUid = 10, listComplete = false))
+        assertNull(FrameIdlePolicy.foreignFromUids(listOf(10), ourUid = 10, listComplete = false))
+        assertEquals(false, FrameIdlePolicy.foreignFromUids(listOf(10), ourUid = 10, listComplete = true))
+        assertNull(FrameIdlePolicy.foreignFromUids(listOf(null), ourUid = 10, listComplete = true))
+        assertEquals(false, FrameIdlePolicy.foreignFromUids(emptyList(), ourUid = 10, listComplete = true))
+    }
+
+    @Test fun holdScreenWindowComesFromTheWindowDump() {
+        val ours = "com.leslie.tvhome"
+        assertNull(FrameIdlePolicy.foreignHoldScreen(null, ours))
+        assertNull(FrameIdlePolicy.foreignHoldScreen("mCurrentFocus=Window{a u0 $ours/$ours.HomeActivity}", ours))
+        assertEquals(false, FrameIdlePolicy.foreignHoldScreen("""
+            mHoldScreenWindow=Window{abc u0 $ours/$ours.HomeActivity}
+            mLastWakeLockHoldingWindow=null
+        """.trimIndent(), ours))
+        assertEquals(false, FrameIdlePolicy.foreignHoldScreen("""
+            mHoldScreenWindow=null
+            mLastWakeLockHoldingWindow=null
+        """.trimIndent(), ours))
+        assertEquals(true, FrameIdlePolicy.foreignHoldScreen("""
+            mHoldScreenWindow=null
+            mLastWakeLockHoldingWindow=Window{def u0 com.example.cast/com.example.cast.Player}
+        """.trimIndent(), ours))
+        assertNull(FrameIdlePolicy.foreignHoldScreen("mHoldScreenWindow=not-a-window", ours))
+    }
+
+    @Test fun systemDreamIsAllowedOnlyOverAnIdleHomeScreen() {
+        val quiet = FrameIdlePolicy.Media()
+        val playing = FrameIdlePolicy.Media(musicActive = true)
+        assertFalse(FrameIdlePolicy.dreamDecision(false, 600_000, 60_000, quiet).show)
+        assertTrue(FrameIdlePolicy.dreamDecision(false, 600_000, 60_000, quiet).reason.contains("not in front"))
+        assertFalse(FrameIdlePolicy.dreamDecision(true, 10_000, 60_000, quiet).show)
+        assertFalse(FrameIdlePolicy.dreamDecision(true, 600_000, null, quiet).show)
+        assertFalse(FrameIdlePolicy.dreamDecision(true, 600_000, 60_000, playing).show)
+        val allowed = FrameIdlePolicy.dreamDecision(true, 60_000, 60_000, quiet)
+        assertTrue(allowed.show)
+        assertTrue(allowed.reason.contains("reached"))
+    }
+
+    @Test fun dreamCoversHomeOnlyForTheHomeScreenOrTheDreamThatJustReplacedIt() {
+        val clock = HomeForeground
+        assertFalse(clock.dreamCoversHome(10_000))
+        clock.resume(1_000)
+        clock.windowFocus(true, 1_000)
+        clock.interact(1_000)
+        assertTrue(clock.dreamCoversHome(5_000))
+        assertEquals(4_000L, clock.idleFor(5_000))
+
+        clock.windowFocus(false, 2_000)
+        assertTrue(clock.dreamCoversHome(2_200))
+        assertFalse(clock.dreamCoversHome(6_000))
+
+        clock.windowFocus(true, 7_000)
+        clock.pause(8_000)
+        assertTrue(clock.dreamCoversHome(8_400))
+        assertFalse(clock.dreamCoversHome(12_000))
+    }
+
+    @Test fun rejectingOurOwnDreamDoesNotLookLikeTheUserCameBack() {
+        HomeForeground.resume(0)
+        HomeForeground.interact(0)
+        HomeForeground.noteDreamRejected(5_000)
+        assertTrue(HomeForeground.isDreamBounce(5_100))
+        assertFalse(HomeForeground.isDreamBounce(9_000))
+        assertEquals(5_100L, HomeForeground.idleFor(5_100))
+    }
+
+    @Test fun ownPlaybackGraceDoesNotOutliveTheWallpaper() {
+        HomeForeground.setOwnPlayback(true, 1_000)
+        assertTrue(HomeForeground.mediaHint(1_500).ownPlayback)
+        HomeForeground.setOwnPlayback(false, 2_000)
+        assertEquals(400L, HomeForeground.mediaHint(2_400).ownPlaybackStoppedAgoMs)
+        assertNull(FrameIdlePolicy.mediaBlockReason(HomeForeground.mediaHint(2_400).copy(musicActive = true)))
+        assertTrue(FrameIdlePolicy.mediaBlockReason(HomeForeground.mediaHint(6_000).copy(musicActive = true))!!.contains("isMusicActive"))
+    }
+
+    @Test fun settingsNoLongerWriteTheSystemScreenOffTimeout() {
+        val root = listOf(File("src/main/java"), File("app/src/main/java")).first { it.isDirectory }
+        val hits = root.walk().filter { it.extension == "kt" }
+            .filter { "settings put system screen_off_timeout" in it.readText() }
+            .map { it.relativeTo(root).path }
+            .toList()
+        assertEquals(emptyList<String>(), hits)
+    }
+}
