@@ -504,14 +504,8 @@ class SettingsActivity : Activity() {
                 else -> MediaQuality.AUTO
             }
         }
-        row(I18n.text(R.string.i18n_settingsactivity_080), I18n.text(R.string.i18n_settingsactivity_081), { minutesLabel(idleMinutes()) }) { v ->
-            val opts = listOf(1, 3, 5, 10, 15, 30)
-            val next = opts[(opts.indexOf(idleMinutes()) + 1) % opts.size]
-            v.text = I18n.text(R.string.i18n_settingsactivity_082)
-            Thread {
-                val ok = LocalAdb.shell(applicationContext, "settings put system screen_off_timeout ${next * 60_000}") != null
-                runOnUiThread { v.text = if (ok) minutesLabel(next) else I18n.text(R.string.i18n_settingsactivity_083) }
-            }.start()
+        row(I18n.text(R.string.i18n_settingsactivity_080), I18n.text(R.string.i18n_settingsactivity_081), { minutesLabel(prefs.frameIdleMinutes) }) {
+            prefs.frameIdleMinutes = FrameIdlePolicy.nextMinutes(prefs.frameIdleMinutes)
         }
         row(I18n.text(R.string.i18n_settingsactivity_084), I18n.text(R.string.i18n_settingsactivity_085), { I18n.text(R.string.i18n_settingsactivity_086, prefs.frameSeconds) }) {
             val opts = listOf(15, 30, 60, 120)
@@ -943,9 +937,6 @@ class SettingsActivity : Activity() {
         m >= 60 -> I18n.text(R.string.i18n_settingsactivity_157, m / 60)
         else -> I18n.text(R.string.i18n_settingsactivity_158, m)
     }
-
-    /** On Android TV the screensaver starts after the "screen off" timeout. */
-    private fun idleMinutes() = Settings.System.getInt(contentResolver, Settings.System.SCREEN_OFF_TIMEOUT, 600_000) / 60_000
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK && page != Page.MAIN) {
