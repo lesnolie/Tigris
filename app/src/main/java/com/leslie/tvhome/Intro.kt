@@ -8,11 +8,15 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffXfermode
 import android.graphics.SurfaceTexture
+import android.hardware.display.DisplayManager
 import android.media.MediaPlayer
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
+import android.view.Choreographer
+import android.view.Display
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
@@ -33,6 +37,10 @@ import kotlin.math.sin
  *
  * A default video is available as an optional download; the phone page (壁纸 → QR code) can upload an override, or adb
  * can push one to Android/data/com.leslie.tvhome/files/intro.mp4.
+ *
+ * API 31+ starts on a fixed delay from the wake signal ([start]). Android 9–11 wait until the
+ * display is actually on ([startAfterDisplay]): those panels stay dark after screen-on, and a
+ * TextureView started in that window plays audio with a black picture.
  */
 class Intro(
     private val ctx: Context,
@@ -62,35 +70,271 @@ class Intro(
     /** The video ended (or was skipped) while the logo was still being cut out. */
     private var ended = false
     /** Nothing may keep the home screen covered: whatever goes wrong, the intro ends by then. */
-    private val watchdog = Runnable { finish() }
+    private val watchdog: Runnable = Runnable { onWatchdog() }
+
+    private fun onWatchdog() {
+        if (!finished && deferring && !begun && displayState() != BootIntroGate.DISPLAY_ON &&
+            SystemClock.elapsedRealtime() - armedAt < MAX_WAIT_MS
+        ) {
+            BootLog.i("watchdog extended display=${BootIntroGate.displayLabel(displayState())}")
+            main.postDelayed(watchdog, 5_000L)
+            return
+        }
+        finish()
+    }
+    private var begun = false
+    private var deferring = false
+    private var wakePlay = false
+    private var settleMs = 0L
+    private var armedAt = 0L
+    private var readySince: Long? = null
+    private var frameOk = false
+    private var framePending = false
+    private var settleLogged = false
+    private var lastDisplay = Int.MIN_VALUE
+    private var displayManager: DisplayManager? = null
+    private var playerSurface: Surface? = null
+    private var playingFile: File? = null
+    private var renderAttempts = 0
+    private var loggedTexture = false
+    private var heldForDisplay = false
+    private val settleRunnable = Runnable { evaluate("settle") }
+    private val giveUpRunnable = Runnable { evaluate("give-up") }
+    private val renderWatch = Runnable { retargetIfNoFrame() }
+    private val displayListener = object : DisplayManager.DisplayListener {
+        override fun onDisplayAdded(displayId: Int) {}
+        override fun onDisplayRemoved(displayId: Int) {}
+        override fun onDisplayChanged(displayId: Int) {
+            if (displayId != Display.DEFAULT_DISPLAY || finished) return
+            val state = displayState()
+            if (state == lastDisplay) return
+            BootLog.i("display ${BootIntroGate.displayLabel(lastDisplay)} -> ${BootIntroGate.displayLabel(state)}")
+            lastDisplay = state
+            if (begun) holdForDisplay(state != BootIntroGate.DISPLAY_ON)
+            evaluate("display")
+        }
+    }
 
     /** Covers the screen at once; the animation itself begins after [delay] ms of black. */
     fun start(delay: Long = 0) {
         host.addView(overlay, FrameLayout.LayoutParams(-1, -1))
+        BootLog.i("cover path=legacy delay=$delay sdk=${Build.VERSION.SDK_INT}")
         main.postDelayed(watchdog, 15_000 + delay)
         if (delay > 0) main.postDelayed({ if (!finished) begin() }, delay) else begin()
     }
 
-    private fun begin() {
-        if (Prefs(ctx).introSource == Prefs.INTRO_WORDMARK) {
-            showWordmark()
-            return
+    /**
+     * API 28–30. The black cover goes up immediately. Playback waits until the display is
+     * [BootIntroGate.DISPLAY_ON], this window has focus and a frame has been drawn, then
+     * [wakeDelayMs] (wake only) so the panel can light before the clip's audio starts.
+     */
+    fun startAfterDisplay(wake: Boolean, wakeDelayMs: Long) {
+        deferring = true
+        wakePlay = wake
+        settleMs = wakeDelayMs
+        armedAt = SystemClock.elapsedRealtime()
+        host.addView(overlay, FrameLayout.LayoutParams(-1, -1))
+        main.postDelayed(watchdog, 15_000L + wakeDelayMs.coerceAtLeast(0L) + BootIntroGate.GIVE_UP_MS)
+        main.postDelayed(giveUpRunnable, BootIntroGate.GIVE_UP_MS)
+        val manager = ctx.getSystemService(DisplayManager::class.java)
+        displayManager = manager
+        lastDisplay = displayState()
+        BootLog.i(
+            "cover path=pre31 wake=$wake settle=$wakeDelayMs display=${BootIntroGate.displayLabel(lastDisplay)} focus=${host.hasWindowFocus()} sdk=${Build.VERSION.SDK_INT}"
+        )
+        manager?.registerDisplayListener(displayListener, main)
+        evaluate("arm")
+    }
+
+    /** Still waiting for a lit, focused window. A pause in that gap must not cancel the wake clip. */
+    fun isWaitingForDisplay(): Boolean = deferring && !begun && !finished
+
+    /** [HomeActivity] forwards window focus. Ignored once playback has begun and on the legacy path. */
+    fun onWindowFocus(hasFocus: Boolean) {
+        if (!deferring || begun || finished) return
+        evaluate(if (hasFocus) "focus" else "unfocus")
+    }
+
+    private fun displayState(): Int =
+        (displayManager ?: ctx.getSystemService(DisplayManager::class.java))
+            ?.getDisplay(Display.DEFAULT_DISPLAY)?.state ?: -1
+
+    private fun evaluate(reason: String) {
+        if (finished || begun || !deferring) return
+        val state = displayState()
+        val focus = host.hasWindowFocus()
+        val now = SystemClock.elapsedRealtime()
+        val displayOn = state == BootIntroGate.DISPLAY_ON
+        if (!displayOn || !focus) {
+            if (frameOk || readySince != null) {
+                BootLog.i("wait display=${BootIntroGate.displayLabel(state)} focus=$focus reason=$reason")
+            }
+            frameOk = false
+            readySince = null
+            settleLogged = false
+            main.removeCallbacks(settleRunnable)
+        } else if (!frameOk && !framePending) {
+            framePending = true
+            Choreographer.getInstance().postFrameCallback {
+                framePending = false
+                if (finished || begun || !deferring) return@postFrameCallback
+                if (displayState() == BootIntroGate.DISPLAY_ON && host.hasWindowFocus()) {
+                    frameOk = true
+                    BootLog.i("first frame reason=$reason")
+                }
+                evaluate("frame")
+            }
         }
-        val video = videoFile(ctx) ?: OptionalAssets.file(ctx, OptionalAssets.intro)
+        if (displayOn && focus && frameOk && readySince == null) readySince = now
+        val decision = BootIntroGate.decide(
+            Build.VERSION.SDK_INT, wakePlay, settleMs, state, focus, frameOk, now, readySince, armedAt,
+        )
+        when (decision.action) {
+            BootIntroGate.Action.WAIT -> {
+                if (decision.delayMs > 0L && !settleLogged) {
+                    settleLogged = true
+                    BootLog.i("settle ${decision.delayMs}ms reason=$reason")
+                    main.postDelayed(settleRunnable, decision.delayMs)
+                }
+            }
+            BootIntroGate.Action.START -> {
+                BootLog.i("display ready reason=$reason display=${BootIntroGate.displayLabel(state)}")
+                begin()
+            }
+            BootIntroGate.Action.START_UNREADY -> {
+                // Still dark, unfocused, or waiting on the frame we just scheduled: keep the cover.
+                // The watchdog gives up later so Home cannot stay black.
+                if (!displayOn || !focus || framePending) {
+                    BootLog.i(
+                        "readiness timeout display=${BootIntroGate.displayLabel(state)} focus=$focus frame=$frameOk reason=$reason; still waiting"
+                    )
+                    return
+                }
+                BootLog.i("readiness timeout; starting without a frame reason=$reason")
+                begin()
+            }
+        }
+    }
+
+    /** Pause a clip that has already started if the panel drops out again, then resume on STATE_ON. */
+    private fun holdForDisplay(hold: Boolean) {
+        val mp = player ?: return
+        if (hold == heldForDisplay) return
+        if (hold) {
+            val playing = runCatching { mp.isPlaying }.getOrDefault(false)
+            if (!playing) return
+            if (runCatching { mp.pause() }.isFailure) return
+            heldForDisplay = true
+            main.removeCallbacks(renderWatch)
+            main.removeCallbacks(watchdog)
+            main.postDelayed(watchdog, 20_000L)
+            BootLog.i("playback paused; display not on")
+        } else {
+            heldForDisplay = false
+            runCatching { mp.start() }
+            main.removeCallbacks(watchdog)
+            main.postDelayed(watchdog, 15_000L)
+            if (!loggedTexture) armRenderWatch()
+            BootLog.i("playback resumed; display on")
+        }
+    }
+
+    private fun begin() {
+        if (finished || begun) return
+        begun = true
+        deferring = false
+        main.removeCallbacks(settleRunnable)
+        main.removeCallbacks(giveUpRunnable)
+        if (Build.VERSION.SDK_INT < 31) {
+            main.removeCallbacks(watchdog)
+            main.postDelayed(watchdog, 15_000L)
+        }
+        val wordmark = Prefs(ctx).introSource == Prefs.INTRO_WORDMARK
+        val video = if (wordmark) null else videoFile(ctx) ?: OptionalAssets.file(ctx, OptionalAssets.intro)
+        playingFile = video
+        BootLog.i("animation start source=${if (video == null) "wordmark" else "video"} file=${video?.name ?: "-"}")
         if (video == null) { showWordmark(); return }
         val tv = TextureView(ctx)
+        if (Build.VERSION.SDK_INT < 31) {
+            // An opaque TextureView on API 28 (MediaTek BRAVIA) composites as black while audio runs.
+            tv.isOpaque = false
+        }
         texture = tv
         tv.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
-            override fun onSurfaceTextureAvailable(st: SurfaceTexture, w: Int, h: Int) = play(video, Surface(st))
-            override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, w: Int, h: Int) {}
-            override fun onSurfaceTextureDestroyed(st: SurfaceTexture) = true
+            override fun onSurfaceTextureAvailable(st: SurfaceTexture, w: Int, h: Int) {
+                BootLog.i("surface available ${w}x${h}")
+                if (Build.VERSION.SDK_INT >= 31) {
+                    play(video, Surface(st))
+                    return
+                }
+                if (!BootIntroGate.surfaceCanPlay(Build.VERSION.SDK_INT, w, h)) return
+                st.setDefaultBufferSize(w, h)
+                bindSurface(video, st)
+            }
+            override fun onSurfaceTextureSizeChanged(st: SurfaceTexture, w: Int, h: Int) {
+                BootLog.i("surface size ${w}x${h}")
+                if (Build.VERSION.SDK_INT >= 31 || !BootIntroGate.surfaceCanPlay(Build.VERSION.SDK_INT, w, h)) return
+                st.setDefaultBufferSize(w, h)
+                if (player == null) bindSurface(video, st)
+            }
+            override fun onSurfaceTextureDestroyed(st: SurfaceTexture): Boolean {
+                BootLog.i("surface destroyed")
+                if (Build.VERSION.SDK_INT < 31) {
+                    runCatching { player?.setSurface(null) }
+                    playerSurface?.release()
+                    playerSurface = null
+                }
+                return true
+            }
             override fun onSurfaceTextureUpdated(st: SurfaceTexture) {
+                if (!loggedTexture) {
+                    loggedTexture = true
+                    BootLog.i("texture frame")
+                    main.removeCallbacks(renderWatch)
+                }
                 val mp = player ?: return
                 val left = runCatching { mp.duration - mp.currentPosition }.getOrDefault(Int.MAX_VALUE)
                 if (left in 0..600) cutLogo()
             }
         }
         overlay.addView(tv, FrameLayout.LayoutParams(-1, -1))
+    }
+
+    private fun bindSurface(file: File, st: SurfaceTexture) {
+        val surface = Surface(st)
+        val existing = player
+        if (existing != null) {
+            runCatching { existing.setSurface(surface) }.onFailure {
+                BootLog.i("surface retarget failed ${it.javaClass.simpleName}")
+            }
+            playerSurface?.release()
+            playerSurface = surface
+            BootLog.i("surface retarget")
+            armRenderWatch()
+            return
+        }
+        playerSurface?.release()
+        playerSurface = surface
+        play(file, surface)
+    }
+
+    private fun armRenderWatch() {
+        main.removeCallbacks(renderWatch)
+        main.postDelayed(renderWatch, RENDER_WAIT_MS)
+    }
+
+    /** One retarget: a decoder left attached through standby plays audio into a dead buffer. */
+    private fun retargetIfNoFrame() {
+        if (finished || player == null || Build.VERSION.SDK_INT >= 31) return
+        val file = playingFile ?: return
+        val st = texture?.surfaceTexture
+        if (st == null || renderAttempts >= 1) {
+            BootLog.i("video frame missing")
+            return
+        }
+        renderAttempts++
+        BootLog.i("video frame missing; retarget")
+        bindSurface(file, st)
     }
 
     private fun play(file: File, surface: Surface) {
@@ -101,11 +345,35 @@ class Intro(
             mp.setDataSource(file.path)
             mp.setSurface(surface)
             if (!sound) mp.setVolume(0f, 0f)
-            mp.setOnPreparedListener { it.start() }
+            mp.setOnVideoSizeChangedListener { _, w, h -> BootLog.i("video size ${w}x${h}") }
+            mp.setOnInfoListener { _, what, extra ->
+                when (what) {
+                    MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START -> {
+                        BootLog.i("video frame")
+                        main.removeCallbacks(renderWatch)
+                    }
+                    MediaPlayer.MEDIA_INFO_VIDEO_NOT_PLAYING -> BootLog.i("video not playing extra=$extra")
+                }
+                false
+            }
+            mp.setOnPreparedListener {
+                BootLog.i("prepared duration=${runCatching { it.duration }.getOrDefault(-1)}")
+                it.start()
+                BootLog.i("playback started")
+                if (Build.VERSION.SDK_INT < 31) {
+                    if (displayState() != BootIntroGate.DISPLAY_ON) holdForDisplay(true)
+                    if (!heldForDisplay) armRenderWatch()
+                }
+            }
             mp.setOnCompletionListener { main.post { revealFromVideo() } }
-            mp.setOnErrorListener { _, _, _ -> main.post { revealFromVideo() }; true }
+            mp.setOnErrorListener { _, what, extra ->
+                BootLog.i("player error what=$what extra=$extra")
+                main.post { revealFromVideo() }
+                true
+            }
             mp.prepareAsync()
         } catch (e: Exception) {
+            BootLog.i("player failed ${e.javaClass.simpleName}")
             revealFromVideo()
         }
     }
@@ -135,9 +403,17 @@ class Intro(
         if (finished || revealing) return
         revealing = true
         ended = true
+        BootLog.i("reveal")
         if (!cut) cutLogo()
         // Releasing a player can block for a while; the last frame stays on the TextureView meanwhile.
-        player?.let { mp -> Thread { runCatching { mp.release() } }.start() }
+        player?.let { mp ->
+            if (Build.VERSION.SDK_INT < 31) {
+                runCatching { mp.setSurface(null) }
+                playerSurface?.release()
+                playerSurface = null
+            }
+            Thread { runCatching { mp.release() } }.start()
+        }
         player = null
         if (cut) zoomOrFade()
     }
@@ -201,10 +477,19 @@ class Intro(
     fun finish() {
         if (finished) return
         finished = true
+        BootLog.i("intro end begun=$begun")
         main.removeCallbacks(watchdog)
+        main.removeCallbacks(settleRunnable)
+        main.removeCallbacks(giveUpRunnable)
+        main.removeCallbacks(renderWatch)
+        displayManager?.let { runCatching { it.unregisterDisplayListener(displayListener) } }
+        displayManager = null
         zoom.cancel()
+        if (Build.VERSION.SDK_INT < 31) runCatching { player?.setSurface(null) }
         player?.let { runCatching { it.release() } }
         player = null
+        playerSurface?.release()
+        playerSurface = null
         scene.scaleX = 1f; scene.scaleY = 1f
         overlay.animate().cancel()
         host.removeView(overlay)
@@ -345,6 +630,9 @@ class Intro(
     companion object {
         const val EXTRA_PREVIEW = "com.leslie.tvhome.INTRO_PREVIEW"
         const val FILE = "intro.mp4"
+        private const val RENDER_WAIT_MS = 1_500L
+        /** Keep the cover while a slow panel is still off, then give up so Home cannot stay black. */
+        private const val MAX_WAIT_MS = 45_000L
 
         /** The uploaded video (app storage), else one pushed over adb (Android/data/…/files). */
         fun videoFile(ctx: Context): File? =
