@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.provider.Settings
 import android.service.dreams.DreamService
 import android.util.Log
 import android.view.KeyEvent
@@ -193,10 +192,10 @@ class FrameActivity : Activity() {
 }
 
 /**
- * System dream for the photo frame. Android may start it over any foreground app once the
- * device is idle. It continues only when the Tigris home screen was what it replaced, the
- * in-app idle time has elapsed, and nothing is playing. Otherwise it wakes straight back so
- * a cast or video is not covered and the screen is not forced off.
+ * Android has already decided that the device is idle when it starts this dream. Rechecking
+ * Home's independent timer here races the dream's own focus transition and can immediately
+ * finish the dream, which lets Android go to sleep. Accept our idle settings/update pages too;
+ * the home-only timer and foreign playback/foreground protections remain separate.
  */
 class PhotoDream : DreamService() {
     private var frame: SaverHost? = null
@@ -204,25 +203,21 @@ class PhotoDream : DreamService() {
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         val now = SystemClock.elapsedRealtime()
-        val timeout = runCatching { Settings.System.getLong(contentResolver, "screen_saver_timeout") }.getOrNull()
-        val prefs = Prefs(this)
-        val schedule = FrameIdlePolicy.schedule(prefs.frameScreensaver, prefs.frameIdleMinutes, timeout)
+        val coversOurUi = ScreensaverScope.coversTigrisUi() || HomeForeground.dreamCoversHome(now)
         val decision = FrameIdlePolicy.dreamDecision(
-            coversHome = HomeForeground.dreamCoversHome(now),
-            idleForMs = HomeForeground.idleFor(now),
-            delayMs = schedule.delayMs,
+            coversTigrisUi = coversOurUi,
             media = FrameIdleProbe.media(this, HomeForeground.mediaHint(now)),
         )
         if (!decision.show) {
-            Log.i(FrameIdlePolicy.TAG, "dismissing system photo dream: ${decision.reason}; ${schedule.logLine}")
-            if (HomeForeground.dreamCoversHome(now)) HomeForeground.noteDreamRejected(now)
+            Log.i(FrameIdlePolicy.TAG, "dismissing system photo dream: ${decision.reason}")
+            if (coversOurUi) HomeForeground.noteDreamRejected(now)
             runCatching { wakeUp() }.onFailure {
                 Log.w(FrameIdlePolicy.TAG, "could not dismiss photo dream", it)
                 finish()
             }
             return
         }
-        Log.i(FrameIdlePolicy.TAG, "system photo dream starting: ${decision.reason}; ${schedule.logLine}")
+        Log.i(FrameIdlePolicy.TAG, "system photo dream starting: ${decision.reason}; system idle timeout")
         // Interactive so that left / right can skip a film; every other key ends the dream.
         isInteractive = true
         isFullscreen = true

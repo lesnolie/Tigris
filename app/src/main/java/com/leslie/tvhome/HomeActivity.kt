@@ -179,8 +179,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     /**
      * In-app idle timer for the photo frame. The deadline is [FrameIdlePolicy]: the minutes
      * chosen in settings, brought forward only when the firmware's screensaver timeout is sooner.
-     * It runs only while this home screen is resumed. [PhotoDream] is the system dream and
-     * dismisses itself unless this same home screen was what it replaced.
+     * It runs only while this home screen is resumed. [PhotoDream] independently accepts the
+     * system idle timeout over our own UI, including settings; it does not recheck this timer.
      */
     private var idleToken = 0
     private var idleDueAt = 0L

@@ -5,6 +5,7 @@ import android.app.Application
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
+        ScreensaverScope.register(this)
         I18n.initialize(this)
         Updates.schedule(this)
         val sp = Updates.prefs(this)
