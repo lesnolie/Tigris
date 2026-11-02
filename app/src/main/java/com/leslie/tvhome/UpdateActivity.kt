@@ -213,11 +213,24 @@ class UpdateActivity : Activity() {
 
     private fun cardAction(p: Updates.Product): AppUpdateCardState.Action {
         val sp = Updates.prefs(this)
+        val savedVersion = sp.getString(p.pkg + ".version", null)
+        val stored = sp.getBoolean(p.pkg + ".available", false)
+        // Re-evaluate a saved release against the installed versionCode so a leftover
+        // 「继续安装」 does not survive adb install of a higher code.
+        val offered = if (savedVersion.isNullOrBlank()) stored else {
+            val info = runCatching { packageManager.getPackageInfo(p.pkg, 0) }.getOrNull()
+            UpdatePolicy.offer(
+                savedVersion,
+                Updates.cachedReleaseCode(this, p, savedVersion),
+                info?.versionName,
+                info?.longVersionCode,
+            )
+        }
         return AppUpdateCardState.action(AppUpdateCardState.Snapshot(
             installed = Updates.installed(this, p) != null,
             optional = p.optional,
             checked = sp.contains(p.pkg + ".version"),
-            updateAvailable = sp.getBoolean(p.pkg + ".available", false),
+            updateAvailable = stored && offered,
             phase = sp.getString(p.pkg + ".phase", "idle") ?: "idle",
             hasConfirmation = !sp.getString(p.pkg + ".confirmation", null).isNullOrBlank()
         ))

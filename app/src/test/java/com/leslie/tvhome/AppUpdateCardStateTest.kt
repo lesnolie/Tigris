@@ -25,6 +25,15 @@ class AppUpdateCardStateTest {
         assertFalse(AppUpdateCardState.actionable(AppUpdateCardState.Action.CURRENT))
     }
 
+    @Test fun installedHigherCodeHidesAStaleContinueInstall() {
+        assertEquals(AppUpdateCardState.Action.CURRENT,
+            AppUpdateCardState.action(state(true, false, true, false, phase = "pending", confirmation = true)))
+        assertEquals(AppUpdateCardState.Action.CURRENT,
+            AppUpdateCardState.action(state(true, false, true, false, phase = "failed", confirmation = true)))
+        assertEquals(AppUpdateCardState.Action.CONFIRM,
+            AppUpdateCardState.action(state(true, false, true, true, phase = "pending", confirmation = true)))
+    }
+
     @Test fun pendingInstallHasOneContextualAction() {
         assertEquals(AppUpdateCardState.Action.CONFIRM,
             AppUpdateCardState.action(state(false, true, phase="pending", confirmation=true)))
