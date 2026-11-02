@@ -19,10 +19,8 @@ internal object AppUpdateCardState {
     fun action(s: Snapshot): Action = when {
         s.phase == "download" -> Action.DOWNLOADING
         s.phase == "verify" || s.phase == "stage" -> Action.VERIFYING
-        // A leftover session must not keep offering 「继续安装」 after a higher versionCode is installed.
-        s.phase == "pending" && (!s.installed || s.updateAvailable) ->
-            if (s.hasConfirmation) Action.CONFIRM else Action.WAITING
-        s.phase == "failed" && (!s.installed || s.updateAvailable) -> Action.RETRY
+        s.phase == "pending" -> if (s.hasConfirmation) Action.CONFIRM else Action.WAITING
+        s.phase == "failed" -> Action.RETRY
         !s.installed -> Action.GET
         s.updateAvailable -> Action.UPDATE
         s.optional -> Action.OPEN
