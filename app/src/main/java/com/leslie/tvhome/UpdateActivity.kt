@@ -28,6 +28,7 @@ class UpdateActivity : Activity() {
         val progress: ProgressBar,
         val action: TextView,
         val badge: TextView,
+        val restart: TextView,
     )
 
     private lateinit var column: LinearLayout
@@ -53,6 +54,7 @@ class UpdateActivity : Activity() {
     override fun onResume() {
         super.onResume()
         visible = true
+        Updates.executor.execute { Updates.reconcile(applicationContext) }
         Updates.prefs(this).registerOnSharedPreferenceChangeListener(listener)
         if (::autoButton.isInitialized) render()
         if (::permissionButton.isInitialized) {
@@ -177,6 +179,22 @@ class UpdateActivity : Activity() {
             visibility = View.GONE
         }
         summary.addView(progress, LinearLayout.LayoutParams(-1, dp(4)).apply { topMargin = dp(8) })
+        val restart = button(I18n.text(R.string.update_restart_install), summary, 34) {
+            work {
+                Updates.cancelPending(applicationContext, p, keepDownload = true)
+                Updates.check(applicationContext)
+                Updates.install(applicationContext, p)
+            }
+        }.apply {
+            textSize = 12f
+            visibility = View.GONE
+            contentDescription = I18n.text(R.string.update_retry_product, p.name)
+        }
+        restart.setOnFocusChangeListener { _, on ->
+            focus(restart, on)
+            material.focus(on)
+            if (on) reveal(holder)
+        }
 
         val right = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -195,7 +213,7 @@ class UpdateActivity : Activity() {
             material.focus(on)
             if (on) reveal(holder)
         }
-        cards[p.pkg] = AppCard(p, detail, progress, action, badge)
+        cards[p.pkg] = AppCard(p, detail, progress, action, badge, restart)
     }
 
     private fun label(action: AppUpdateCardState.Action): String = I18n.text(when (action) {
@@ -219,7 +237,7 @@ class UpdateActivity : Activity() {
             checked = sp.contains(p.pkg + ".version"),
             updateAvailable = sp.getBoolean(p.pkg + ".available", false),
             phase = sp.getString(p.pkg + ".phase", "idle") ?: "idle",
-            hasConfirmation = !sp.getString(p.pkg + ".confirmation", null).isNullOrBlank()
+            hasConfirmation = sp.getString(p.pkg + ".phase", "") == "pending" && Updates.canResume(this, p)
         ))
     }
 
@@ -251,6 +269,9 @@ class UpdateActivity : Activity() {
             item.detail.maxLines = if (shown.length > 80) 16 else 2
             item.detail.text = shown
             val inProgress = phase in listOf("download", "verify", "stage")
+            val canRestart = phase == "pending"
+            if (!canRestart && item.restart.hasFocus()) checkButton.requestFocus()
+            item.restart.visibility = if (canRestart) View.VISIBLE else View.GONE
             item.progress.visibility = if (inProgress) View.VISIBLE else View.GONE
             item.progress.isIndeterminate = percent !in 0..100 || phase != "download"
             if (phase == "download" && percent in 0..100) item.progress.progress = percent
@@ -280,19 +301,16 @@ class UpdateActivity : Activity() {
                 if (launch != null) startActivity(launch)
                 else Toast.makeText(this, I18n.text(R.string.optional_app_not_installed), Toast.LENGTH_LONG).show()
             }
-            AppUpdateCardState.Action.CONFIRM -> {
+            AppUpdateCardState.Action.CONFIRM -> work {
                 if (!Updates.confirm(this, p)) {
                     val sp = Updates.prefs(this)
                     val persisted = sp.getString(p.pkg + ".status", null)
                     val failed = sp.getString(p.pkg + ".phase", "") == "failed"
-                    Toast.makeText(this,
-                        if (failed && !persisted.isNullOrBlank()) persisted else I18n.text(R.string.update_no_confirmation),
-                        Toast.LENGTH_LONG).show()
-                    if (failed) render()
+                    error(if (failed && !persisted.isNullOrBlank()) persisted else I18n.text(R.string.update_no_confirmation))
                 }
             }
             AppUpdateCardState.Action.GET, AppUpdateCardState.Action.UPDATE, AppUpdateCardState.Action.RETRY -> work {
-                if (Updates.prefs(this).getString(p.pkg + ".phase", "") == "failed") Updates.cancelPending(applicationContext, p)
+                if (Updates.prefs(this).getString(p.pkg + ".phase", "") == "failed") Updates.cancelPending(applicationContext, p, keepDownload = true)
                 Updates.check(applicationContext)
                 Updates.install(applicationContext, p)
             }

@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="update_restart_install">Force retry</string>
+    <string name="update_interrupted">Installation was interrupted. Retry to create a fresh task; the installed app and its data will be kept.</string>
+    <string name="update_resuming">Restoring installation. Waiting for system confirmation…</string>
     <string name="update_transfer_busy">Download or verification is in progress. Please wait.</string>
     <string name="update_cancelled">Pending task cancelled. Check for updates to try again.</string>
-    <string name="update_pending_recovery">Waiting for TV confirmation. Choose Continue installation; if stuck, choose Cancel pending task and retry.</string>
+    <string name="update_pending_recovery">Waiting for TV confirmation. Choose Continue installation; if it does not open, choose Force retry.</string>
     <string name="update_download_percent">Downloading · %1$d%%</string>
     <string name="update_verifying">Verifying package integrity, version and signature…</string>
     <string name="update_staging">Preparing system installation…</string>
