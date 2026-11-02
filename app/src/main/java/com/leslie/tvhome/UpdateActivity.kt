@@ -241,12 +241,15 @@ class UpdateActivity : Activity() {
                 version != null && saved == "$version → $release" -> I18n.text(R.string.update_available_version, release)
                 else -> saved
             }
-            item.detail.text = when {
+            val shown = when {
                 version != null && !status.isNullOrBlank() -> I18n.text(R.string.update_version_status, version, status)
                 version != null -> I18n.text(R.string.i18n_updateactivity_001, version)
                 !status.isNullOrBlank() -> status
                 else -> I18n.text(R.string.optional_status_not_installed)
             }
+            // Sideload instructions include a full path and must stay on the card after any toast is gone.
+            item.detail.maxLines = if (shown.length > 80) 16 else 2
+            item.detail.text = shown
             val inProgress = phase in listOf("download", "verify", "stage")
             item.progress.visibility = if (inProgress) View.VISIBLE else View.GONE
             item.progress.isIndeterminate = percent !in 0..100 || phase != "download"
@@ -278,8 +281,15 @@ class UpdateActivity : Activity() {
                 else Toast.makeText(this, I18n.text(R.string.optional_app_not_installed), Toast.LENGTH_LONG).show()
             }
             AppUpdateCardState.Action.CONFIRM -> {
-                if (!Updates.confirm(this, p)) Toast.makeText(this,
-                    I18n.text(R.string.update_no_confirmation), Toast.LENGTH_LONG).show()
+                if (!Updates.confirm(this, p)) {
+                    val sp = Updates.prefs(this)
+                    val persisted = sp.getString(p.pkg + ".status", null)
+                    val failed = sp.getString(p.pkg + ".phase", "") == "failed"
+                    Toast.makeText(this,
+                        if (failed && !persisted.isNullOrBlank()) persisted else I18n.text(R.string.update_no_confirmation),
+                        Toast.LENGTH_LONG).show()
+                    if (failed) render()
+                }
             }
             AppUpdateCardState.Action.GET, AppUpdateCardState.Action.UPDATE, AppUpdateCardState.Action.RETRY -> work {
                 if (Updates.prefs(this).getString(p.pkg + ".phase", "") == "failed") Updates.cancelPending(applicationContext, p)
@@ -439,7 +449,8 @@ class UpdateActivity : Activity() {
             runOnUiThread {
                 busy = false
                 if (!isFinishing && !isDestroyed) {
-                    if (error != null) Toast.makeText(this,
+                    // SideloadRequired is already the persistent card status. A toast would hide the path again.
+                    if (error != null && error !is SideloadRequired) Toast.makeText(this,
                         error.message ?: I18n.text(R.string.i18n_updates_024), Toast.LENGTH_LONG).show()
                     render()
                 }
