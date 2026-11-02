@@ -72,7 +72,7 @@
     <string name="i18n_settingsactivity_070" formatted="false">正在下载…</string>
     <string name="i18n_settingsactivity_071">已有 %1$s 张</string>
     <string name="i18n_settingsactivity_072" formatted="false">电视空闲时显示相框</string>
-    <string name="i18n_settingsactivity_073" formatted="false">只在 Tigris 主屏幕空闲后全屏轮播照片或航拍，代替电视自带的屏保。其他应用在前台、正在播放或保持亮屏时不会出现。</string>
+    <string name="i18n_settingsactivity_073" formatted="false">主屏幕空闲后显示照片或航拍。在 Tigris 设置或更新页停留时，也会响应电视系统的屏保时间；不覆盖其他前台应用或正在播放的内容。</string>
     <string name="i18n_settingsactivity_074" formatted="false">正在设置…</string>
     <string name="i18n_settingsactivity_075" formatted="false">需要先授权本机调试</string>
     <string name="i18n_settingsactivity_076" formatted="false">屏保内容</string>
@@ -99,7 +99,7 @@
     <string name="i18n_settingsactivity_099" formatted="false">释放内存时不会被关掉的 App，比如投屏和音乐。</string>
     <string name="i18n_settingsactivity_100">%1$s 个</string>
     <string name="i18n_settingsactivity_101" formatted="false">按遥控器电源键时</string>
-    <string name="i18n_settingsactivity_102" formatted="false">待机：和平时一样。彻底关机：省电，但开机要等更久。</string>
+    <string name="i18n_settingsactivity_102" formatted="false">彻底关机仅在系统能确认电源键操作时执行，开机会更久。自动待机和屏保不会触发彻底关机。</string>
     <string name="i18n_settingsactivity_103" formatted="false">彻底关机</string>
     <string name="i18n_settingsactivity_104" formatted="false">待机</string>
     <string name="i18n_settingsactivity_105" formatted="false">需要先授权本机调试才会生效</string>

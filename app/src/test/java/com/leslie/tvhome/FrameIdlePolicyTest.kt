@@ -129,17 +129,19 @@ class FrameIdlePolicyTest {
         assertNull(FrameIdlePolicy.foreignHoldScreen("mHoldScreenWindow=not-a-window", ours))
     }
 
-    @Test fun systemDreamIsAllowedOnlyOverAnIdleHomeScreen() {
+    @Test fun systemDreamUsesTheSystemsIdleDecisionForHomeAndOurSettingsUi() {
         val quiet = FrameIdlePolicy.Media()
         val playing = FrameIdlePolicy.Media(musicActive = true)
-        assertFalse(FrameIdlePolicy.dreamDecision(false, 600_000, 60_000, quiet).show)
-        assertTrue(FrameIdlePolicy.dreamDecision(false, 600_000, 60_000, quiet).reason.contains("not in front"))
-        assertFalse(FrameIdlePolicy.dreamDecision(true, 10_000, 60_000, quiet).show)
-        assertFalse(FrameIdlePolicy.dreamDecision(true, 600_000, null, quiet).show)
-        assertFalse(FrameIdlePolicy.dreamDecision(true, 600_000, 60_000, playing).show)
-        val allowed = FrameIdlePolicy.dreamDecision(true, 60_000, 60_000, quiet)
-        assertTrue(allowed.show)
-        assertTrue(allowed.reason.contains("reached"))
+        assertFalse(FrameIdlePolicy.dreamDecision(false, quiet).show)
+        assertFalse(FrameIdlePolicy.dreamDecision(true, playing).show)
+        // Sony's dream focus transition made Home report only 32 ms idle after 10 actual minutes.
+        // That independent clock must not reject the system's already-triggered dream.
+        HomeForeground.interact(600_000)
+        assertEquals(32L, HomeForeground.idleFor(600_032))
+        assertTrue(FrameIdlePolicy.dreamDecision(true, quiet).show)
+        HomeForeground.resetForTests() // Settings never initialized Home's clock at all.
+        assertEquals(0L, HomeForeground.idleFor(600_032))
+        assertTrue(FrameIdlePolicy.dreamDecision(true, quiet).show)
     }
 
     @Test fun dreamCoversHomeOnlyForTheHomeScreenOrTheDreamThatJustReplacedIt() {

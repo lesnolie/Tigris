@@ -46,7 +46,7 @@ object LocalAdb {
 
     private data class ShellResult(val response: dadb.AdbShellResponse? = null, val failure: AdbFailure? = null)
 
-    private fun execute(ctx: Context, cmd: String, waitAuthMs: Int): ShellResult {
+    private fun execute(ctx: Context, cmd: String, waitAuthMs: Int, beforeCommand: ((Dadb) -> Boolean)? = null): ShellResult {
         val prefs = Prefs(ctx)
         var stage = AdbStage.KEYS
         return try {
@@ -54,6 +54,7 @@ object LocalAdb {
             stage = AdbStage.HANDSHAKE
             Dadb.create("127.0.0.1", 5555, pair, connectTimeout = 3000, socketTimeout = waitAuthMs).use { d ->
                 stage = AdbStage.SHELL
+                if (beforeCommand != null && !beforeCommand(d)) return@use ShellResult()
                 ShellResult(response = d.shell(cmd)).also { prefs.adbAuthorized = true }
             }
         } catch (e: Exception) {
@@ -61,6 +62,19 @@ object LocalAdb {
             // Do not copy commands, keys, pairing codes or arbitrary server output into diagnostics.
             Log.w(TAG, "local ADB failed: stage=$stage reason=$reason type=${e.javaClass.simpleName}")
             ShellResult(failure = reason)
+        }
+    }
+
+    /** Probe and shutdown share one connection; a wake invalidates the queued screen-off event. */
+    internal fun shutdownFromPowerButton(ctx: Context, stillCurrent: () -> Boolean) {
+        execute(ctx, "svc power shutdown", 4000) { connection ->
+            if (!stillCurrent()) return@execute false
+            val dump = connection.shell("dumpsys power").allOutput
+            val interactive = ctx.getSystemService(android.os.PowerManager::class.java).isInteractive
+            val decision = PowerButtonShutdownPolicy.decide(dump, android.os.SystemClock.uptimeMillis(), interactive)
+            Log.i("TigrisPower", "screen-off shutdown=${decision.shutdown}: ${decision.reason}")
+            decision.shutdown && stillCurrent() &&
+                !ctx.getSystemService(android.os.PowerManager::class.java).isInteractive
         }
     }
 

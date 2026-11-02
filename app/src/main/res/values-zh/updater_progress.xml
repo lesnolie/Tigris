@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="update_restart_install">强制重试</string>
+    <string name="update_interrupted">安装任务已中断，请重试创建新任务。已安装的应用和数据会保留。</string>
+    <string name="update_resuming">正在恢复安装，等待系统确认…</string>
     <string name="update_transfer_busy">正在下载或校验，请稍候</string>
     <string name="update_cancelled">已取消待处理任务，可重新检查更新</string>
-    <string name="update_pending_recovery">等待电视安装确认。请选择「继续安装确认」；若仍卡住，选择「取消旧任务并重试」。</string>
+    <string name="update_pending_recovery">等待电视安装确认。请选择「继续安装」；若无法打开，选择「强制重试」。</string>
     <string name="update_download_percent">正在下载 · %1$d%%</string>
     <string name="update_verifying">正在校验安装包、版本和签名…</string>
     <string name="update_staging">正在准备系统安装…</string>

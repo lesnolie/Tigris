@@ -72,7 +72,7 @@
     <string name="i18n_settingsactivity_070" formatted="false">Downloading…</string>
     <string name="i18n_settingsactivity_071">%1$s photos</string>
     <string name="i18n_settingsactivity_072" formatted="false">Start Screen Saver When Idle</string>
-    <string name="i18n_settingsactivity_073" formatted="false">Show photos or Aerials only after the Tigris home screen has been idle. It does not appear while another app is in front, media is playing, or the screen is held on.</string>
+    <string name="i18n_settingsactivity_073" formatted="false">Show photos or Aerials when Home is idle. Tigris settings and update pages also use the TV system screensaver timeout. Other foreground apps and active playback are not covered.</string>
     <string name="i18n_settingsactivity_074" formatted="false">Setting up…</string>
     <string name="i18n_settingsactivity_075" formatted="false">Local debugging must be authorized first</string>
     <string name="i18n_settingsactivity_076" formatted="false">Screen Saver Content</string>
@@ -99,7 +99,7 @@
     <string name="i18n_settingsactivity_099" formatted="false">Apps that won\'t be closed when freeing memory, such as casting and music.</string>
     <string name="i18n_settingsactivity_100">%1$s</string>
     <string name="i18n_settingsactivity_101" formatted="false">When you press power on the remote</string>
-    <string name="i18n_settingsactivity_102" formatted="false">Standby: as usual. Full power off: saves power, but boot takes longer.</string>
+    <string name="i18n_settingsactivity_102" formatted="false">Full power off requires a system-confirmed power-key action and takes longer to boot. Automatic standby and the screensaver never trigger full power off.</string>
     <string name="i18n_settingsactivity_103" formatted="false">Full power off</string>
     <string name="i18n_settingsactivity_104" formatted="false">Standby</string>
     <string name="i18n_settingsactivity_105" formatted="false">Requires local debugging authorization to take effect</string>

@@ -29,9 +29,9 @@ package com.leslie.tvhome
  *   the idle timer reads `dumpsys window` for the hold-screen window. A partial wake lock does
  *   not keep the screen on and is not treated as one. Without that grant, a silent window flag
  *   on an activity that never took focus can be missed. An app that did take the foreground
- *   still cannot receive the in-app timer, and a system dream started over it is dismissed.
- * - The system may paint one frame of [PhotoDream] before `wakeUp()` returns to the app
- *   underneath. That is the dream the user opted into; a normal app cannot veto the start.
+ *   still cannot receive the in-app timer. System dreams accept Tigris's idle UI based on
+ *   the system timer, not this independent home timer. Ending a system dream after an idle
+ *   timeout can let Android sleep; DreamService.wakeUp() does not keep the device awake.
  */
 internal object FrameIdlePolicy {
     const val TAG = "TigrisFrame"
@@ -151,12 +151,10 @@ internal object FrameIdlePolicy {
         else -> mediaBlockReason(media)?.let { Suppression(Block.MEDIA, it) }
     }
 
-    fun dreamDecision(coversHome: Boolean, idleForMs: Long, delayMs: Long?, media: Media): DreamDecision {
-        if (!coversHome) return DreamDecision(false, "Tigris home screen is not in front")
+    fun dreamDecision(coversTigrisUi: Boolean, media: Media): DreamDecision {
+        if (!coversTigrisUi) return DreamDecision(false, "a different app is in front")
         mediaBlockReason(media)?.let { return DreamDecision(false, it) }
-        if (delayMs == null) return DreamDecision(false, "photo frame idle is not armed")
-        if (idleForMs < delayMs) return DreamDecision(false, "idle ${idleForMs}ms is below ${delayMs}ms")
-        return DreamDecision(true, "home screen idle ${idleForMs}ms reached ${delayMs}ms")
+        return DreamDecision(true, "system requested the screensaver over idle Tigris UI")
     }
 
     /**

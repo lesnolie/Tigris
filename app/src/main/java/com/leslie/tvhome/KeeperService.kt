@@ -24,11 +24,19 @@ class KeeperService : Service() {
     private val main = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
     private lateinit var prefs: Prefs
+    @Volatile private var screenEvent = 0
 
     private val screenOff = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
+            val event = ++screenEvent
+            if (i.action == Intent.ACTION_SCREEN_ON) return
+            if (i.action != Intent.ACTION_SCREEN_OFF) return
             if (prefs.shutdownOnPowerKey && prefs.adbAuthorized) {
-                Cleaner.shutdown(applicationContext)
+                worker.execute {
+                    LocalAdb.shutdownFromPowerButton(applicationContext) {
+                        screenEvent == event && prefs.shutdownOnPowerKey
+                    }
+                }
             } else if (prefs.cleanOnStandby) {
                 runClean(spareForeground = false)
             }
@@ -57,7 +65,10 @@ class KeeperService : Service() {
             .setContentTitle(I18n.text(R.string.i18n_keeperservice_002))
             .setContentText(I18n.text(R.string.i18n_keeperservice_003))
             .build())
-        registerReceiver(screenOff, IntentFilter(Intent.ACTION_SCREEN_OFF))
+        registerReceiver(screenOff, IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+        })
         contentResolver.registerContentObserver(Settings.Global.getUriFor(Settings.Global.ADB_ENABLED), false, adbObserver)
         Guard.ensure(this)
         // START_STICKY may revive us without rebinding the enabled accessibility service.
@@ -90,6 +101,7 @@ class KeeperService : Service() {
     }
 
     override fun onDestroy() {
+        screenEvent++
         unregisterReceiver(screenOff)
         contentResolver.unregisterContentObserver(adbObserver)
         main.removeCallbacksAndMessages(null)
