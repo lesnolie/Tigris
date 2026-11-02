@@ -88,11 +88,11 @@ export const zh = {
     aerial: {
       eyebrow: "AERIAL SCREENSAVER",
       title: "Apple TV 航拍，成为你的屏保。",
-      lede: "空闲时，电视缓缓滑过地球：海岸线、冰川与城市在屏保里依次展开，地点名随镜头变化。左右键切换镜头，断网自动回到照片，不打断正在播放的视频。",
+      lede: "Tigris 主屏幕空闲时，电视缓缓滑过地球：海岸线、冰川与城市在屏保里依次展开，地点名随镜头变化。左右键切换镜头，断网自动回到照片。其他应用、投屏或正在播放的视频在前台时不会出现。",
       bullets: [
         "可选「航拍视频」作为屏保内容，画面来自 Apple 服务器在线播放（约 15–20 Mbps）",
         "断网或缓冲失败时自动切回照片屏保，不影响下一次空闲进入",
-        "遥控器闲置 1–30 分钟后自动进入「相框」，时间和照片说明也会做出防烙印的位置变化",
+        "仅在 Tigris 主屏幕空闲 1–30 分钟后进入相框。投屏、正在播放的视频或其他应用在前台时不会出现",
       ],
       caption: "相框屏保 · 必应每日照片（演示：照片模式）",
       frameAlt: "相框屏保实拍：水下章鱼照片，左下角是时间、日期与照片说明。",
@@ -363,7 +363,8 @@ adb -s 192.168.x.x:5555 shell appops set com.leslie.tvhome SYSTEM_ALERT_WINDOW a
         { feature: "释放内存", any: "清理缓存", debug: "彻底结束后台 App", sony: "—" },
         { feature: "删除预装 App", any: "—", debug: "支持", sony: "—" },
         { feature: "待机、关机、重启", any: "—", debug: "支持", sony: "—" },
-        { feature: "相框设为系统屏保、空闲时长", any: "—", debug: "支持", sony: "—" },
+        { feature: "相框空闲倒计时（仅主屏幕）", any: "支持", debug: "—", sony: "—" },
+        { feature: "相框设为系统屏保", any: "—", debug: "支持", sony: "—" },
         { feature: "音量滑条", any: "Android 标准音量", debug: "—", sony: "电视音量" },
         { feature: "HDMI 输入源切换", any: "大多数电视", debug: "—", sony: "并显示当前输入源" },
         { feature: "亮度（背光）滑条", any: "小米，需 ADB 授权", debug: "—", sony: "支持" },
