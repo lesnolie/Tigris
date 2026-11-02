@@ -90,8 +90,12 @@ object Updates {
             val release = try { con.inputStream.bufferedReader().use { JSONObject(it.readText()) } } finally { con.disconnect() }
             check(!release.optBoolean("draft") && !release.optBoolean("prerelease"))
             val version = release.getString("tag_name")
-            val current = installed(c, p)
-            val update = current == null || UpdatePolicy.newer(version, current)
+            val info = runCatching { c.packageManager.getPackageInfo(p.pkg, 0) }.getOrNull()
+            val current = info?.versionName?.takeIf { it.isNotBlank() }
+            val installedCode = info?.longVersionCode
+            val remoteCode = cachedReleaseCode(c, p, version)
+            val update = UpdatePolicy.offer(version, remoteCode, current, installedCode)
+            Log.i(TAG, "check ${p.pkg} installed=$current code=$installedCode remote=$version code=$remoteCode offer=$update")
             val assets = release.getJSONArray("assets")
             val home = c.packageManager.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setPackage(c.packageName), 0).isNotEmpty()
             val items = (0 until assets.length()).map { assets.getJSONObject(it) }
@@ -109,14 +113,23 @@ object Updates {
             // An external upgrade can leave the old self-install session behind.
             // Installed current-or-newer software no longer needs that pending session.
             if (!update && p.pkg !in transferring) {
-                if (pending(c, p)) cancelPending(c, p)
+                if (pending(c, p)) {
+                    val installer = c.packageManager.packageInstaller
+                    installer.mySessions.filter { it.appPackageName == p.pkg }
+                        .forEach { installer.abandonSession(it.sessionId) }
+                }
                 discardSideload(c, p.pkg)
                 releaseDownload(c, p.pkg)
             }
-            prefs(c).edit().putString(p.pkg + ".status", status).putBoolean(p.pkg + ".available", update)
+            val edit = prefs(c).edit().putString(p.pkg + ".status", status).putBoolean(p.pkg + ".available", update)
                 .putString(p.pkg + ".url", url).putString(p.pkg + ".version", version)
                 .putString(p.pkg + ".digest", asset.optString("digest"))
-                .putLong(p.pkg + ".size", asset.getLong("size")).apply()
+                .putLong(p.pkg + ".size", asset.getLong("size"))
+            if (!update && p.pkg !in transferring) {
+                edit.remove(p.pkg + ".session").remove(p.pkg + ".confirmation")
+                    .putString(p.pkg + ".phase", "idle").putInt(p.pkg + ".progress", -1)
+            }
+            edit.apply()
             if (update && current != null) {
                 val key = p.pkg + ".notified"
                 if (prefs(c).getString(key, "") != version) {
@@ -269,6 +282,24 @@ object Updates {
             .setContentTitle(p.name).setContentText(message).setContentIntent(pending).setAutoCancel(true)
         if (message.contains("adb install -r")) builder.setStyle(Notification.BigTextStyle().bigText(message))
         nm.notify(p.pkg.hashCode(), builder.build())
+    }
+
+    /**
+     * versionCode of an already downloaded APK for [version], if its own versionName
+     * is that same numeric release. A cache from an older tag is ignored.
+     */
+    internal fun cachedReleaseCode(c: Context, p: Product, version: String): Long? {
+        val files = ArrayList<File>()
+        prefs(c).getString(p.pkg + ".sideload", null)?.let { files.add(File(it)) }
+        files.add(downloadCache(c, p.pkg))
+        for (file in files) {
+            if (!file.isFile) continue
+            val archive = runCatching { c.packageManager.getPackageArchiveInfo(file.path, 0) }.getOrNull() ?: continue
+            val name = archive.versionName ?: continue
+            if (!UpdatePolicy.sameNumeric(version, name)) continue
+            return archive.longVersionCode
+        }
+        return null
     }
 
     private fun downloadCache(c: Context, pkg: String) = File(c.cacheDir, "$pkg-update.apk")
