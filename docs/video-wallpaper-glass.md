@@ -23,6 +23,16 @@ still active, but had no current video image to refract.
 The Dock uses sampled frames rather than video-rate refraction. If a bake takes
 longer than the sampling interval, the next one waits until it finishes.
 
+## Android 11 and older
+
+API 31+ still bakes snapshots with `LiquidGlass` at the snapshot's own scale,
+on the previous cadence. API 30 and below keep the TextureView playing under
+the dock. A copy about 320 px wide is blurred and drawn at about 55% opacity
+inside a mask and rim at the dock's real size, about every 4 s (10 s when the
+TV is short on memory or cores). A copy that takes longer than 150 ms is
+dropped; the dock then stays a light veil and a rim, and further copies stop.
+Details are in [dock-glass-fallback.md](dock-glass-fallback.md).
+
 ## Validation
 
 Android CI passed for both release flavors, including the `VideoGlassFrames`
