@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.19 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.19)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.19/Tigris-v2.0.19.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.19/Tigris-guard-v2.0.19.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.19/SHA256SUMS-v2.0.19.txt)）
+- 最新正式版：**[v2.0.20 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.20)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.20/Tigris-v2.0.20.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.20/Tigris-guard-v2.0.20.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.20/SHA256SUMS-v2.0.20.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **正式版为 v2.0.19。** 标准版 `Tigris-v2.0.19.apk`，兼容守护版 `Tigris-guard-v2.0.19.apk`，沿用原有签名，可对应类型覆盖升级。本版修复更新安装卡住、空闲跳过屏保直接待机，以及自动待机被误当成电源键关机的问题。Guard 仍按真实固件选择。
+> **正式版为 v2.0.20。** 标准版 `Tigris-v2.0.20.apk`，兼容守护版 `Tigris-guard-v2.0.20.apk`，沿用原有签名，可对应类型覆盖升级。本版让 Android 11 及更早的动态视频背景上，Dock 圆角保持清晰，正在播放的画面从半透明磨砂里透出来。Guard 仍按真实固件选择。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
@@ -36,6 +36,10 @@
 | Samsung **Tizen**、海信**原生 VIDAA** | **无兼容的 Android APK 安装方式** | 不适用 | 请勿执行 Android ADB 安装命令 |
 
 **如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
+
+## v2.0.20：旧版 Android 的 Dock 玻璃
+
+Android 11 及更早的系统上，动态视频背景的 Dock 按真实尺寸画圆角，里面是大约 55% 不透明的慢速模糊，圆角不再被拉糊，视频继续在下面播放。拷贝太慢时改成一层淡罩。Android 12 及以上不变。详见 [v2.0.20 更新说明](docs/releases/v2.0.20.md)。
 
 ## v2.0.19：更新恢复、屏保与电源键关机
 

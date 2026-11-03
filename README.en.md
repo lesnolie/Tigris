@@ -14,7 +14,7 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeover fixes and video optimizations still need model-level verification. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.19 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.19)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.19/Tigris-v2.0.19.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.19/Tigris-guard-v2.0.19.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.19/SHA256SUMS-v2.0.19.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.20 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.20)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.20/Tigris-v2.0.20.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.20/Tigris-guard-v2.0.20.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.20/SHA256SUMS-v2.0.20.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -22,7 +22,7 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 ## Which APK should I install? Check the TV OS and firmware
 
-> **Latest official release: v2.0.19.** Upgrade in place with `Tigris-v2.0.19.apk` (Standard) or `Tigris-guard-v2.0.19.apk` (Compatibility Guard), retaining the existing flavor and signing identity. This release fixes interrupted installation recovery, idle screensavers exiting into standby, and automatic standby being mistaken for a power-key shutdown. Select Guard according to the actual firmware.
+> **Latest official release: v2.0.20.** Upgrade in place with `Tigris-v2.0.20.apk` (Standard) or `Tigris-guard-v2.0.20.apk` (Compatibility Guard), retaining the existing flavor and signing identity. On Android 11 and older, the dock over a moving video keeps sharp corners and lets the video show through a slow frost. Select Guard according to the actual firmware.
 
 | TV / platform | First choice | When to use another build | Important limits |
 |---|---|---|---|
@@ -35,6 +35,10 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 | Samsung **Tizen**, Hisense **native VIDAA** | **No supported Android APK** | Neither | Do not run Android ADB installer commands |
 
 **Verification:** After installing, open another app and press the physical Home key; check reboot, standby/wake and long-press Home cleanup separately. If Home does not return to Tigris, keep the stock launcher enabled and use the [brand install and recovery guide](docs/installation-compatibility.md). Preserve the existing APK signing identity and user data; **do not uninstall merely to bypass installation restrictions**.
+
+## v2.0.20: dock glass on Android 11 and older
+
+On Android 11 and older, the dock over a moving video is drawn at its real size: a rounded mask, a slow heavy blur at about 55% opacity, and a light veil if a snapshot is too slow. The video keeps playing underneath. Android 12 and newer are unchanged. See the [v2.0.20 release notes](docs/releases/v2.0.20.md).
 
 ## v2.0.19: installation recovery, screensavers and power-key shutdown
 
