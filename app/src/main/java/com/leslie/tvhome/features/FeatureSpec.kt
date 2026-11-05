@@ -30,11 +30,11 @@ object Features {
         testMethod = "FeatureSpecTest; enable/disable, offline cache and destroy during request",
     )
     val liquidGlass = FeatureSpec(
-        id = "liquid-glass", name = "Liquid Glass", purpose = "Control Center appearance",
-        capabilities = emptySet(), settings = setOf("cc_style"), defaultEnabled = true,
+        id = "liquid-glass", name = "Liquid Glass", purpose = "Control Center and Dock appearance",
+        capabilities = emptySet(), settings = setOf("cc_style", "extreme_glass", "glass_light_tint", "glass_dark_tint", "reduce_glass_transparency"), defaultEnabled = true,
         permissions = emptySet(), fallback = "Existing auto mode selects panel on low-end hardware",
         lifecycle = "ControlCenter owns views and animations; close cancels its view lifecycle",
-        testMethod = "Build both flavors; compare auto/glass/panel on hardware",
+        testMethod = "Build both flavors; compare auto/glass/panel and extreme glass on hardware",
     )
     val dock = FeatureSpec(
         id = "dock", name = "Dock", purpose = "Launch and arrange applications",

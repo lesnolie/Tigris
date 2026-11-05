@@ -76,6 +76,8 @@ internal class VideoWallpaper(
     private var failedCopies = 0
     private var nextCaptureAt = 0L
     private val lowEnd by lazy { Device.isLowEnd(ctx) }
+    private val prefs = Prefs(ctx)
+    private var capturedTimestamp = Long.MIN_VALUE
     /** A pre-31 copy was slow enough that further frost snapshots would stall playback. */
     var frostSuspended = false
         private set
@@ -103,12 +105,16 @@ internal class VideoWallpaper(
                 nextCaptureAt = now + 5_000L
             }
             if (frostSuspended && Build.VERSION.SDK_INT < DockGlassFallback.MODERN_MIN_SDK) return
+            val live = prefs.extremeGlass
+            val timestamp = texture.surfaceTexture?.timestamp ?: Long.MIN_VALUE
             if (!pendingCapture && now >= nextCaptureAt && texture.alpha > 0f &&
                 texture.isAvailable && canSample() && texture.width > 0 && texture.height > 0
+                && (!live || timestamp != capturedTimestamp)
             ) {
+                capturedTimestamp = timestamp
                 capture(now)
             }
-            main.postDelayed(this, if (lowEnd) 350L else 200L)
+            main.postDelayed(this, if (live) 80L else if (lowEnd) 350L else 200L)
         }
     }
 
@@ -124,7 +130,8 @@ internal class VideoWallpaper(
      * itself is short on memory or cores.
      */
     private fun captureIntervalMs(): Long =
-        if (Build.VERSION.SDK_INT < DockGlassFallback.MODERN_MIN_SDK)
+        if (prefs.extremeGlass) 1000L
+        else if (Build.VERSION.SDK_INT < DockGlassFallback.MODERN_MIN_SDK)
             DockGlassFallback.videoRefreshIntervalMs(weakHardware)
         else if (lowEnd) 1_000L else 500L
 
@@ -162,7 +169,7 @@ internal class VideoWallpaper(
                         return@post
                     }
                     pendingCapture = false
-                    if (Build.VERSION.SDK_INT < DockGlassFallback.MODERN_MIN_SDK &&
+                    if (!prefs.extremeGlass && Build.VERSION.SDK_INT < DockGlassFallback.MODERN_MIN_SDK &&
                         DockGlassFallback.copyIsSlow(took)
                     ) {
                         bitmap.recycle()
@@ -227,6 +234,7 @@ internal class VideoWallpaper(
                 main.removeCallbacks(timeout)
                 texture.alpha = 1f
                 main.removeCallbacks(sample)
+                texture.removeCallbacks(sample)
                 sample.run()
             }
             override fun onVideoSizeChanged(size: VideoSize) {
@@ -290,6 +298,7 @@ internal class VideoWallpaper(
 
     private fun clearFrame() {
         captureGeneration++
+        capturedTimestamp = Long.MIN_VALUE
         captureSurface?.release()
         captureSurface = null
         pendingCapture = false
@@ -300,6 +309,7 @@ internal class VideoWallpaper(
     fun stop() {
         main.removeCallbacks(timeout)
         main.removeCallbacks(sample)
+        texture.removeCallbacks(sample)
         player?.release()
         player = null
         texture.alpha = 0f

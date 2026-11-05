@@ -156,4 +156,11 @@
     <string name="i18n_settingsactivity_156" formatted="false">Daily</string>
     <string name="i18n_settingsactivity_157">%1$s h</string>
     <string name="i18n_settingsactivity_158">%1$s min</string>
+    <string name="i18n_settingsactivity_159" formatted="false">Extreme Liquid Glass</string>
+    <string name="i18n_settingsactivity_160" formatted="false">Refraction and dispersion over still backgrounds; video passes directly through transparent glass with rim light. Recommended for high-performance TVs.</string>
+    <string name="glass_light_tint">Glass tint · light mode</string>
+    <string name="glass_dark_tint">Glass tint · dark mode</string>
+    <string name="glass_tint_help">Adjust tint from 0% to 150%. 100% is the reference material; 0% keeps the blur, lens and edge light.</string>
+    <string name="glass_reduce_transparency">Reduce glass transparency</string>
+    <string name="glass_reduce_transparency_help">Use solid surfaces for clearer text. System high contrast text also enables this fallback.</string>
 </resources>

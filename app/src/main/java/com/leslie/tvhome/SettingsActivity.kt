@@ -149,6 +149,7 @@ class SettingsActivity : Activity() {
             setOnClickListener { if (page == Page.MAIN) finish() else show(Page.MAIN, opener) }
         }
         val backGlass = glass.control(back)
+        backGlass.bindInk(listOf(back))
         back.setOnFocusChangeListener { _, on ->
             backGlass.focus(on)
             back.tweenScale(if (on) 1.045f else 1f, 220)
@@ -368,6 +369,22 @@ class SettingsActivity : Activity() {
             auto(prefs.ccStyle, prefs.ccGlass(this), I18n.text(R.string.i18n_settingsactivity_038), I18n.text(R.string.i18n_settingsactivity_039))
         }) {
             prefs.ccStyle = next(prefs.ccStyle, Prefs.CC_GLASS, Prefs.CC_PANEL)
+        }
+        row(I18n.text(R.string.i18n_settingsactivity_159), I18n.text(R.string.i18n_settingsactivity_160),
+            { onOff(prefs.extremeGlass) }, checked = { prefs.extremeGlass }) {
+            prefs.extremeGlass = !prefs.extremeGlass
+        }
+        row(I18n.text(R.string.glass_light_tint), I18n.text(R.string.glass_tint_help),
+            { "${(prefs.glassLightTint * 100).toInt()}%" }) {
+            prefs.glassLightTint = if (prefs.glassLightTint >= 1.5f) 0f else prefs.glassLightTint + 0.25f
+        }
+        row(I18n.text(R.string.glass_dark_tint), I18n.text(R.string.glass_tint_help),
+            { "${(prefs.glassDarkTint * 100).toInt()}%" }) {
+            prefs.glassDarkTint = if (prefs.glassDarkTint >= 1.5f) 0f else prefs.glassDarkTint + 0.25f
+        }
+        row(I18n.text(R.string.glass_reduce_transparency), I18n.text(R.string.glass_reduce_transparency_help),
+            { onOff(prefs.reduceGlassTransparency) }, checked = { prefs.reduceGlassTransparency }) {
+            prefs.reduceGlassTransparency = !prefs.reduceGlassTransparency
         }
 
         section(I18n.text(R.string.shelf_custom_section))
@@ -844,7 +861,6 @@ class SettingsActivity : Activity() {
             setPadding(dp(20), dp(14), dp(20), dp(14))
             minimumHeight = dp(56)
         }
-        val material = glass.control(r, 20)
         appIcon?.let { drawable ->
             r.addView(ImageView(this).apply {
                 setImageDrawable(drawable); scaleType = ImageView.ScaleType.FIT_CENTER
@@ -868,9 +884,37 @@ class SettingsActivity : Activity() {
             gravity = Gravity.CENTER; importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         } else null
         check?.let { r.addView(it, LinearLayout.LayoutParams(dp(28), dp(28)).apply { marginStart = dp(12) }) }
-        if (chevron) r.addView(text(23f, IDLE_VALUE, weight = 300).apply {
+        val chevronView = if (chevron) text(23f, IDLE_VALUE, weight = 300).apply {
             text = "›"; importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(12) })
+        }.also {
+            r.addView(it, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(12) })
+        } else null
+        var focused = false
+        var restLabel = IDLE_TEXT
+        var restValue = IDLE_VALUE
+        var restChevron = IDLE_VALUE
+        fun restInk() {
+            val selected = focused && prefs.extremeGlass
+            l.setTextColor(if (selected) Color.argb(235, 0, 0, 0) else restLabel)
+            v.setTextColor(if (selected) Color.argb(180, 0, 0, 0) else restValue)
+            chevronView?.setTextColor(if (selected) Color.argb(180, 0, 0, 0) else restChevron)
+            check?.setTextColor(if (selected) Color.argb(235, 0, 0, 0) else restLabel)
+            val blend = prefs.extremeGlass && !prefs.solidGlass(this)
+            val light = selected || GlassMaterial.luminance(restLabel) < 0.5f
+            listOfNotNull(l, v, chevronView, check).forEach { GlassInk.apply(it, blend, light) }
+        }
+        val material = glass.control(r, 20) { tone ->
+            if (prefs.extremeGlass) {
+                restLabel = tone.ink
+                restValue = tone.secondaryInk
+                restChevron = tone.secondaryInk
+            } else {
+                restLabel = IDLE_TEXT
+                restValue = IDLE_VALUE
+                restChevron = IDLE_VALUE
+            }
+            restInk()
+        }
         fun sync() {
             val on = checked?.invoke()
             if (on != null) {
@@ -888,7 +932,21 @@ class SettingsActivity : Activity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { sync() }
             override fun afterTextChanged(s: Editable?) {}
         })
+        val focusInk = Color.argb(235, 0, 0, 0)
+        val focusSecondary = Color.argb(180, 0, 0, 0)
         r.setOnFocusChangeListener { _, on ->
+            focused = on
+            if (on && prefs.extremeGlass) {
+                l.setTextColor(focusInk)
+                v.setTextColor(focusSecondary)
+                chevronView?.setTextColor(focusSecondary)
+                check?.setTextColor(focusInk)
+                listOfNotNull(l, v, chevronView, check).forEach {
+                    GlassInk.apply(it, !prefs.solidGlass(this), true)
+                }
+            } else {
+                restInk()
+            }
             material.focus(on)
             r.tweenScale(if (on) 1.035f else 1f, if (on) 260 else 200,
                 if (on) Motion.spring else Motion.ease)

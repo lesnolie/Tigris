@@ -116,6 +116,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     /** Grid scroll position; RecyclerView's own estimate is unreliable for grids. */
     private var scrollY = 0
     private var shownBackground: String? = null
+    private var glassExtreme = false
+    private var glassAppearance = ""
     @Volatile private var refreshing = false
     private var bgPhoto: android.graphics.drawable.Drawable? = null
     private var sw = 0
@@ -123,6 +125,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     /** Liquid Glass slab behind the first row, the "dock". */
     private lateinit var dock: ImageView
+    private var dockShadow: ImageView? = null
     private lateinit var frost: ImageView
     private lateinit var scrollGlass: FrostGlass
     private val dockRect = Rect()
@@ -132,6 +135,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private var dockShown: Drawable? = null
     /** Last pre-31 video dock rebuild. API 31+ does not read this. */
     private var lastLegacyDockGlassMs = 0L
+    private var lastLiveFrostMs = 0L
 
     /** Top Shelf: content of the focused first-row dock app filling the screen above the dock. */
     private lateinit var shelf: FrameLayout
@@ -318,6 +322,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         super.onCreate(savedInstanceState)
         Tween.readScale(this)
         prefs = Prefs(this)
+        glassExtreme = prefs.extremeGlass
         cols = prefs.dockColumns
         repo = AppRepo(this)
         buildViews()
@@ -471,6 +476,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         unregisterReceiver(pkgReceiver)
         main.removeCallbacksAndMessages(null)
         control.destroy()
+        scrollGlass.close()
         intro?.finish()
         welcome?.close()
         runCatching { unregisterReceiver(screenOn) }
@@ -491,7 +497,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         bg = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
         backdrop.addView(bg, match())
         videoWallpaper = VideoWallpaper(this, backdrop,
-            canSample = { resumed && !shelfShown && !videoGlassFrames.busy },
+            canSample = { resumed && !shelfShown && (prefs.extremeGlass || !videoGlassFrames.busy) },
             onFrame = ::updateVideoGlass,
             onFrostSuspended = ::showVideoVeil)
 
@@ -499,18 +505,18 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         sw = dm.widthPixels
         sh = dm.heightPixels
         // Proportions measured from a 1920×1080 tvOS 26 screenshot.
-        val side = (sw * 0.0583f).toInt()          // 112 px
+        val side = (sw * 0.06875f).toInt()
         val gap = (sw * 0.0292f).toInt()           // 56 px
         tileW = DockLayout.tileWidth(sw, side, gap, cols)
         tileH = tileW * 9 / 16
         rowPitch = (sh * 0.2463f).toInt()          // 266 px
         // The dock sits at the bottom; only the top edge of the next row peeks out below it.
         val defaultTileHeight = DockLayout.tileWidth(sw, side, gap, DockLayout.DEFAULT_COLUMNS) * 9 / 16
-        firstRowY = DockLayout.dockTop((sh * 0.744f).toInt(), defaultTileHeight, tileH)
+        firstRowY = DockLayout.dockTop((sh * 0.744f).toInt(), defaultTileHeight, tileH) + dp(10)
         expandedRowY = (sh * 0.36f).toInt()
 
         // The dock hugs the first row: a focused tile (scaled 1.12) nearly touches its edges.
-        val pad = dp(15)
+        val pad = dp(24)
         dockRect.set(side - pad, firstRowY - pad, sw - side + pad, firstRowY + tileH + pad)
         dockRadius = dp(11) + pad.toFloat()
         buildShelf(side)
@@ -521,6 +527,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         scene.addView(dock, FrameLayout.LayoutParams(dockRect.width(), dockRect.height()).apply {
             leftMargin = dockRect.left; topMargin = dockRect.top
         })
+        updateDockShadow(prefs.extremeGlass)
 
         // A persistent status row, also visible over Top Shelf and the expanded app grid.
         header = FrameLayout(this).apply { clipChildren = false; clipToPadding = false }
@@ -649,14 +656,16 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                 // Keep the glass with the first row and sample the wallpaper at its current position.
                 val expansion = (off / (rowPitch * 0.7f)).coerceIn(0f, 1f)
                 dock.translationY = -off
+                dockShadow?.translationY = -off
                 icons.translationY = -off
                 weatherCard.alpha = 1f - expansion
                 // Off-screen controls must also leave remote-control focus navigation.
                 icons.visibility = if (off > 0f && off >= icons.bottom) View.INVISIBLE else View.VISIBLE
                 dock.alpha = 1f
                 frost.alpha = expansion
+                scrollGlass.expansion = expansion
                 if (off > 0f) { dock.setImageDrawable(scrollGlass); scrollGlass.invalidateSelf() }
-                else dock.setImageDrawable(dockShown)
+                else dock.setImageDrawable(if (prefs.extremeGlass) scrollGlass else dockShown)
                 // The large clock gives way to the rows coming up under it.
                 if (!shelfShown) bigClock.alpha = 1f - expansion
             }
@@ -735,16 +744,19 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val key = if (Wallpapers.isPhoto(theme)) "$theme:${photo?.name}" else theme
         if (key == shownBackground) return
         shownBackground = key
-        val modernDock = DockGlassFallback.usesModernPipeline(Build.VERSION.SDK_INT)
+        val modernDock = prefs.extremeGlass || DockGlassFallback.usesModernPipeline(Build.VERSION.SDK_INT)
         val lowEnd = Device.isLowEnd(this)
         val videoTheme = prefs.background in VideoWallpaper.SOURCES
         io.execute {
-            val bmp = photo?.let { Wallpapers(this, Wallpapers.sourceFor(theme)).forHome(it) } ?: Backgrounds.render(if (Wallpapers.isPhoto(theme)) "green" else theme)
+            val bmp = photo?.let { Wallpapers(this, Wallpapers.sourceFor(theme)).forHome(it, clearDock = prefs.extremeGlass) }
+                ?: Backgrounds.render(if (Wallpapers.isPhoto(theme)) "green" else theme,
+                    bottomShade = if (prefs.extremeGlass) 0.55f else 1f)
             // API 31+ is the existing full-resolution bake. Older TVs composite a
             // small software blur into a full-size mask. Video starts as a light
             // veil until a snapshot is ready; the TextureView keeps playing under it.
-            val glass = (if (modernDock) {
-                LiquidGlass.bake(bmp, sw, sh, dockRect, dockRadius)
+            val glass = (if (prefs.extremeGlass) bmp else if (modernDock) {
+                LiquidGlass.bake(bmp, sw, sh, dockRect, dockRadius, extreme = prefs.extremeGlass,
+                    darkTheme = isNight(), tintScale = prefs.glassTint(isNight()), solid = prefs.solidGlass(this))
             } else if (videoTheme) {
                 DockGlassFallback.frosted(dockRect.width(), dockRect.height(), dockRadius)
             } else {
@@ -760,7 +772,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                     frost.setImageBitmap(blurred)
                     scrollGlass.veil = !modernDock && videoTheme
                     scrollGlass.frostAlpha = 255
-                    if (!scrollGlass.veil) scrollGlass.texture(blurred)
+                    if (!scrollGlass.veil) scrollGlass.texture(blurred, bmp)
                     val fade = if (!modernDock && videoTheme) DockGlassFallback.FROST_FADE_MS else 1200
                     if (!shelfShown) setDock(glass, fade)
                 }
@@ -800,9 +812,33 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             }
             return
         }
+        if (prefs.extremeGlass) {
+            if (isDestroyed || !resumed || shelfShown) return
+            homeDock = frame
+            scrollGlass.liveTexture(frame)
+            if (dock.drawable !== scrollGlass) dock.setImageDrawable(scrollGlass)
+            control.liveFrame(frame)
+            val now = SystemClock.uptimeMillis()
+            if (scrollY > 0 && now - lastLiveFrostMs >= 100L) {
+                val ticket = videoGlassFrames.begin() ?: return
+                lastLiveFrostMs = now
+                val source = prefs.background
+                io.execute {
+                    val blurred = Wallpapers.blurred(frame, darken = 0.22f)
+                    main.post {
+                        val current = videoGlassFrames.finish(ticket)
+                        if (current && !isDestroyed && resumed && !shelfShown && prefs.background == source) {
+                            frost.setImageBitmap(blurred)
+                            scrollGlass.softTexture(blurred)
+                        }
+                    }
+                }
+            }
+            return
+        }
         val ticket = videoGlassFrames.begin() ?: return
         val source = prefs.background
-        val modernDock = DockGlassFallback.usesModernPipeline(Build.VERSION.SDK_INT)
+        val modernDock = prefs.extremeGlass || DockGlassFallback.usesModernPipeline(Build.VERSION.SDK_INT)
         if (!modernDock && (videoWallpaper.frostSuspended || !DockGlassFallback.shouldRefreshVideo(
                 SystemClock.uptimeMillis(), lastLegacyDockGlassMs, videoWallpaper.weakForFrost,
             ))
@@ -825,8 +861,10 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                     // Live video already provides motion and color; a lighter frost
                     // and partial opacity keep more of that detail visible while the
                     // asynchronous glass texture catches up with the video.
-                    val glass = LiquidGlass.bake(frame, renderW, renderH, rect, dockRadius * scale,
-                        frostStrength = 0.3f, glassOpacity = 0.5f)
+                    val glass = (if (prefs.extremeGlass) frame else LiquidGlass.bake(frame, renderW, renderH, rect, dockRadius * scale,
+                        frostStrength = 0.3f, glassOpacity = 0.5f, extreme = prefs.extremeGlass,
+                        darkTheme = isNight(), tintScale = prefs.glassTint(isNight()),
+                        solid = prefs.solidGlass(this), renderScale = scale))
                         .also { it.prepareToDraw() }
                     glass to Wallpapers.blurred(frame, darken = 0.22f)
                 } else {
@@ -847,13 +885,13 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                         if (modernDock) {
                             scrollGlass.veil = false
                             scrollGlass.frostAlpha = 255
-                            scrollGlass.texture(blurred)
+                            scrollGlass.texture(blurred, frame)
                             // Periodic live frames replace directly; still photos retain their cross-fade.
                             setDock(glass, 0)
                         } else if (!videoWallpaper.frostSuspended) {
                             scrollGlass.veil = false
                             scrollGlass.frostAlpha = DockGlassFallback.VIDEO_FROST_ALPHA
-                            scrollGlass.texture(blurred)
+                            scrollGlass.texture(blurred, frame)
                             setDock(glass, DockGlassFallback.FROST_FADE_MS)
                         }
                         control.refreshGlass()
@@ -883,6 +921,11 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     }
 
     private fun setDock(b: Bitmap, fadeMs: Int) {
+        if (prefs.extremeGlass) {
+            dock.setImageDrawable(scrollGlass)
+            dockShown = scrollGlass
+            return
+        }
         val next = BitmapDrawable(resources, b)
         val old = dockShown
         if (old == null || fadeMs == 0) {
@@ -894,6 +937,40 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         }
         dockShown = next
         if (scrollY > 0) dock.setImageDrawable(scrollGlass)
+    }
+
+    /** The Dock's depth shadow is only allocated for people who opt into extreme glass. */
+    private fun isNight() = (resources.configuration.uiMode and
+        android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+        android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+    private fun updateDockShadow(on: Boolean) {
+        if (!on) {
+            dockShadow?.visibility = View.GONE
+            return
+        }
+        dockShadow?.let {
+            it.visibility = View.VISIBLE
+            return
+        }
+        val pad = dp(18)
+        val offset = dp(4)
+        val bitmap = LiquidGlass.shadow(
+            dockRect.width() / 2, dockRect.height() / 2, dockRadius / 2,
+            pad / 2, alpha = 110, hollow = true,
+        )
+        val shadow = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.FIT_XY
+            setImageBitmap(bitmap)
+            translationY = dock.translationY
+        }
+        scene.addView(shadow, scene.indexOfChild(dock), FrameLayout.LayoutParams(
+            dockRect.width() + pad * 2, dockRect.height() + pad * 2,
+        ).apply {
+            leftMargin = dockRect.left - pad
+            topMargin = dockRect.top - pad + offset
+        })
+        dockShadow = shadow
     }
 
     // ------------------------------------------------------------------- shelf
@@ -978,14 +1055,18 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         io.execute {
             // The picture already carries the scrim (see Shelf.darken).
             // API 31+ keeps the original bake. Older TVs use the full-size mask.
-            val glass = (if (DockGlassFallback.usesModernPipeline(Build.VERSION.SDK_INT)) {
-                LiquidGlass.bake(b, sw, sh, dockRect, dockRadius)
+            val glass = (if (prefs.extremeGlass) b else if (DockGlassFallback.usesModernPipeline(Build.VERSION.SDK_INT)) {
+                LiquidGlass.bake(b, sw, sh, dockRect, dockRadius, extreme = prefs.extremeGlass,
+                    darkTheme = isNight(), tintScale = prefs.glassTint(isNight()), solid = prefs.solidGlass(this))
             } else {
                 DockGlassFallback.fromBackdrop(
                     b, sw, sh, dockRect, dockRadius, video = false, lowEnd = Device.isLowEnd(this@HomeActivity),
                 )
             }).also { it.prepareToDraw() }
-            main.post { if (shelfShown && shelfPkg == pkg && shelfIndex == i) setDock(glass, 600) }
+            main.post { if (shelfShown && shelfPkg == pkg && shelfIndex == i) {
+                if (prefs.extremeGlass) scrollGlass.texture(b, b)
+                setDock(glass, 600)
+            } }
         }
         // Fetch the next picture ahead of time.
         shelfItems.getOrNull((i + 1) % shelfItems.size)?.let { n -> net.execute { Shelf.image(this, n.image) } }
@@ -1009,7 +1090,14 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                 }
                 if (!isDestroyed) control.refreshGlass()
             }.start()
-        if (!v) homeDock?.let { setDock(it, 450) }
+        if (!v) {
+            if (prefs.extremeGlass) {
+                val image = videoWallpaper.frame ?: (bgPhoto as? BitmapDrawable)?.bitmap
+                val soft = (frost.drawable as? BitmapDrawable)?.bitmap
+                if (image != null && soft != null) scrollGlass.texture(soft, image)
+            }
+            homeDock?.let { setDock(it, 450) }
+        }
     }
 
     private fun hideShelf() {
@@ -1049,6 +1137,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     /** The home scene alone, without the control center or any dialog; the glass controls sample it. */
     val sceneView: View get() = scene
+    internal fun glassVideoFrame(): Bitmap? = if (shelfShown) null else videoWallpaper.frame
 
     /** An opaque wallpaper base prevents transitional scene alpha from baking black into glass. */
     fun drawGlassScene(canvas: Canvas): Boolean {
@@ -1472,6 +1561,13 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         super.onResume()
         // Rebuild only after Settings changes column count; order/folders remain in Prefs.
         if (cols != prefs.dockColumns) { recreate(); return }
+        val appearance = "${prefs.extremeGlass}:${prefs.glassTint(isNight())}:${prefs.solidGlass(this)}:${isNight()}"
+        if (glassAppearance != appearance) {
+            glassAppearance = appearance
+            glassExtreme = prefs.extremeGlass
+            updateDockShadow(glassExtreme)
+            shownBackground = null
+        }
         prefs.observe(wallpaperChanges)
         avatar.visibility = if (prefs.showAvatar) View.VISIBLE else View.GONE
         avatar.setPortrait(SettingsActivity.avatarFile(this)?.let { SettingsActivity.decodeIcon(it, 96) })

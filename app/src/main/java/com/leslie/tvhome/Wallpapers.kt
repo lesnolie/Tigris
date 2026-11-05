@@ -402,12 +402,13 @@ class Wallpapers(private val ctx: Context, private val source: String = BING) {
     } catch (e: OutOfMemoryError) { null }
 
     /** A photo dressed for the home screen: darker at the bottom and top-left so tiles and clock stay legible. */
-    fun forHome(f: File): Bitmap? = decode(f)?.also { b ->
+    fun forHome(f: File, clearDock: Boolean = false): Bitmap? = decode(f)?.also { b ->
         val c = Canvas(b)
         val w = b.width.toFloat()
         val h = b.height.toFloat()
         val p = Paint()
-        p.shader = LinearGradient(0f, h * 0.35f, 0f, h, Color.TRANSPARENT, Color.argb(215, 0, 0, 0), Shader.TileMode.CLAMP)
+        p.shader = LinearGradient(0f, h * 0.35f, 0f, h, Color.TRANSPARENT,
+            Color.argb(if (clearDock) 130 else 215, 0, 0, 0), Shader.TileMode.CLAMP)
         c.drawRect(0f, 0f, w, h, p)
         p.shader = android.graphics.RadialGradient(w * 0.12f, h * 0.38f, w * 0.45f,
             Color.argb(90, 0, 0, 0), Color.TRANSPARENT, Shader.TileMode.CLAMP)
@@ -580,7 +581,7 @@ object Backgrounds {
     data class Blob(val x: Float, val y: Float, val r: Float, val color: Int)
 
     /** Rendered small; the ImageView's bilinear upscale keeps it perfectly smooth. */
-    fun render(key: String): Bitmap {
+    fun render(key: String, bottomShade: Float = 1f): Bitmap {
         val blobs = (THEMES[key] ?: THEMES.getValue("green")).second
         val w = 480
         val h = 270
@@ -596,7 +597,7 @@ object Backgrounds {
         }
         // Darken the bottom so the lower rows sit on near-black, as in tvOS.
         p.shader = LinearGradient(0f, h * 0.45f, 0f, h.toFloat(),
-            Color.TRANSPARENT, Color.argb(235, 0, 0, 0), Shader.TileMode.CLAMP)
+            Color.TRANSPARENT, Color.argb((235 * bottomShade.coerceIn(0f, 1f)).toInt(), 0, 0, 0), Shader.TileMode.CLAMP)
         c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), p)
         return b
     }

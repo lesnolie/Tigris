@@ -92,7 +92,7 @@ class UpdateActivity : Activity() {
             setShadowLayer(dp(2).toFloat(), 0f, dp(1).toFloat(), Color.argb(150,0,0,0))
             setOnClickListener { action() }
         }
-        glass.control(view)
+        glass.control(view).bindInk(listOf(view))
         view.setOnFocusChangeListener { _, on -> focus(view, on) }
         parent.addView(view, LinearLayout.LayoutParams(-1, dp(height)))
         return view
@@ -161,11 +161,12 @@ class UpdateActivity : Activity() {
 
         val summary = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         holder.addView(summary, LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dp(12) })
-        summary.addView(text(18f, weight = 500).apply {
+        val title = text(18f, weight = 500).apply {
             text = p.name
             setSingleLine(true)
             ellipsize = TextUtils.TruncateAt.END
-        })
+        }
+        summary.addView(title)
         val detail = text(13f, Color.argb(180,255,255,255)).apply {
             maxLines = 2
             ellipsize = TextUtils.TruncateAt.END
@@ -208,6 +209,7 @@ class UpdateActivity : Activity() {
             visibility = View.GONE
         }
         right.addView(badge, LinearLayout.LayoutParams(-1, dp(42)))
+        material.bindInk(listOf(title), listOf(detail, badge))
         action.setOnFocusChangeListener { _, on ->
             focus(action, on)
             material.focus(on)
@@ -386,14 +388,16 @@ class UpdateActivity : Activity() {
                 sp.edit().putBoolean("auto", !sp.getBoolean("auto", false)).apply()
             }
         }
-        glass.control(autoButton)
+        val autoGlass = glass.control(autoButton)
         autoButton.setOnFocusChangeListener { _, on -> focus(autoButton, on) }
         controls.addView(autoButton, LinearLayout.LayoutParams(-1, dp(64)).apply { topMargin = dp(16) })
         val autoText = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         autoButton.addView(autoText, LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dp(10) })
-        autoText.addView(text(14f, weight = 500).apply { text = I18n.text(R.string.i18n_updateactivity_008).trim() })
+        val autoLabel = text(14f, weight = 500).apply { text = I18n.text(R.string.i18n_updateactivity_008).trim() }
+        autoText.addView(autoLabel)
         autoState = text(11f, Color.argb(170,255,255,255))
         autoText.addView(autoState, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(5) })
+        autoGlass.bindInk(listOf(autoLabel), listOf(autoState))
         autoSwitch = UpdateSwitch(this)
         autoButton.addView(autoSwitch, LinearLayout.LayoutParams(dp(42), dp(26)))
         left.addView(text(12f, Color.argb(150,255,255,255)).apply {

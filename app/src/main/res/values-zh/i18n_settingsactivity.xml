@@ -156,4 +156,11 @@
     <string name="i18n_settingsactivity_156" formatted="false">每天</string>
     <string name="i18n_settingsactivity_157">%1$s 小时</string>
     <string name="i18n_settingsactivity_158">%1$s 分钟</string>
+    <string name="i18n_settingsactivity_159" formatted="false">极致液态玻璃</string>
+    <string name="i18n_settingsactivity_160" formatted="false">静态背景使用折射与色散，动态壁纸直接透明透出，保留边缘光。建议高性能电视开启。</string>
+    <string name="glass_light_tint">玻璃着色 · 浅色模式</string>
+    <string name="glass_dark_tint">玻璃着色 · 深色模式</string>
+    <string name="glass_tint_help">每次调整 25%，范围 0%–150%。100% 为参考材质，0% 仅保留模糊、折射和边缘光。</string>
+    <string name="glass_reduce_transparency">减少玻璃透明效果</string>
+    <string name="glass_reduce_transparency_help">改用实色表面，让文字更清楚。系统开启高对比度文字时也会自动使用实色。</string>
 </resources>
