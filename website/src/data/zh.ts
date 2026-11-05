@@ -10,6 +10,7 @@ export const zh = {
     menuLabel: "打开菜单",
     menuCloseLabel: "关闭菜单",
     nav: [
+      { href: "#extreme-glass", label: "极致玻璃" },
       { href: "#features", label: "功能" },
       { href: "#aerial", label: "航拍屏保" },
       { href: "#compare", label: "前后对比" },
@@ -92,7 +93,7 @@ export const zh = {
       bullets: [
         "可选「航拍视频」作为屏保内容，画面来自 Apple 服务器在线播放（约 15–20 Mbps）",
         "断网或缓冲失败时自动切回照片屏保，不影响下一次空闲进入",
-        "仅在 Tigris 主屏幕空闲 1–30 分钟后进入相框。投屏、正在播放的视频或其他应用在前台时不会出现",
+        "桌面或设置等页面空闲后可显示相框；第三方视频须确认暂停，播放中和已识别投屏不会被屏保打断",
       ],
       caption: "相框屏保 · 必应每日照片（演示：照片模式）",
       frameAlt: "相框屏保实拍：水下章鱼照片，左下角是时间、日期与照片说明。",

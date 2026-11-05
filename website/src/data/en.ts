@@ -9,6 +9,7 @@ export const en = {
   menuLabel: "Open menu",
   menuCloseLabel: "Close menu",
   nav: [
+    { href: "#extreme-glass", label: "Extreme Glass" },
     { href: "#features", label: "Features" },
     { href: "#aerial", label: "Aerial" },
     { href: "#compare", label: "Compare" },
