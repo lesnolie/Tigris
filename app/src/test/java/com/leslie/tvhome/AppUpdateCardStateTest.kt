@@ -25,6 +25,15 @@ class AppUpdateCardStateTest {
         assertFalse(AppUpdateCardState.actionable(AppUpdateCardState.Action.CURRENT))
     }
 
+    @Test fun installedCurrentReleaseNeverShowsAnObsoleteSession() {
+        assertEquals(AppUpdateCardState.Action.CURRENT,
+            AppUpdateCardState.action(state(true, false, true, false, "pending", true)))
+        assertEquals(AppUpdateCardState.Action.CURRENT,
+            AppUpdateCardState.action(state(true, false, true, false, "failed", true)))
+        assertEquals(AppUpdateCardState.Action.CONFIRM,
+            AppUpdateCardState.action(state(true, false, true, true, "pending", true)))
+    }
+
     @Test fun pendingInstallHasOneContextualAction() {
         assertEquals(AppUpdateCardState.Action.CONFIRM,
             AppUpdateCardState.action(state(false, true, phase="pending", confirmation=true)))

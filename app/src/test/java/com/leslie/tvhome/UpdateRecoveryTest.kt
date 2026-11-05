@@ -24,6 +24,11 @@ class UpdateRecoveryTest {
         for (phase in listOf("download", "verify", "stage", "pending")) assertEquals(UpdateRecovery.Action.NONE,
             UpdateRecovery.action(phase, true, 13, 14, 42, 42))
     }
+    @Test fun successfulExternalUpgradeClearsAnOldFailedTask() {
+        assertEquals(UpdateRecovery.Action.COMPLETE,
+            UpdateRecovery.action("failed", false, 27L, 26L, -1, null))
+    }
+
     @Test fun finishedFailedOrIdleTasksAreNotAutomaticallyRestarted() {
         for (phase in listOf("idle", "done", "failed")) assertEquals(UpdateRecovery.Action.NONE,
             UpdateRecovery.action(phase, false, 13, 14, 42, 42))

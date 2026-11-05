@@ -9,29 +9,10 @@ import java.io.File
 class InstallConfirmationTest {
     private val path = "/storage/emulated/0/Android/data/com.leslie.tvhome/files/Download/Tigris/com.leslie.tvhome-v2.0.18.apk"
 
-    @Test fun probesCoverTheInstallConfirmationIntents() {
-        assertTrue(InstallConfirmation.probes.any {
-            it.action == "android.intent.action.INSTALL_PACKAGE" && it.mime == InstallConfirmation.ARCHIVE_MIME
-        })
-        assertTrue(InstallConfirmation.probes.any {
-            it.action == "android.intent.action.VIEW" && it.mime == InstallConfirmation.ARCHIVE_MIME
-        })
-        assertTrue(InstallConfirmation.probes.any { it.action == InstallConfirmation.ACTION_CONFIRM_INSTALL })
-        assertEquals("application/vnd.android.package-archive", InstallConfirmation.ARCHIVE_MIME)
-    }
-
-    @Test fun sessionStaysOnTheCurrentPathWhenAnyConfirmationUiResolves() {
-        assertFalse(InstallConfirmation.sessionAllowed(false))
-        assertTrue(InstallConfirmation.sessionAllowed(true))
-        assertFalse(InstallConfirmation.sessionAllowed(listOf(false, false, false).any { it }))
-        assertTrue(InstallConfirmation.sessionAllowed(listOf(false, true, false).any { it }))
-    }
-
-    @Test fun pendingUserActionWithoutAStartableIntentIsTheSameMissingPage() {
-        assertTrue(InstallConfirmation.pendingActionUnusable(intentPresent = false, intentStartable = false))
-        assertTrue(InstallConfirmation.pendingActionUnusable(intentPresent = false, intentStartable = true))
-        assertTrue(InstallConfirmation.pendingActionUnusable(intentPresent = true, intentStartable = false))
-        assertFalse(InstallConfirmation.pendingActionUnusable(intentPresent = true, intentStartable = true))
+    @Test fun onlyMissingSystemIntentRequiresFallback() {
+        assertTrue(InstallConfirmation.missingSystemIntent(false))
+        assertFalse(InstallConfirmation.missingSystemIntent(true))
+        // The actual system Intent must be attempted without synthetic resolver probes.
     }
 
     @Test fun savedApkNameStaysInsideTheTigrisDownloadDirectory() {
@@ -54,8 +35,8 @@ class InstallConfirmationTest {
     }
 
     @Test fun adbCommandUsesTheExactSavedPath() {
-        assertEquals("adb install -r $path", InstallConfirmation.adbCommand(path))
-        assertEquals("adb install -r \"/sdcard/My TV/app.apk\"", InstallConfirmation.adbCommand("/sdcard/My TV/app.apk"))
+        assertEquals("adb pull \"$path\" \"com.leslie.tvhome-v2.0.18.apk\" && adb install -r \"com.leslie.tvhome-v2.0.18.apk\"", InstallConfirmation.adbCommand(path))
+        assertEquals("adb pull \"/sdcard/My TV/app.apk\" \"app.apk\" && adb install -r \"app.apk\"", InstallConfirmation.adbCommand("/sdcard/My TV/app.apk"))
     }
 
     @Test fun bothLocalesTellTheUserToSideloadTheExactPath() {
@@ -64,7 +45,8 @@ class InstallConfirmationTest {
             val xml = read("src/main/res/$folder/updater_progress.xml")
             val body = stringBody(xml, "update_no_install_ui")
             val shown = body.format(path, command)
-            assertTrue(shown.contains("adb install -r $path"))
+            assertTrue(shown.contains("adb pull \"$path\""))
+            assertTrue(shown.contains("adb install -r \"com.leslie.tvhome-v2.0.18.apk\""))
             assertTrue(shown.contains(path))
             assertTrue(stringBody(xml, "update_no_install_ui_missing_copy").contains("adb install -r"))
             assertTrue(stringBody(xml, "update_no_install_ui_saving").isNotBlank())
