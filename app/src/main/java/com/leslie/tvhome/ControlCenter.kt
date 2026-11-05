@@ -3,6 +3,7 @@ package com.leslie.tvhome
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapShader
+import android.graphics.BlendMode
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorFilter
@@ -46,14 +47,24 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
     private val cell = ctx.dp(47)
     private val width = cell * 4 + gap * 3
     private var glassStyle = prefs.ccGlass(ctx)
+    private var extremeGlass = prefs.extremeGlass
     private val surfaces = ArrayList<GlassSurface>()
     private var destroyed = false
     private var refreshing = false
 
     // ---- the blurred picture of the home screen behind the controls ----
-    private val sampleScale = 0.25f
+    private val sampleScale get() = if (extremeGlass) 0.5f else 0.25f
     private var blur: Bitmap? = null
+    private var blurPixels: IntArray? = null
     private var blurShader: BitmapShader? = null
+    private var lens: MovingGlass? = null
+    private var videoLens = false
+    private var backdropScale = 0.25f
+    private var nextLiveToneAt = 0L
+    private val glassWorker = Executors.newSingleThreadExecutor()
+    private var sampling = false
+    private var sampleRevision = 0
+    private var appearance = ""
     /** Where [blur] starts, in host coordinates. */
     private var blurX = 0f
     private var blurY = 0f
@@ -67,6 +78,27 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
             0f, 0.88f, 0f, 0f, 22f,
             0f, 0f, 0.88f, 0f, 22f,
             0f, 0f, 0f, 1f, 0f)))
+    }
+    private val extremeTones = HashMap<Int, ColorMatrix>()
+    private val night get() = (ctx.resources.configuration.uiMode and
+        android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+        android.content.res.Configuration.UI_MODE_NIGHT_YES
+
+    private fun extremeTone(tone: GlassTone, chromaStep: Int): ColorMatrix {
+        val key = ((if (tone.darkTheme) 32 else if (tone.light) 16 else 0) + chromaStep) * 151 +
+            (tone.tintScale * 100).roundToInt()
+        return extremeTones.getOrPut(key) {
+            val recipe = GlassMaterial.recipe(tone.copy(chroma = chromaStep / 8f))
+            val brightness = recipe.brightness
+            ColorMatrix().apply {
+                setSaturation(recipe.saturation)
+                postConcat(ColorMatrix(floatArrayOf(
+                    brightness, 0f, 0f, 0f, 0f,
+                    0f, brightness, 0f, 0f, 0f,
+                    0f, 0f, brightness, 0f, 0f,
+                    0f, 0f, 0f, 1f, 0f)))
+            }
+        }
     }
 
     private val scrim = View(ctx).apply {
@@ -103,6 +135,11 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
     // milky. PorterDuff ADD is the same blend as BlendMode.PLUS and exists on Android 9.
     private val lightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.ADD) }
     private val panelToHost = Matrix()
+    private val shadowPad = ctx.dp(10)
+    private val shadowOffset = ctx.dp(2)
+    private val shadowCache = HashMap<String, Bitmap>()
+    private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    private val shadows = Shadows()
 
     /** Glides the light to the newly focused control. */
     private fun glowAt(v: View, strength: Float = if (v is Slider) 0.5f else 1f) {
@@ -127,19 +164,48 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
     private fun invalidateSurfaces() { for (s in surfaces) s.owner.invalidate() }
 
     /** The glass body's colour filter, per wash strength and focus level (cached in 16 steps). */
-    private val bodies = HashMap<Int, ColorMatrixColorFilter>()
+    private val bodies = HashMap<String, ColorMatrixColorFilter>()
 
-    private fun body(wash: Int, lit: Float): ColorMatrixColorFilter {
+    private fun body(wash: Int, lit: Float, material: GlassTone?): ColorMatrixColorFilter {
+        if (bodies.size > 512) bodies.clear()
         val step = (lit * 16).roundToInt().coerceIn(0, 16)
-        return bodies.getOrPut(wash * 32 + step) {
+        val tintKind = when {
+            !extremeGlass || material == null -> 0
+            material.light -> 1
+            else -> 2
+        }
+        val chromaStep = ((material?.chroma ?: 0f) * 8f).roundToInt().coerceIn(0, 8)
+        val toneKey = tintKind * 9 + if (extremeGlass) chromaStep else 0
+        val tintAlpha = if (extremeGlass) material?.let {
+            GlassMaterial.recipe(it).tintAlpha * (1f - step / 16f)
+        } ?: 0f else 0f
+        val tintStep = (tintAlpha * 32f).roundToInt().coerceIn(0, 32)
+        val mode = if (extremeGlass) 1 else 0
+        return bodies.getOrPut("$mode:$toneKey:$tintStep:$step:$wash:${material?.darkTheme}:${material?.tintScale}:${material?.tint}") {
             val l = step / 16f
             // A black wash at rest, white as it lights up: the same as layers over the toned picture.
-            val black = 34f * (1f - l) / 255f
-            val white = (10f + wash * l) / 255f
-            val k = (1f - black) * (1f - white)
-            val o = 255f * white
-            ColorMatrixColorFilter(ColorMatrix(toneMatrix).apply {
-                postConcat(ColorMatrix(floatArrayOf(k, 0f, 0f, 0f, o, 0f, k, 0f, 0f, o, 0f, 0f, k, 0f, o, 0f, 0f, 0f, 1f, 0f)))
+            val black = if (extremeGlass) 0f else 34f * (1f - l) / 255f
+            val white = if (extremeGlass) (if (wash > 0) 0.46f * l else 0f) else (10f + wash * l) / 255f
+            val washK = (1f - black) * (1f - white)
+            val washO = 255f * white
+            // Fold the adaptive tint into the same colour matrix as the wash, so
+            // sampling the wallpaper still costs no extra draw pass.
+            val amount = tintStep / 32f
+            val tint = material?.tint ?: 0
+            val k = washK * (1f - amount)
+            val r = washO * (1f - amount) + GlassMaterial.red(tint) * amount
+            val g = washO * (1f - amount) + GlassMaterial.green(tint) * amount
+            val b = washO * (1f - amount) + GlassMaterial.blue(tint) * amount
+            val base = when {
+                !extremeGlass -> toneMatrix
+                else -> extremeTone(material ?: GlassTone.Fallback, chromaStep)
+            }
+            ColorMatrixColorFilter(ColorMatrix(base).apply {
+                postConcat(ColorMatrix(floatArrayOf(
+                    k, 0f, 0f, 0f, r,
+                    0f, k, 0f, 0f, g,
+                    0f, 0f, k, 0f, b,
+                    0f, 0f, 0f, 1f, 0f)))
             })
         }
     }
@@ -250,13 +316,38 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
     /** Picks up a change of [Prefs.ccStyle] made in settings. */
     fun applyStyle() {
         val glass = prefs.ccGlass(ctx)
-        if (glass == glassStyle && panel.tag != null) return
+        val extreme = prefs.extremeGlass
+        val nextAppearance = "$extreme:$night:${prefs.glassTint(night)}:${prefs.solidGlass(ctx)}"
+        if (glass == glassStyle && nextAppearance == appearance && panel.tag != null) return
+        appearance = nextAppearance
         panel.tag = true
         glassStyle = glass
-        panel.background = if (glass) null else panelCard
-        if (!glass) { blur = null; blurShader = null }
+        extremeGlass = extreme
+        videoLens = false
+        sampleRevision++
+        bodies.clear()
+        extremeTones.clear()
+        panel.background = when {
+            !glass -> panelCard
+            extreme -> shadows
+            else -> null
+        }
+        if (!glass) { blur = null; blurPixels = null; blurShader = null; lens = null }
+        else lens = if (extreme) blur?.let {
+            MovingGlass(host, it, MovingGlass.Mapping(blurX, blurY, sampleScale))
+        } else null
+        surfaces.forEach {
+            it.owner.clipToOutline = !(glass && extreme)
+            it.updateRim()
+        }
         blurDirty = true
+        if (glass && extreme) panel.invalidate()
+        surfaces.forEach { it.reapplyTone() }
         invalidateSurfaces()
+        if (isOpen) {
+            host.removeCallbacks(resample)
+            host.postDelayed(resample, 80)
+        }
     }
 
     /** Maps [v]'s own coordinates to the host's, through every scale and translation on the way. */
@@ -272,9 +363,19 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
     }
 
     /** Each control owns its own background: its share of the blurred screen, a sheen, a lit rim. */
-    private inner class GlassSurface(val owner: View, val radius: Float) : Drawable() {
+    private inner class GlassSurface(
+        val owner: View,
+        val radius: Float,
+        private val onTone: ((GlassTone) -> Unit)? = null,
+    ) : Drawable() {
         /** How much white the focused glass takes on; sliders keep it low so their fill reads. */
         var focusWash = 140
+        /** Sliders keep a stable body so white fill and ink stay readable. */
+        var focusSpot = true
+        var material = GlassTone.Fallback
+            private set
+        var pendingTone = GlassTone.Fallback
+        val id = surfaces.size
         private val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
         private val glassPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
         private val rect = RectF()
@@ -291,6 +392,30 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         private var rim: Shader? = null
         private var spot: Shader? = null
         private val r get() = minOf(radius, bounds.width() / 2f, bounds.height() / 2f)
+        private var mesh: MovingGlass.Mesh? = null
+        private val tintTween = Tween()
+        private var targetTone = GlassTone.Fallback
+
+        fun applyTone(tone: GlassTone) {
+            if (targetTone == tone) return
+            val from = material
+            val glide = extremeGlass && (from.tintScale != tone.tintScale || from.light != tone.light)
+            targetTone = tone
+            tintTween.cancel()
+            material = tone
+            onTone?.invoke(tone)
+            invalidateSelf()
+            if (glide) tintTween.start(180) { progress ->
+                material = GlassMaterial.transition(from, tone, progress)
+                invalidateSelf()
+            }
+        }
+
+        fun release() { tintTween.cancel(); litTween.cancel() }
+
+        fun reapplyTone() {
+            onTone?.invoke(material)
+        }
 
         fun light(on: Boolean) {
             val from = lit
@@ -301,18 +426,26 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
             val w = b.width().toFloat()
             val h = b.height().toFloat()
             if (w <= 0f || h <= 0f) return
+            mesh = MovingGlass.Mesh(w, h, r)
             // A sheen across the upper half, as light falling on a curved top surface.
             sheen = android.graphics.LinearGradient(0f, 0f, 0f, h,
                 intArrayOf(Color.argb(70, 255, 255, 255), Color.argb(0, 255, 255, 255)),
                 floatArrayOf(0f, 0.55f), Shader.TileMode.CLAMP)
             // Rim: bright where it faces the light (top left), a softer reflection bottom right.
-            rim = android.graphics.LinearGradient(0f, 0f, w, h,
-                intArrayOf(Color.WHITE, Color.argb(40, 255, 255, 255), Color.argb(40, 255, 255, 255), Color.argb(170, 255, 255, 255)),
-                floatArrayOf(0f, 0.35f, 0.65f, 1f), Shader.TileMode.CLAMP)
+            updateRim()
             // The focus light: a soft glow pooled under the top left of the glass.
             spot = android.graphics.RadialGradient(w * 0.3f, h * 0.1f, maxOf(w, h) * 0.95f,
                 intArrayOf(Color.argb(120, 255, 255, 255), Color.argb(0, 255, 255, 255)),
                 null, Shader.TileMode.CLAMP)
+        }
+
+        fun updateRim() {
+            if (bounds.isEmpty) return
+            rim = android.graphics.LinearGradient(0f, 0f, bounds.width().toFloat(), bounds.height().toFloat(),
+                if (extremeGlass) intArrayOf(Color.WHITE, 0x1effffff, 0x12ffffff, 0x78ffffff)
+                else intArrayOf(Color.WHITE, 0x28ffffff, 0x28ffffff, 0xaaffffff.toInt()),
+                if (extremeGlass) floatArrayOf(0f, 0.30f, 0.70f, 1f)
+                else floatArrayOf(0f, 0.35f, 0.65f, 1f), Shader.TileMode.CLAMP)
         }
 
         override fun draw(c: Canvas) {
@@ -324,7 +457,25 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
             // Every full-size pass costs about a millisecond of GPU time per frame on a BRAVIA's
             // Mali, so what can be merged is: three passes when resting, five when lit.
             val shader = blurShader
-            if (shader != null) {
+            val lens = this@ControlCenter.lens
+            val geometry = mesh
+            if (extremeGlass && prefs.solidGlass(ctx)) {
+                paint.shader = null
+                paint.color = if (material.light) Color.rgb(240, 242, 247) else Color.rgb(20, 20, 24)
+                c.drawRoundRect(rect, r, r, paint)
+            } else if (extremeGlass && videoLens) {
+                paint.shader = null
+                paint.color = material.tint
+                paint.alpha = (GlassMaterial.recipe(material).tintAlpha * (1f - lit) * 255).toInt()
+                c.drawRoundRect(rect, r, r, paint)
+                if (focusWash > 0 && lit > 0f) {
+                    paint.color = Color.WHITE
+                    paint.alpha = (0.42f * lit * 255).toInt()
+                    c.drawRoundRect(rect, r, r, paint)
+                }
+            } else if (extremeGlass && lens != null && geometry != null) {
+                lens.draw(c, owner, geometry, 255, body(focusWash, lit, material), chromatic = true)
+            } else if (shader != null) {
                 // The blurred screen, mapped so this control shows exactly the part behind it,
                 // with the milky wash and the focus brightening folded into its colour filter.
                 m.setScale(1f / sampleScale, 1f / sampleScale)
@@ -332,7 +483,7 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
                 m.postConcat(hostToOwner)
                 shader.setLocalMatrix(m)
                 glassPaint.shader = shader
-                glassPaint.colorFilter = body(focusWash, lit)
+                glassPaint.colorFilter = body(focusWash, lit, material)
                 c.drawRoundRect(rect, r, r, glassPaint)
             } else {
                 paint.color = Color.argb((90 + focusWash * lit).toInt().coerceAtMost(255), 48, 52, 58)
@@ -341,11 +492,11 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
             // A sheen across the top, as light falling on a curved surface; a pooled glow when lit.
             paint.color = Color.WHITE
             paint.shader = sheen
-            paint.alpha = (110 + 145 * lit).toInt()
+            paint.alpha = if (extremeGlass) (55 + 40 * lit).toInt() else (110 + 145 * lit).toInt()
             c.drawRoundRect(rect, r, r, paint)
-            if (lit > 0f) {
+            if (lit > 0f && (!extremeGlass || focusSpot)) {
                 paint.shader = spot
-                paint.alpha = (255 * lit).toInt()
+                paint.alpha = ((if (extremeGlass) 65 else 255) * lit).toInt()
                 c.drawRoundRect(rect, r, r, paint)
             }
             // The focused control lights the glass around it: a pool of light spilling into its
@@ -360,7 +511,7 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
                 m.postConcat(hostToOwner)
                 pool.setLocalMatrix(m)
                 lightPaint.shader = pool
-                lightPaint.alpha = (255 * glowA).toInt()
+                lightPaint.alpha = ((if (extremeGlass) 45 else 255) * glowA).toInt()
                 c.drawRoundRect(rect, r, r, lightPaint)
             }
             // Rim: bright where it faces the light (top left), a softer reflection bottom right,
@@ -368,7 +519,11 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
             val rimShader = rim
             paint.style = Paint.Style.STROKE
             paint.strokeWidth = ctx.dp(1f + 0.6f * lit).toFloat()
-            paint.alpha = (150 + 105 * lit).toInt()
+            paint.alpha = when {
+                !extremeGlass -> (150 + 105 * lit).toInt()
+                material.darkTheme -> (50 + 80 * lit).toInt()
+                else -> (110 + 90 * lit).toInt()
+            }
             paint.shader = rimShader
             if (glow && rimShader != null) {
                 val e = edgeFor(glowA)
@@ -382,6 +537,13 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
             val inset = paint.strokeWidth / 2
             rect.inset(inset, inset)
             c.drawRoundRect(rect, r, r, paint)
+            if (extremeGlass) {
+                val inner = ctx.dp(1.5f).toFloat()
+                rect.inset(inner, inner)
+                paint.strokeWidth = ctx.dp(0.5f).toFloat()
+                paint.alpha = (70 * GlassMaterial.recipe(material).edgeStrength).toInt()
+                c.drawRoundRect(rect, (r - inner).coerceAtLeast(0f), (r - inner).coerceAtLeast(0f), paint)
+            }
             paint.shader = null
             paint.alpha = 255
             paint.style = Paint.Style.FILL
@@ -409,17 +571,65 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         }
 
         override fun getOutline(outline: android.graphics.Outline) = outline.setRoundRect(bounds, r)
+        fun resolvedRadius() = r
         override fun setAlpha(alpha: Int) {}
         override fun setColorFilter(cf: ColorFilter?) {}
         @Deprecated("Deprecated in Java")
         override fun getOpacity() = PixelFormat.TRANSLUCENT
     }
 
-    private fun glassFor(view: View, radius: Float): GlassSurface = GlassSurface(view, radius).also {
+    /**
+     * The panel's background draws every control's shadow in one pass. A view's
+     * own background is clipped to its bounds, so drawing the shadow there
+     * cuts off exactly the soft falloff that gives the glass its thickness.
+     */
+    private inner class Shadows : Drawable() {
+        private val ownerToHost = Matrix()
+        private val hostToPanel = Matrix()
+        private val m = Matrix()
+
+        override fun draw(c: Canvas) {
+            if (!glassStyle || !extremeGlass) return
+            toHost(panel, hostToPanel)
+            hostToPanel.invert(hostToPanel)
+            shadowPaint.alpha = 255
+            for (surface in surfaces) {
+                val owner = surface.owner
+                val w = owner.width
+                val h = owner.height
+                if (w <= 0 || h <= 0) continue
+                val shadow = shadowFor(w, h, surface.resolvedRadius()) ?: continue
+                toHost(owner, ownerToHost)
+                m.reset()
+                m.postTranslate(-shadowPad.toFloat(), -shadowPad + shadowOffset.toFloat())
+                m.postConcat(ownerToHost)
+                m.postConcat(hostToPanel)
+                c.drawBitmap(shadow, m, shadowPaint)
+            }
+        }
+
+        override fun setAlpha(alpha: Int) {}
+        override fun setColorFilter(colorFilter: ColorFilter?) {}
+        @Deprecated("Deprecated in Java")
+        override fun getOpacity() = PixelFormat.TRANSLUCENT
+    }
+
+    private fun glassFor(
+        view: View,
+        radius: Float,
+        onTone: ((GlassTone) -> Unit)? = null,
+    ): GlassSurface = GlassSurface(view, radius, onTone).also {
         view.background = it
         view.outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
-        view.clipToOutline = true
+        view.clipToOutline = !(glassStyle && extremeGlass)
         // No elevation: through translucent glass the platform shadow shows a hard-edged hole.
+    }
+
+    private fun shadowFor(w: Int, h: Int, radius: Float): Bitmap? {
+        if (!extremeGlass || w <= 0 || h <= 0) return null
+        return shadowCache.getOrPut("$w:$h:${radius.toInt()}") {
+            LiquidGlass.shadow(w, h, radius, shadowPad, alpha = 95, hollow = true)
+        }
     }
 
     private fun focus(view: View, glass: GlassSurface, on: Boolean, grow: Float = 1.08f) {
@@ -427,12 +637,15 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         // The focused control lifts towards the viewer; its glass keeps showing what is behind it.
         view.tweenScale(if (on) grow else 1f, if (on) 260 else 200, if (on) Motion.spring else Motion.ease) {
             if (glassStyle) view.invalidate()
+            if (glassStyle && extremeGlass) panel.invalidate()
         }
     }
 
     /** The screen behind changed (background, shelf, layout): the glass samples it again. */
     fun refreshGlass() {
         if (destroyed) return
+        sampleRevision++
+        if (glassStyle && extremeGlass) panel.invalidate()
         blurDirty = true
         if (glassStyle) {
             host.removeCallbacks(resample)
@@ -440,12 +653,34 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         }
     }
 
+    fun liveFrame(frame: Bitmap) {
+        if (destroyed || !isOpen || !glassStyle || !extremeGlass || host.width <= 0) return
+        sampleRevision++
+        blur = frame
+        val scale = minOf(frame.width / host.width.toFloat(), frame.height / host.height.toFloat())
+        backdropScale = scale
+        blurX = (host.width - frame.width / scale) / 2f
+        blurY = (host.height - frame.height / scale) / 2f
+        videoLens = true
+        blurDirty = false
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now >= nextLiveToneAt || blurPixels?.size != frame.width * frame.height) {
+            blurPixels = IntArray(frame.width * frame.height).also {
+                frame.getPixels(it, 0, frame.width, 0, 0, frame.width, frame.height)
+            }
+            nextLiveToneAt = now + 160L
+            refreshTones()
+        }
+        invalidateSurfaces()
+    }
+
     /**
      * Captures the home screen behind the controls at a quarter of its size and blurs it, on the
      * UI thread: a few milliseconds, once per opening at most.
      */
     private fun sampleBehind() {
-        if (destroyed || !glassStyle || host.width == 0 || panel.width == 0) return
+        if (destroyed || sampling || !glassStyle || host.width == 0 || panel.width == 0) return
+        if (extremeGlass) home.glassVideoFrame()?.let { liveFrame(it); return }
         val margin = ctx.dp(48)
         val left = (panel.left - margin).coerceAtLeast(0)
         val top = (panel.top - margin).coerceAtLeast(0)
@@ -465,32 +700,132 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         } catch (e: RuntimeException) {
             return
         }
+        val revision = sampleRevision
+        val extreme = extremeGlass
+        val scale = sampleScale
+        sampling = true
+        glassWorker.execute {
         val px = IntArray(w * h)
         bmp.getPixels(px, 0, w, 0, 0, w, h)
-        // Three box passes come close to a Gaussian blur.
-        repeat(3) { LiquidGlass.boxBlur(px, w, h, 7) }
+        val samples = if (extreme) px.copyOf() else px
+        // Keep a little scene detail visible through the extreme lens; the
+        // ordinary glass keeps its established softer bake unchanged. Two passes
+        // at half resolution land near the reference's 2dp blur on a 1080p TV.
+        repeat(if (extreme) 2 else 3) {
+            LiquidGlass.boxBlur(px, w, h, if (extreme) 1 else 7)
+        }
         bmp.setPixels(px, 0, w, 0, 0, w, h)
         bmp.prepareToDraw()
         // Not recycled: a frame still being drawn may hold the previous picture. It is small.
+        host.post {
+        sampling = false
+        if (destroyed) return@post
+        if (revision != sampleRevision) {
+            if (isOpen) sampleBehind()
+            return@post
+        }
         blur = bmp
+        blurPixels = samples
         blurShader = BitmapShader(bmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
         blurX = left.toFloat()
         blurY = top.toFloat()
+        backdropScale = scale
+        videoLens = false
+        lens = if (extreme) MovingGlass(host, bmp, MovingGlass.Mapping(blurX, blurY, scale)) else null
         blurDirty = false
         invalidateSurfaces()
+        refreshTones()
+        }
+        }
+    }
+
+    /**
+     * Reads the wallpaper under each control once per backdrop change. A card
+     * over a pale sky gets dark ink and a white tint; one over a dark scene gets
+     * white ink and charcoal tint. The values are cached until the next sample.
+     */
+    private fun refreshTones() {
+        val pixels = blurPixels ?: return
+        val image = blur ?: return
+        val bounds = RectF()
+        val transform = Matrix()
+        val samples = ArrayList<FloatArray>()
+        for (surface in surfaces) {
+            val owner = surface.owner
+            if (owner.width <= 0 || owner.height <= 0) continue
+            bounds.set(0f, 0f, owner.width.toFloat(), owner.height.toFloat())
+            toHost(owner, transform)
+            transform.mapRect(bounds)
+            val left = ((bounds.left - blurX) * backdropScale).roundToInt()
+            val top = ((bounds.top - blurY) * backdropScale).roundToInt()
+            val right = ((bounds.right - blurX) * backdropScale).roundToInt()
+            val bottom = ((bounds.bottom - blurY) * backdropScale).roundToInt()
+            var tone = GlassMaterial.analyze(
+                pixels, image.width, image.height, left, top, right, bottom,
+                previous = surface.material.takeUnless { it == GlassTone.Fallback }
+                    ?: prefs.rememberedGlassInk("control:${surface.id}:$night")?.let {
+                        GlassMaterial.tone(0.5f, 0f, lightOverride = it, darkTheme = night)
+                    },
+                darkTheme = night && !videoLens,
+                tintScale = prefs.glassTint(night),
+            )
+            if (night && videoLens) tone = tone.copy(darkTheme = true, tint = 0xff141418.toInt())
+            surface.pendingTone = tone
+            samples += floatArrayOf(
+                surface.id.toFloat(),
+                layoutTop(owner),
+                bounds.width() * bounds.height(),
+                tone.luminance,
+            )
+        }
+        // Adjacent controls in one row choose one ink direction together.
+        val groups = LinkedHashMap<Int, MutableList<FloatArray>>()
+        for (sample in samples) {
+            groups.getOrPut((sample[1] / ctx.dp(4f)).roundToInt()) { ArrayList() } += sample
+        }
+        for (members in groups.values) {
+            val area = members.sumOf { it[2].toDouble() }.coerceAtLeast(1.0)
+            val mean = members.sumOf { (it[2] * it[3]).toDouble() } / area
+            val previous = surfaces[members.first()[0].toInt()].material
+            val light = if (previous != GlassTone.Fallback && kotlin.math.abs(mean - 0.5) <= 0.05)
+                previous.light else mean >= GlassMaterial.LIGHT_THRESHOLD
+            for (sample in members) {
+                val surface = surfaces.firstOrNull { it.id == sample[0].toInt() } ?: continue
+                val tone = if (videoLens && night) {
+                    GlassMaterial.withLight(surface.pendingTone.copy(darkTheme = false), light)
+                        .copy(darkTheme = true, tint = 0xff141418.toInt())
+                } else GlassMaterial.withLight(surface.pendingTone, light)
+                surface.applyTone(tone)
+                prefs.rememberGlassInk("control:${surface.id}:$night", surface.material.light)
+            }
+        }
     }
 
     private enum class Shape { TILE, CAPSULE, ROUND }
+
+    private fun layoutTop(owner: View): Float {
+        var current = owner
+        var top = 0f
+        while (current !== panel) {
+            top += current.top
+            current = current.parent as? View ?: break
+        }
+        return top
+    }
 
     private inner class GlassButton(
         label: String,
         icon: Int,
         shape: Shape,
-        accent: Int = Color.WHITE,
+        private val accent: Int = Color.WHITE,
         action: () -> Unit,
     ) : LinearLayout(ctx) {
         // Capsules and circles clamp this to half their height.
-        private val glass = glassFor(this, ctx.dp(if (shape == Shape.TILE) 24 else 100).toFloat())
+        private var glassTone = GlassTone.Fallback
+        private val glass = glassFor(this, ctx.dp(if (shape == Shape.TILE) 24 else 100).toFloat()) {
+            glassTone = it
+            applyInk(isFocused)
+        }
         private val glyph = ImageView(ctx)
         val title = ctx.text(12.5f, weight = 600).apply { text = label; maxLines = 1 }
         val sub = ctx.text(10.5f, Color.argb(205, 255, 255, 255), weight = 500).apply {
@@ -523,12 +858,32 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
             setOnClickListener { action() }
             setOnFocusChangeListener { _, on ->
                 focus(this, glass, on, when (shape) { Shape.TILE -> 1.06f; Shape.CAPSULE -> 1.05f; Shape.ROUND -> 1.1f })
-                // Lit glass is bright: dark glyphs keep the focused control readable on any wallpaper.
-                val ink = Color.argb(225, 0, 0, 0)
-                glyph.setColorFilter(if (on) ink else accent)
-                title.setTextColor(if (on) ink else Color.WHITE)
-                sub.setTextColor(if (on) Color.argb(170, 0, 0, 0) else Color.argb(205, 255, 255, 255))
+                applyInk(on)
             }
+            applyInk(false)
+        }
+
+        /**
+         * Focus is always the bright selected state, so its ink stays dark. At
+         * rest the wallpaper decides: pale glass gets dark ink, dark glass keeps
+         * the accent or white.
+         */
+        private fun applyInk(focused: Boolean) {
+            val blend = extremeGlass && glassStyle && !prefs.solidGlass(ctx)
+            listOf(glyph, title, sub).forEach { GlassInk.apply(it, blend, focused || glassTone.light) }
+            val focusInk = Color.argb(235, 0, 0, 0)
+            if (!extremeGlass || !glassStyle) {
+                // Keep the pre-existing look (and reset it if extreme was just switched off).
+                val originalInk = Color.argb(225, 0, 0, 0)
+                glyph.setColorFilter(if (focused) originalInk else accent)
+                title.setTextColor(if (focused) originalInk else Color.WHITE)
+                sub.setTextColor(if (focused) Color.argb(170, 0, 0, 0) else Color.argb(205, 255, 255, 255))
+                return
+            }
+            val ink = if (focused) focusInk else glassTone.ink
+            glyph.setColorFilter(if (focused) focusInk else if (glassTone.light && GlassMaterial.luminance(accent) > 0.62f) ink else accent)
+            title.setTextColor(ink)
+            sub.setTextColor(if (focused) Color.argb(175, 0, 0, 0) else glassTone.secondaryInk)
         }
     }
 
@@ -543,10 +898,20 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         private val send: (Int) -> Unit,
     ) : FrameLayout(ctx) {
         private val corner = ctx.dp(19).toFloat()
-        private val glass = glassFor(this, corner).apply { focusWash = 0 }
+        private var tone = GlassTone.Fallback
+        private val glass = glassFor(this, corner) { tone = it; draw() }.apply {
+            focusWash = 0
+            focusSpot = false
+        }
         private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         private val fillClip = android.graphics.Path()
         private var darkIcon = false
+        private var iconInk = 0
+        private val filledInkPaint = Paint().apply {
+            colorFilter = android.graphics.PorterDuffColorFilter(Color.argb(230, 0, 0, 0), PorterDuff.Mode.SRC_IN)
+        }
+        private val emptyInkPaint = Paint()
+        private var emptyInk = 0
         private var lastInteraction = 0L
         private val img = ImageView(ctx).apply { setImageResource(icon) }
         private val nameText = ctx.text(12.5f, weight = 600).apply { text = label }
@@ -679,6 +1044,38 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
             canvas.restoreToCount(save)
         }
 
+        override fun dispatchDraw(canvas: Canvas) {
+            if (!extremeGlass || !glassStyle) {
+                super.dispatchDraw(canvas)
+                return
+            }
+            val fraction = if (ready && max > min)
+                ((displayedValue - min) / (max - min)).coerceIn(0f, 1f) else 0f
+            val filled = width * fraction
+            // Clip the glyphs themselves at the fill boundary: even half a letter
+            // stays readable. Layer filters preserve text antialiasing and avoid
+            // changing child colours (and invalidating them) during drawing.
+            inkPass(canvas, 0f, filled, filledInkPaint)
+            if (android.os.Build.VERSION.SDK_INT >= 29) {
+                emptyInkPaint.blendMode = if (prefs.solidGlass(ctx)) BlendMode.SRC_OVER
+                    else if (tone.light) BlendMode.MULTIPLY else BlendMode.PLUS
+            } else {
+                emptyInkPaint.xfermode = if (prefs.solidGlass(ctx)) null else PorterDuffXfermode(
+                    if (tone.light) PorterDuff.Mode.DARKEN else PorterDuff.Mode.ADD)
+            }
+            inkPass(canvas, filled, width.toFloat(), emptyInkPaint)
+        }
+
+        private fun inkPass(canvas: Canvas, left: Float, right: Float, paint: Paint) {
+            if (right <= left) return
+            val clip = canvas.save()
+            canvas.clipRect(left, 0f, right, height.toFloat())
+            val layer = canvas.saveLayer(left, 0f, right, height.toFloat(), paint)
+            super.dispatchDraw(canvas)
+            canvas.restoreToCount(layer)
+            canvas.restoreToCount(clip)
+        }
+
         private fun draw() {
             if (width <= 0) return
             val fraction = if (ready && max > min)
@@ -686,13 +1083,30 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
             val filled = width * fraction
             val dark = Color.argb(230, 0, 0, 0)
             val iconIsDark = filled > ctx.dp(32)
-            if (darkIcon != iconIsDark) {
-                darkIcon = iconIsDark
-                img.setColorFilter(if (darkIcon) dark else Color.WHITE)
+            val baseInk = if (extremeGlass && glassStyle) tone.ink else Color.WHITE
+            if (extremeGlass && glassStyle) {
+                if (emptyInk != baseInk) {
+                    emptyInk = baseInk
+                    emptyInkPaint.colorFilter = android.graphics.PorterDuffColorFilter(baseInk, PorterDuff.Mode.SRC_IN)
+                }
+                if (iconInk != Color.WHITE) {
+                    iconInk = Color.WHITE
+                    img.setColorFilter(Color.WHITE)
+                }
+                if (nameText.currentTextColor != Color.WHITE) nameText.setTextColor(Color.WHITE)
+                if (valueText.currentTextColor != Color.WHITE) valueText.setTextColor(Color.WHITE)
+                invalidate()
+                return
             }
-            val nameColor = if (filled > ctx.dp(41) + nameText.width) dark else Color.WHITE
+            val ink = if (iconIsDark) dark else baseInk
+            if (darkIcon != iconIsDark || iconInk != ink) {
+                darkIcon = iconIsDark
+                iconInk = ink
+                img.setColorFilter(ink)
+            }
+            val nameColor = if (filled > ctx.dp(41) + nameText.width) dark else baseInk
             if (nameText.currentTextColor != nameColor) nameText.setTextColor(nameColor)
-            val valueColor = if (filled > width - ctx.dp(15)) dark else Color.WHITE
+            val valueColor = if (filled > width - ctx.dp(15)) dark else baseInk
             if (valueText.currentTextColor != valueColor) valueText.setTextColor(valueColor)
             // Only drawing changes. No animated child width or per-frame text relayout.
             invalidate()
@@ -703,6 +1117,7 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
 
     fun open() {
         if (isOpen) return
+        applyStyle()
         isOpen = true
         glowTween.cancel()
         glowA = 0f
@@ -770,7 +1185,13 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         scrim.animate().cancel()
         glowTween.cancel()
         blur = null
+        blurPixels = null
         blurShader = null
+        lens = null
+        shadowCache.values.forEach { it.recycle() }
+        shadowCache.clear()
+        surfaces.forEach { it.release() }
+        glassWorker.shutdown()
         io.shutdown()
     }
 

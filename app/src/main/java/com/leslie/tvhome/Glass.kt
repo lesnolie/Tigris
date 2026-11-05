@@ -12,6 +12,7 @@ import android.graphics.drawable.Drawable
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.sqrt
 
 /**
@@ -38,14 +39,19 @@ object LiquidGlass {
         overlay: Drawable? = null,
         frostStrength: Float = 1f,
         glassOpacity: Float = 1f,
+        extreme: Boolean = false,
+        darkTheme: Boolean = false,
+        tintScale: Float = 1f,
+        solid: Boolean = false,
+        renderScale: Float = 1f,
     ): Bitmap {
         val w = rect.width()
         val h = rect.height()
         // Match Canvas round-rect geometry for capsules, including when the requested radius exceeds half the short side.
         val cornerRadius = radius.coerceIn(0f, min(w, h) / 2f)
-        val zone = min(h * 0.26f, cornerRadius * 1.4f)    // refracting band along the rim
-        val pull = zone * 0.9f                       // how far the rim reaches outside
-        val blurR = 7
+        val zone = if (extreme) min(min(w, h) / 3.5f, 44f * renderScale).coerceAtLeast(4f * renderScale) else min(h * 0.26f, cornerRadius * 1.4f)
+        val pull = zone * if (extreme) 1.1f else 0.9f
+        val blurR = if (extreme) (2f * renderScale).toInt().coerceAtLeast(1) else 7
         val margin = (pull + blurR * 2 + 2).toInt()
 
         // The part of the screen around the slab, as the user sees it.
@@ -67,6 +73,9 @@ object LiquidGlass {
         val src = IntArray(cw * ch)
         region.getPixels(src, 0, cw, 0, 0, cw, ch)
         region.recycle()
+        val material = if (extreme)
+            GlassMaterial.analyze(src, cw, ch, margin, margin, margin + w, margin + h, darkTheme = darkTheme, tintScale = tintScale)
+        else GlassTone.Fallback
         repeat(2) { boxBlur(src, cw, ch, blurR) }
 
         val out = IntArray(w * h)
@@ -74,9 +83,19 @@ object LiquidGlass {
         val hh = h / 2f
         val rimW = 2.2f
         val frost = frostStrength.coerceIn(0f, 1f)
-        val opacity = glassOpacity.coerceIn(0f, 1f)
-        val transmission = 1f - 0.14f * frost
-        val lift = 30f * frost
+        val opacity = if (extreme && solid) 1f else glassOpacity.coerceIn(0f, 1f)
+        val transmission = if (extreme) 1f else 1f - 0.14f * frost
+        val lift = if (extreme) 0f else 30f * frost
+        val recipe = GlassMaterial.recipe(material)
+        val tint = material.tint
+        val tintR = GlassMaterial.red(tint).toFloat()
+        val tintG = GlassMaterial.green(tint).toFloat()
+        val tintB = GlassMaterial.blue(tint).toFloat()
+        val tintAmount = if (extreme)
+            recipe.tintAlpha
+        else 0f
+        val saturation = if (extreme) recipe.saturation else 1.2f
+        val brightness = if (extreme) recipe.brightness else 1f
         for (j in 0 until h) {
             val py = j + 0.5f
             for (i in 0 until w) {
@@ -99,28 +118,65 @@ object LiquidGlass {
                 if (px < hw) nx = -nx
                 if (py < hh) ny = -ny
 
+                if (extreme) { nx = -nx; ny = -ny }
+
                 val t = (1f - depth / zone).coerceIn(0f, 1f)
-                val off = t * t * pull
+                val off = pull * if (extreme) t.pow(2.6f) else t * t
                 val c = sample(src, cw, ch, px + nx * off + margin, py + ny * off + margin)
-                var r = Color.red(c).toFloat()
+                // The red channel travels a little farther through the rim than blue.
+                // Keep it at the centre flat and cap it so 4K does not turn into a rainbow.
+                val dispersion = if (extreme) min(off * 0.15f, 5f) else 0f
+                val cr = if (extreme && off > 0.75f)
+                    sample(src, cw, ch, px + nx * (off + dispersion) + margin, py + ny * (off + dispersion) + margin)
+                else c
+                val cb = if (extreme && off > 0.75f)
+                    sample(src, cw, ch, px + nx * (off - dispersion).coerceAtLeast(0f) + margin,
+                        py + ny * (off - dispersion).coerceAtLeast(0f) + margin)
+                else c
+                var r = Color.red(cr).toFloat()
                 var g = Color.green(c).toFloat()
-                var b = Color.blue(c).toFloat()
+                var b = Color.blue(cb).toFloat()
                 // A little milky and a little more saturated than what is behind.
                 val luma = r * 0.3f + g * 0.59f + b * 0.11f
-                r = luma + (r - luma) * 1.2f; g = luma + (g - luma) * 1.2f; b = luma + (b - luma) * 1.2f
-                r = r * transmission + lift; g = g * transmission + lift; b = b * transmission + lift
+                r = luma + (r - luma) * saturation
+                g = luma + (g - luma) * saturation
+                b = luma + (b - luma) * saturation
+                r = (r * transmission + lift) * brightness
+                g = (g * transmission + lift) * brightness
+                b = (b * transmission + lift) * brightness
+                r += (tintR - r) * tintAmount
+                g += (tintG - g) * tintAmount
+                b += (tintB - b) * tintAmount
+                if (extreme && solid) {
+                    r = if (material.light) 240f else 20f
+                    g = if (material.light) 242f else 20f
+                    b = if (material.light) 247f else 24f
+                }
 
                 // Specular rim: strongest where it faces the light (top left), a softer
                 // reflection on the opposite side, tinted by the colour behind it.
-                val facing = -(nx * 0.45f + ny * 0.9f)
-                val light = 0.3f + 0.7f * max(facing, 0f) + 0.35f * max(-facing, 0f)
+                val facing = (if (extreme) 1f else -1f) * (nx * 0.45f + ny * 0.9f)
+                val light = if (extreme) {
+                    // A dark lower-right edge would read as a sticker outline; let the
+                    // lit top-left carry the rim and keep the opposite side faint.
+                    0.10f + 0.90f * max(facing, 0f) + 0.25f * max(-facing, 0f)
+                } else {
+                    0.3f + 0.7f * max(facing, 0f) + 0.35f * max(-facing, 0f)
+                }
                 if (depth < rimW) {
-                    val k = (1f - depth / rimW).coerceIn(0f, 1f) * (0.35f + 0.6f * light)
+                    val shape = if (extreme) 0.25f + 0.55f * light else 0.35f + 0.6f * light
+                    val k = (1f - depth / rimW).coerceIn(0f, 1f) * shape * if (extreme) recipe.edgeStrength else 1f
+                    r += (255f - r) * k; g += (255f - g) * k; b += (255f - b) * k
+                }
+                // A second, thinner line inset from the lit edge: the reference's
+                // "inner rim" that makes the slab feel thick rather than outlined.
+                if (extreme && depth < rimW * 3.2f) {
+                    val k = (1f - depth / (rimW * 3.2f)) * 0.14f * max(facing, 0f) * recipe.edgeStrength
                     r += (255f - r) * k; g += (255f - g) * k; b += (255f - b) * k
                 }
                 // Soft inner glow just inside the lit edge.
                 if (depth < zone) {
-                    val k = (1f - depth / zone) * 0.16f * max(facing, 0f)
+                    val k = (1f - depth / zone) * 0.16f * max(facing, 0f) * if (extreme) recipe.edgeStrength else 1f
                     r += (255f - r) * k; g += (255f - g) * k; b += (255f - b) * k
                 }
                 out[j * w + i] = Color.argb((a * opacity * 255).toInt(), clamp(r), clamp(g), clamp(b))
@@ -168,15 +224,21 @@ object LiquidGlass {
      * A soft drop shadow for a rounded card of [w]×[h], padded by [pad] on every
      * side so the blur has room. Drawn in software, where BlurMaskFilter works.
      */
-    fun shadow(w: Int, h: Int, radius: Float, pad: Int): Bitmap {
+    fun shadow(w: Int, h: Int, radius: Float, pad: Int, alpha: Int = 200, hollow: Boolean = false): Bitmap {
         val b = Bitmap.createBitmap(w + pad * 2, h + pad * 2, Bitmap.Config.ARGB_8888)
         val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(200, 0, 0, 0)
+            color = Color.argb(alpha.coerceIn(0, 255), 0, 0, 0)
             maskFilter = BlurMaskFilter(pad * 0.55f, BlurMaskFilter.Blur.NORMAL)
         }
         // A touch narrower than the card, so the shadow pools underneath rather than haloing.
         val inset = pad * 0.18f
-        Canvas(b).drawRoundRect(RectF(pad + inset, pad.toFloat(), pad + w - inset, (pad + h).toFloat()), radius, radius, p)
+        val canvas = Canvas(b)
+        canvas.drawRoundRect(RectF(pad + inset, pad.toFloat(), pad + w - inset, (pad + h).toFloat()), radius, radius, p)
+        if (hollow) {
+            p.maskFilter = null
+            p.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.CLEAR)
+            canvas.drawRoundRect(RectF(pad.toFloat(), pad.toFloat(), (pad + w).toFloat(), (pad + h).toFloat()), radius, radius, p)
+        }
         return b
     }
 }

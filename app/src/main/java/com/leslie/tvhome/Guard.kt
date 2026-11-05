@@ -290,6 +290,7 @@ class ConfigReceiver : BroadcastReceiver() {
         }
         // Looks (主屏幕设置 → 外观 / 开机动画), mostly for agents setting a TV up.
         i.getStringExtra("cc_style")?.let { prefs.ccStyle = it }
+        if (i.hasExtra("extreme_glass")) prefs.extremeGlass = i.getBooleanExtra("extreme_glass", false)
         i.getStringExtra("focus_style")?.let { prefs.focusStyle = it }
         i.getStringExtra("clock_style")?.let { prefs.clockStyle = it }
         if (i.hasExtra("clock_24")) prefs.clock24 = i.getBooleanExtra("clock_24", false)
@@ -306,6 +307,7 @@ class ConfigReceiver : BroadcastReceiver() {
         Guard.ensure(c)
         resultData = "guard=${prefs.guard} keep_adb=${prefs.keepAdb} home_filter=${prefs.persistentHomeFilter} secure_settings=${Guard.hasSecureSettings(c)} " +
             "background=${prefs.background} cc_style=${prefs.ccStyle} focus_style=${prefs.focusStyle} clock_style=${prefs.clockStyle} clock_24=${prefs.clock24} " +
-            "intro=${prefs.intro} intro_source=${prefs.introSource} wake_delay=${prefs.wakeDelay} own_icon=${prefs.ownIcon} settings_bg=${prefs.settingsBg} low_end=${Device.isLowEnd(c)}"
+            "intro=${prefs.intro} intro_source=${prefs.introSource} wake_delay=${prefs.wakeDelay} own_icon=${prefs.ownIcon} " +
+            "settings_bg=${prefs.settingsBg} extreme_glass=${prefs.extremeGlass} low_end=${Device.isLowEnd(c)}"
     }
 }

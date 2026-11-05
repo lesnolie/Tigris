@@ -13,11 +13,55 @@ class FrostGlass(private val owner: View, private val radius: Float) : Drawable(
     private val path = Path()
     private var bitmap: Bitmap? = null
     private var texture: BitmapShader? = null
+    private val prefs = Prefs(owner.context)
+    private var extremeGlass: UpdateGlass? = null
+    private var extremeSurface: UpdateGlass.Surface? = null
+    private var softGlass: UpdateGlass? = null
+    private var softSurface: UpdateGlass.Surface? = null
+    var expansion = 0f
+        set(value) { field = value.coerceIn(0f, 1f); invalidateSelf() }
+    private val extremeLocation = IntArray(2)
+    private var extremePosition = Long.MIN_VALUE
+    private val surfaceCallback = object : Drawable.Callback {
+        override fun invalidateDrawable(who: Drawable) { invalidateSelf() }
+        override fun scheduleDrawable(who: Drawable, what: Runnable, whenMillis: Long) {
+            scheduleSelf(what, whenMillis)
+        }
+        override fun unscheduleDrawable(who: Drawable, what: Runnable) { unscheduleSelf(what) }
+    }
     var focused = false
         set(value) { field = value; invalidateSelf() }
-    fun texture(image: Bitmap) {
+    fun texture(image: Bitmap, clearImage: Bitmap = image) {
         bitmap = image; texture = BitmapShader(image, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP); invalidateSelf()
+        if (prefs.extremeGlass) {
+            val material = extremeGlass ?: UpdateGlass(owner.rootView, moving = true, shadowsEnabled = false, tintStrength = 0.25f).also {
+                extremeGlass = it
+                extremeSurface = it.control(owner,
+                    (radius / owner.resources.displayMetrics.density).toInt(), installBackground = false)
+                    .also { surface -> surface.callback = surfaceCallback }
+            }
+            material.texture(clearImage)
+            val soft = softGlass ?: UpdateGlass(owner.rootView, moving = true, shadowsEnabled = false, tintStrength = 0.25f).also {
+                softGlass = it
+                softSurface = it.control(owner,
+                    (radius / owner.resources.displayMetrics.density).toInt(), installBackground = false)
+                    .also { surface -> surface.callback = surfaceCallback }
+            }
+            soft.texture(image)
+        }
     }
+    fun liveTexture(image: Bitmap) {
+        if (extremeGlass == null) texture(image, image)
+        extremeGlass?.liveTexture(image)
+        invalidateSelf()
+    }
+    fun softTexture(image: Bitmap) {
+        bitmap = image
+        texture = BitmapShader(image, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+        softGlass?.liveTexture(image)
+        invalidateSelf()
+    }
+    fun close() { extremeGlass?.close(); softGlass?.close() }
     /**
      * Alpha of the blurred fill on API 30 and below. 255 is a still plate.
      * [DockGlassFallback.VIDEO_FROST_ALPHA] lets the live video show through.
@@ -28,6 +72,23 @@ class FrostGlass(private val owner: View, private val radius: Float) : Drawable(
     var veil = false
         set(value) { field = value; invalidateSelf() }
     override fun draw(canvas: Canvas) {
+        if (prefs.extremeGlass && extremeSurface != null) {
+            extremeSurface?.bounds = bounds
+            softSurface?.bounds = bounds
+            owner.getLocationInWindow(extremeLocation)
+            val position = (extremeLocation[0].toLong() shl 32) xor extremeLocation[1].toLong()
+            if (position != extremePosition) {
+                extremePosition = position
+                extremeGlass?.refresh()
+                softGlass?.refresh()
+            }
+            if (expansion < 1f) extremeSurface?.draw(canvas)
+            if (expansion > 0f) {
+                softSurface?.alpha = (expansion * 255).toInt()
+                softSurface?.draw(canvas)
+            }
+            return
+        }
         // Hardware clipPath is not anti-aliased, and the stroke below was inset
         // without reducing its radius, so pre-31 corners (the scroll dock) went
         // jagged. API 31+ keeps the original draw.

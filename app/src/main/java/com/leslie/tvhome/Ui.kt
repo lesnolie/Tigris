@@ -149,7 +149,7 @@ object Fonts {
 }
 
 fun Context.text(sizeSp: Float, color: Int = Color.WHITE, bold: Boolean = false, weight: Int = if (bold) 600 else 400): TextView =
-    TextView(this).apply {
+    GlassTextView(this).apply {
         textSize = sizeSp
         setTextColor(color)
         typeface = Fonts.inter(this@text, weight)
@@ -165,6 +165,16 @@ class PillButton(ctx: Context, label: String, iconRes: Int? = null, val onClick:
     private val icon: ImageView? = iconRes?.let { ImageView(ctx).apply { setImageResource(it) } }
     private val idle = rounded(Color.argb(46, 255, 255, 255), dp(14).toFloat())
     private val focus = rounded(Color.WHITE, dp(14).toFloat())
+    private var glass: UpdateGlass.Surface? = null
+    private var glassTone = GlassTone.Fallback
+
+    internal fun useGlass(material: UpdateGlass) {
+        glass = material.control(this, 14) { tone ->
+            glassTone = tone
+            icon?.setColorFilter(if (isFocused) Color.BLACK else tone.ink)
+            icon?.let { GlassInk.apply(it, !Prefs(context).solidGlass(context), isFocused || tone.light) }
+        }.also { it.bindInk(listOf(tv)) }
+    }
 
     init {
         orientation = HORIZONTAL
@@ -177,9 +187,16 @@ class PillButton(ctx: Context, label: String, iconRes: Int? = null, val onClick:
         addView(tv)
         setOnClickListener { onClick() }
         setOnFocusChangeListener { _, f ->
-            background = if (f) focus else idle
-            tv.setTextColor(if (f) Color.BLACK else Color.WHITE)
-            icon?.setColorFilter(if (f) Color.BLACK else Color.WHITE)
+            val material = glass
+            if (material == null) {
+                background = if (f) focus else idle
+                tv.setTextColor(if (f) Color.BLACK else Color.WHITE)
+                icon?.setColorFilter(if (f) Color.BLACK else Color.WHITE)
+            } else {
+                material.focus(f)
+                icon?.setColorFilter(if (f) Color.BLACK else glassTone.ink)
+                icon?.let { GlassInk.apply(it, !Prefs(context).solidGlass(context), f || glassTone.light) }
+            }
             tweenScale(if (f) 1.06f else 1f, 160, z = if (f) dp(10).toFloat() else 0f)
         }
     }
@@ -213,6 +230,26 @@ class Sheet(private val host: FrameLayout) {
         setLineSpacing(0f, 1.25f)
     }
     private var onDismiss: (() -> Unit)? = null
+    private var glass: UpdateGlass? = null
+    private val glassSceneTick = object : Runnable {
+        override fun run() {
+            if (!isShowing || glass == null) return
+            sampleGlassScene()
+            root.postDelayed(this, 1000)
+        }
+    }
+
+    private fun sampleGlassScene() {
+        if (host.width <= 0 || host.height <= 0) return
+        val width = minOf(host.width, 960)
+        val height = (host.height * width.toFloat() / host.width).toInt().coerceAtLeast(1)
+        val image = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(image)
+        canvas.scale(width / host.width.toFloat(), height / host.height.toFloat())
+        val home = ctx as? HomeActivity
+        if (home != null) home.drawGlassScene(canvas) else host.draw(canvas)
+        glass?.texture(image)
+    }
 
     init {
         col.addView(title)
@@ -242,6 +279,13 @@ class Sheet(private val host: FrameLayout) {
     fun onDismiss(f: () -> Unit) = apply { onDismiss = f }
 
     fun show(): Sheet {
+        if (Prefs(ctx).extremeGlass && host.width > 0 && host.height > 0) {
+            val material = UpdateGlass(root, moving = true)
+            glass = material
+            for (index in 0 until col.childCount) (col.getChildAt(index) as? PillButton)?.useGlass(material)
+            sampleGlassScene()
+            if (ctx is HomeActivity) root.postDelayed(glassSceneTick, 1000)
+        }
         host.addView(root, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         root.animate().alpha(1f).setDuration(180).start()
         (0 until col.childCount).map { col.getChildAt(it) }.firstOrNull { it is PillButton }?.requestFocus()
@@ -254,6 +298,9 @@ class Sheet(private val host: FrameLayout) {
         if (!isShowing) return
         root.animate().alpha(0f).setDuration(140).withEndAction {
             host.removeView(root)
+            root.removeCallbacks(glassSceneTick)
+            glass?.close()
+            glass = null
             onDismiss?.invoke()
         }.start()
     }

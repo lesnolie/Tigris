@@ -50,8 +50,10 @@ internal class SettingsDialog(
             clipChildren = false; clipToPadding = false
         }
         frame.addView(panel, FrameLayout.LayoutParams(-1, -1))
-        glass.control(panel, 28, content = true)
-        panel.addView(activity.text(24f, weight = 600).apply { text = title },
+        val panelGlass = glass.control(panel, 28, content = true)
+        val titleView = activity.text(24f, weight = 600).apply { text = title }
+        panelGlass.bindInk(listOf(titleView))
+        panel.addView(titleView,
             LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = activity.dp(18) })
         val content = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
@@ -60,12 +62,14 @@ internal class SettingsDialog(
         if (!message.isNullOrBlank()) content.addView(activity.text(15f, Color.argb(220,255,255,255)).apply {
             text = message
             setLineSpacing(activity.dp(4).toFloat(), 1f)
+            panelGlass.bindInk(emptyList(), listOf(this))
         }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = if (body != null) activity.dp(16) else 0 })
         if (body != null) content.addView(body, LinearLayout.LayoutParams(-1, -2))
         if (body is LinearLayout) for (i in 0 until body.childCount) {
             val choice = body.getChildAt(i)
             if (choice.isFocusable) {
                 val material = glass.control(choice, 14)
+                if (choice is TextView) material.bindInk(listOf(choice))
                 choice.setOnFocusChangeListener { _, on ->
                     material.focus(on)
                     choice.tweenScale(if (on) 1.025f else 1f, 200)
@@ -96,6 +100,7 @@ internal class SettingsDialog(
                 setOnClickListener { click() }
             }
             val material = glass.control(button, 22)
+            material.bindInk(listOf(button))
             button.setOnFocusChangeListener { _, on ->
                 material.focus(on)
                 button.tweenScale(if (on) 1.045f else 1f, 220)

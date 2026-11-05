@@ -236,7 +236,44 @@ class Prefs(ctx: Context) {
         set(v) = sp.edit().putString("cc_style", v).apply()
 
     /** The Control Center uses floating glass controls rather than one plain panel. */
-    fun ccGlass(ctx: Context) = when (ccStyle) { CC_GLASS -> true; CC_PANEL -> false; else -> !Device.isLowEnd(ctx) }
+    fun ccGlass(ctx: Context) = when (ccStyle) {
+        CC_GLASS -> true
+        CC_PANEL -> false
+        // Extreme glass has no meaning on the plain panel, so auto follows it.
+        else -> extremeGlass || !Device.isLowEnd(ctx)
+    }
+
+    /**
+     * Screen-space refraction, three-channel dispersion and the heavier rim
+     * model. Off by default; intended for a TV whose GPU can sustain it.
+     */
+    var extremeGlass: Boolean
+        get() = sp.getBoolean("extreme_glass", false)
+        set(v) = sp.edit().putBoolean("extreme_glass", v).apply()
+
+    var glassLightTint: Float
+        get() = sp.getFloat("glass_light_tint", 1f).coerceIn(0f, 1.5f)
+        set(v) = sp.edit().putFloat("glass_light_tint", v.coerceIn(0f, 1.5f)).apply()
+
+    var glassDarkTint: Float
+        get() = sp.getFloat("glass_dark_tint", 1f).coerceIn(0f, 1.5f)
+        set(v) = sp.edit().putFloat("glass_dark_tint", v.coerceIn(0f, 1.5f)).apply()
+
+    var reduceGlassTransparency: Boolean
+        get() = sp.getBoolean("reduce_glass_transparency", false)
+        set(v) = sp.edit().putBoolean("reduce_glass_transparency", v).apply()
+
+    fun glassTint(darkTheme: Boolean) = if (darkTheme) glassDarkTint else glassLightTint
+
+    fun rememberedGlassInk(surface: String): Boolean? =
+        if (sp.contains("glass_ink_$surface")) sp.getBoolean("glass_ink_$surface", false) else null
+
+    fun rememberGlassInk(surface: String, light: Boolean) {
+        if (rememberedGlassInk(surface) != light) sp.edit().putBoolean("glass_ink_$surface", light).apply()
+    }
+
+    fun solidGlass(ctx: Context) = reduceGlassTransparency ||
+        android.provider.Settings.Secure.getInt(ctx.contentResolver, "high_text_contrast_enabled", 0) == 1
 
     /** [AUTO], [FOCUS_TVOS] (tilt and a gliding highlight) or [FOCUS_SIMPLE] (scale and shadow only). */
     var focusStyle: String
