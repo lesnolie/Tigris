@@ -182,7 +182,7 @@ class UpdateActivity : Activity() {
         val restart = button(I18n.text(R.string.update_restart_install), summary, 34) {
             work {
                 Updates.cancelPending(applicationContext, p, keepDownload = true)
-                Updates.check(applicationContext)
+                if (!Updates.hasCachedOffer(applicationContext, p)) Updates.check(applicationContext)
                 Updates.install(applicationContext, p)
             }
         }.apply {
@@ -235,7 +235,9 @@ class UpdateActivity : Activity() {
             installed = Updates.installed(this, p) != null,
             optional = p.optional,
             checked = sp.contains(p.pkg + ".version"),
-            updateAvailable = sp.getBoolean(p.pkg + ".available", false),
+            updateAvailable = sp.getBoolean(p.pkg + ".available", false) &&
+                (Updates.installed(this, p) == null || UpdatePolicy.newer(
+                    sp.getString(p.pkg + ".version", "").orEmpty(), Updates.installed(this, p).orEmpty())),
             phase = sp.getString(p.pkg + ".phase", "idle") ?: "idle",
             hasConfirmation = sp.getString(p.pkg + ".phase", "") == "pending" && Updates.canResume(this, p)
         ))
@@ -311,7 +313,7 @@ class UpdateActivity : Activity() {
             }
             AppUpdateCardState.Action.GET, AppUpdateCardState.Action.UPDATE, AppUpdateCardState.Action.RETRY -> work {
                 if (Updates.prefs(this).getString(p.pkg + ".phase", "") == "failed") Updates.cancelPending(applicationContext, p, keepDownload = true)
-                Updates.check(applicationContext)
+                if (!Updates.hasCachedOffer(applicationContext, p)) Updates.check(applicationContext)
                 Updates.install(applicationContext, p)
             }
             AppUpdateCardState.Action.CHECK -> work { Updates.check(applicationContext) }
