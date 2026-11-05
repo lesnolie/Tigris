@@ -2,6 +2,9 @@ package com.leslie.tvhome
 
 import android.content.ComponentName
 import android.content.Context
+import android.app.usage.UsageEvents
+import android.app.usage.UsageStatsManager
+import android.os.Build
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.AudioPlaybackConfiguration
@@ -17,11 +20,16 @@ internal object FrameIdleProbe {
     fun media(ctx: Context, hint: FrameIdlePolicy.Media = FrameIdlePolicy.Media()): FrameIdlePolicy.Media {
         val am = ctx.getSystemService(AudioManager::class.java)
         val sessionsVisible = listenerEnabled(ctx)
+        val foreground = recentForegroundPackage(ctx)
+        val sessions = if (sessionsVisible) foreignSessions(ctx) else null
         return hint.copy(
             musicActive = runCatching { am?.isMusicActive == true }.getOrDefault(false),
             remoteMusicActive = remoteMusic(am),
-            foreignSessionPlaying = if (sessionsVisible) foreignSession(ctx) else null,
+            foreignSessionPlaying = sessions?.any { FrameIdlePolicy.sessionActive(it.state) },
             foreignPlayback = foreignPlayback(am, Process.myUid(), sessionsVisible),
+            pausedForegroundVideo = sessions != null &&
+                FrameIdlePolicy.pausedForegroundVideo(foreground, sessions),
+            castReceiverForeground = FrameIdlePolicy.isCastingPackage(foreground),
         )
     }
 
@@ -39,13 +47,35 @@ internal object FrameIdleProbe {
         return flat.split(':').any { ComponentName.unflattenFromString(it)?.flattenToString() == mine }
     }
 
-    private fun foreignSession(ctx: Context): Boolean? {
+    private fun foreignSessions(ctx: Context): List<FrameIdlePolicy.Session>? {
         val manager = ctx.getSystemService(MediaSessionManager::class.java) ?: return null
         val component = ComponentName(ctx, RevivalListener::class.java)
         val controllers = runCatching { manager.getActiveSessions(component) }.getOrNull() ?: return null
-        return controllers.any {
-            it.packageName != ctx.packageName && FrameIdlePolicy.sessionActive(it.playbackState?.state)
+        return controllers.filter { it.packageName != ctx.packageName }.map {
+            FrameIdlePolicy.Session(it.packageName, it.playbackState?.state)
         }
+    }
+
+    /**
+     * Last activity actually brought to the foreground before Android launched the dream.
+     * Requires the user's Usage Access grant; missing/denied grants return null and fail
+     * closed for third-party paused video. Do not use process importance as a foreground proxy.
+     */
+    private fun recentForegroundPackage(ctx: Context): String? {
+        val usage = ctx.getSystemService(UsageStatsManager::class.java) ?: return null
+        val now = System.currentTimeMillis()
+        val events = runCatching { usage.queryEvents(now - 2 * 3_600_000L, now + 1L) }
+            .getOrNull() ?: return null
+        val event = UsageEvents.Event()
+        var lastForeground: String? = null
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND ||
+                (Build.VERSION.SDK_INT >= 29 && event.eventType == UsageEvents.Event.ACTIVITY_RESUMED)) {
+                lastForeground = event.packageName
+            }
+        }
+        return lastForeground
     }
 
     private fun foreignPlayback(am: AudioManager?, ourUid: Int, listComplete: Boolean): Boolean? {
