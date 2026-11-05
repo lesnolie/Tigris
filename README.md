@@ -45,6 +45,9 @@
 
 相框会在系统待机截止时间前启动；Tigris 桌面、设置、更新和壁纸页长时间无操作可以进入相框。第三方播放器必须确认前台且 MediaSession 报告 `PAUSED`，同时由 Android 自行启动系统屏保；**视频播放、音频及已识别投屏接收器（包括静音）禁止抢屏**。索尼安装确认改用系统真实 PackageInstaller Intent，暂时无法访问 GitHub 时保留已校验更新信息，兼容 HGTV 的纯数字版本标签。不同厂商机型仍需实机验收。详见 [v2.0.21 更新说明](docs/releases/v2.0.21.md)。
 
+<details>
+<summary><strong>历史版本更新记录（v2.0.13–v2.0.20）</strong></summary>
+
 ## v2.0.20：旧版 Android 的 Dock 玻璃
 
 Android 11 及更早的系统上，动态视频背景的 Dock 按真实尺寸画圆角，里面是大约 55% 不透明的慢速模糊，圆角不再被拉糊，视频继续在下面播放。拷贝太慢时改成一层淡罩。Android 12 及以上不变。详见 [v2.0.20 更新说明](docs/releases/v2.0.20.md)。
@@ -82,6 +85,11 @@ Settings 和「应用与更新」统一使用透明折射玻璃及当前主屏�
 - **HGTV 红果短剧**：连接 [pan8664716/HGTV Releases](https://github.com/pan8664716/HGTV/releases)，用户主动选择才下载与安装。HGTV 是第三方客户端，使用非官方内容接口；内容平台变更可能影响功能。
 
 **应用与更新**现在采用三张 tvOS 风格应用卡片，每个应用仅显示「获取 / 打开 / 更新」等当前适用的操作；下载进度、继续安装、失败重试按需出现。两者均**不包含在 Tigris APK**、不会被自动首次安装或预先塞进 Dock；安装成功后会像普通应用一样出现在应用列表，可以自行移动到 Dock。安装前检查 SHA-256 和已知发布签名，不匹配则停止，不清除已有应用数据。自动更新仅作用于已安装的应用。更多说明见 [软件更新和可选安装](docs/updater.md)。
+
+</details>
+
+<details>
+<summary><strong>完整功能清单、演示与素材声明</strong></summary>
 
 ## 1. 展示与功能
 
@@ -126,6 +134,11 @@ Settings 和「应用与更新」统一使用透明折射玻璃及当前主屏�
 ### 素材与商标说明
 
 仓库为界面展示打包了默认开机视频，并在线播放 Apple TV 航拍内容。这些素材不附带 Apple 或任何第三方的额外授权，也不代表 Tigris 与 Apple 有关联。对外分发、商用或再发布时，请确认素材授权；也可以在设置中改用 Tigris 字样动画或上传自己拥有权利的视频。截图中的影视封面、摄影作品和第三方图标版权归各自权利人所有。
+
+</details>
+
+<details>
+<summary><strong>LG webOS 开发预览版安装指南（不可安装 Android APK）</strong></summary>
 
 ## LG webOS 专区（独立平台 · 开发预览版）
 
@@ -189,6 +202,11 @@ Windows 可在 PowerShell 执行 `ares-*` 指令；一行 Shell 脚本需要 mac
 详细说明与英文版：**[LG webOS 独立安装指南](webos/README.md)** · **[AI 与 Home Helper 安全预检规范](docs/WEBOS_AI_INSTALL.md)** · **[官网 webOS 专区](https://tigris-tv.pages.dev/webos/)**。
 
 ---
+
+</details>
+
+<details>
+<summary><strong>Android TV 安装指南：ADB、AI 安装与机型授权</strong></summary>
 
 ## 2. 安装指南
 
@@ -427,6 +445,11 @@ curl.exe -s -u ':<PIN>' http://192.168.1.20/sony/accessControl --data-binary '@b
 
 守护默认关闭。AI 安装会按 [AGENTS.md](AGENTS.md) 授权并打开；手动安装后也可在 设置 → 桌面守护 中开启。索尼等原生 Android TV 通常不需要。
 
+</details>
+
+<details>
+<summary><strong>安全还原、关闭守护和卸载步骤</strong></summary>
+
 ## 3. 还原与卸载
 
 ### 用安装脚本还原
@@ -484,6 +507,11 @@ adb -s 192.168.1.20:5555 uninstall com.leslie.tvhome
 请在我的电脑上亲自执行，保留其他无障碍服务，不要猜原桌面包名。
 最后原样贴出 enabled_accessibility_services 和按主页键后的 mCurrentFocus 输出。
 ```
+
+</details>
+
+<details>
+<summary><strong>机型兼容性明细与社区反馈（按设备核实）</strong></summary>
 
 ## 4. 兼容性与社区反馈
 
@@ -569,7 +597,12 @@ tv/
 
 适配成功后欢迎提交 Pull Request，让同品牌用户直接复用。
 
+</details>
+
 ## 5. 常见问题、开发与许可
+
+<details>
+<summary><strong>常见问题与开发者手动构建</strong></summary>
 
 ### 常见问题
 
@@ -637,6 +670,8 @@ app/build/outputs/apk/guard/release/app-guard-release.apk
 ```
 
 本地构建使用本机签名，可能与正式 Release 不同。覆盖安装前先确认签名；不要为了安装本地包直接卸载正式版。
+
+</details>
 
 ### 许可与第三方声明
 

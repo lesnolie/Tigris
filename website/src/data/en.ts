@@ -9,6 +9,7 @@ export const en = {
   menuLabel: "Open menu",
   menuCloseLabel: "Close menu",
   nav: [
+    { href: "#extreme-glass", label: "Extreme Glass" },
     { href: "#features", label: "Features" },
     { href: "#aerial", label: "Aerial" },
     { href: "#compare", label: "Compare" },
@@ -87,11 +88,11 @@ export const en = {
   aerial: {
     eyebrow: "AERIAL SCREENSAVER",
     title: "Apple TV aerials, as your screensaver.",
-    lede: "When the Tigris home screen sits idle it drifts over the planet instead: coastlines, glaciers and city lights unfold with the location name following each shot. Use the arrow keys to change scene; offline it falls back to photos. It stays away while another app, a cast, or a video is already in front.",
+    lede: "When Tigris Home or Settings becomes idle, the screen can drift over the planet: coastlines, glaciers and city lights follow the scene. Use the arrow keys to switch; offline it falls back to photos. Android may also start the dream over a verified paused foreground player, but active playback and recognized casting take priority.",
     bullets: [
       "Choose aerial films as the screensaver content; they stream from Apple's servers at roughly 15–20 Mbps",
       "Offline or on a failed buffer it falls back to the photo frame, without blocking the next idle transition",
-      "After 1–30 minutes idle on the Tigris home screen the photo frame appears. It stays hidden during casting, video playback, or any other app in front",
+      "Idle Tigris screens and verified paused media may show the frame; active video, audio and recognized casting are protected",
     ],
     caption: "Photo frame · Bing daily photograph (photo mode shown; aerial films are video)",
     frameAlt: "Photo frame screensaver: an underwater octopus photograph with the time and date in the corner.",
@@ -313,7 +314,7 @@ adb -s 192.168.x.x:5555 shell appops set com.leslie.tvhome SYSTEM_ALERT_WINDOW a
       { feature: "Memory cleanup", any: "Cache only", debug: "Kills background apps", sony: "—" },
       { feature: "Remove preinstalled apps", any: "—", debug: "Yes", sony: "—" },
       { feature: "Standby, power off, restart", any: "—", debug: "Yes", sony: "—" },
-      { feature: "Photo-frame idle timer (home screen only)", any: "Yes", debug: "—", sony: "—" },
+      { feature: "In-app photo-frame timer (Home); system dream supports idle Settings", any: "Yes", debug: "—", sony: "—" },
       { feature: "Frame as the system screensaver", any: "—", debug: "Yes", sony: "—" },
       { feature: "Volume slider", any: "Android standard", debug: "—", sony: "TV volume" },
       { feature: "HDMI input switching", any: "Most TVs", debug: "—", sony: "Plus input status" },

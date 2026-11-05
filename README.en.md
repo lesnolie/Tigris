@@ -44,6 +44,9 @@ App icons now retain their original shapes in the existing 16:9 tvOS tiles: prop
 
 The photo frame now starts ahead of Android's system sleep deadline, and an idle Tigris Home, Settings, Updates or Wallpaper page may show it. An external video player is eligible only when the foreground media session explicitly reports PAUSED and Android starts its dream; active playback and recognized casting (even silent) take priority and block the photo frame. Sony install confirmations now use the actual PackageInstaller intent, cached update offers survive temporary GitHub network failures, and HGTV numeric release tags are recognized. Device-specific install/casting still require testing. See [v2.0.21 release notes](docs/releases/v2.0.21.md).
 
+<details>
+<summary><strong>Older release notes (v2.0.13–v2.0.20)</strong></summary>
+
 ## v2.0.20: dock glass on Android 11 and older
 
 On Android 11 and older, the dock over a moving video is drawn at its real size: a rounded mask, a slow heavy blur at about 55% opacity, and a light veil if a snapshot is too slow. The video keeps playing underneath. Android 12 and newer are unchanged. See the [v2.0.20 release notes](docs/releases/v2.0.20.md).
@@ -82,6 +85,11 @@ From Tigris on the TV, open **Home Settings → Apps, casting & updates** to opt
 
 The redesigned **Apps & Updates** screen presents one tvOS-style card per app with just one contextual action (Get, Open or Update); download progress and Retry only appear when needed. Neither APK is bundled with Tigris, auto-installed for new users, or pinned to the Dock by default. Once installed, each becomes a normal launcher app and may be moved to the Dock. The installer checks release SHA-256 and a documented signing identity, and refuses incompatible upgrades instead of deleting app data. Automatic updates apply only to already installed apps. [Policy and limitations](docs/updater.md).
 
+</details>
+
+<details>
+<summary><strong>TV screenshots and demonstrations</strong></summary>
+
 ## Screenshots
 
 ![Home screen](docs/screenshots/home.jpg)
@@ -91,6 +99,11 @@ The redesigned **Apps & Updates** screen presents one tvOS-style card per app wi
 | ![Top Shelf](docs/screenshots/shelf.jpg) | ![All apps](docs/screenshots/grid.jpg) |
 | **Control Center** | **Photo frame / screensaver** |
 | ![Control Center](docs/screenshots/cc.jpg) | ![Photo frame](docs/screenshots/frame.jpg) |
+
+</details>
+
+<details>
+<summary><strong>Device compatibility reports and community feedback</strong></summary>
 
 ## TV installation and compatibility reports
 
@@ -125,6 +138,11 @@ Please [open a structured TV compatibility report](https://github.com/lesnolie/T
 | 创维酷开 85P3DMAX | Android 11 | 2.0.2 / Custom fork | Installed and launched (reported) | Closed (fix unverified) | [#15](https://github.com/lesnolie/Tigris/issues/15) |
 | 雷鸟 75S545C | Android 9 | V2.0.2 / Guard | Installed and launched (reported) | Closed (fix unverified) | [#14](https://github.com/lesnolie/Tigris/issues/14) |
 <!-- TV_COMPATIBILITY_AUTO_END -->
+
+</details>
+
+<details>
+<summary><strong>Installation with an AI coding agent or ADB</strong></summary>
 
 ## Install with an AI coding agent
 
@@ -171,6 +189,11 @@ curl -fsSL https://raw.githubusercontent.com/lesnolie/Tigris/main/install.sh \
 
 To explicitly keep ADB enabled, add `KEEP_ADB=1` before `bash`. New releases ship `Tigris-vX.Y.Z.apk`, `Tigris-guard-vX.Y.Z.apk` and `SHA256SUMS-vX.Y.Z.txt`; the installer also accepts older filenames. The installer will not silently uninstall an APK when signatures differ. See the [installation and restore guide](docs/installation.md). On Windows, follow [AGENTS.md](AGENTS.md) with a command-capable desktop agent or use PowerShell/ADB manually; phone chat alone cannot operate the TV.
 
+</details>
+
+<details>
+<summary><strong>Complete feature list and historical milestones</strong></summary>
+
 ## Features
 
 ### What's new in v2.0.6
@@ -199,6 +222,11 @@ App folders, phone-based avatar upload, an update center for Tigris and Miracast
 - **HDMI shortcuts on the home screen:** Control Center → Inputs → Show on Home, where available.
 - **Home guard:** helps keep Tigris in front on OEM firmware that forces its own launcher. Does not require root and is off by default.
 - **Background memory cleanup:** periodic cleanup and a configurable keep-alive list.
+
+</details>
+
+<details>
+<summary><strong>Platform features and manufacturer limitations</strong></summary>
 
 ## Compatibility by feature
 
@@ -257,6 +285,11 @@ The brand-specific adapters live under [`app/src/main/java/com/leslie/tvhome/tv/
 
 To contribute a new model, have a developer or coding agent follow [AGENTS.md §9](AGENTS.md#9-adapting-tigris-to-a-tv-that-isnt-fully-supported), inspect that TV's actual interfaces and submit a pull request. Never disable/uninstall a stock launcher or change critical TV settings without the owner's approval.
 
+</details>
+
+<details>
+<summary><strong>Manual builds, casting recommendations and developer instructions</strong></summary>
+
 ## Build and install manually
 
 Requires **JDK 17**, Android SDK **compileSdk 36**, Gradle wrapper and ADB. Or simply download [the latest release](https://github.com/lesnolie/Tigris/releases/latest).
@@ -283,6 +316,8 @@ See [AGENTS.md](AGENTS.md) for permissions, setup and verification. Official rel
 ## Casting recommendation
 
 Tigris has no built-in casting receiver. The open-source [Miracast Receiver](https://github.com/weekdayjast/MiracastReceiver) is one option for AirPlay, DLNA and Miracast (some firmware features may require root). Install the APK matching your TV's CPU architecture. Tigris's cleanup keep-alive defaults account for this app.
+
+</details>
 
 ## License and third-party notices
 
