@@ -11,9 +11,10 @@ package com.leslie.tvhome
  * settings row labeled “空闲多久显示相框” wrote `screen_off_timeout` (the TV's sleep timer) rather
  * than either of those delays.
  *
- * The delay is now an in-app preference. A positive vendor screensaver timeout can only make
- * the frame earlier, so a firmware screensaver does not appear first. The preference is never
- * written back to `screen_off_timeout`.
+ * The delay is an in-app preference, bounded by whichever system deadline is earlier:
+ * firmware screensaver timeout or SCREEN_OFF_TIMEOUT (which can put the TV to sleep directly).
+ * Start with a safety margin before either system deadline, not at the same instant.
+ * Neither timeout is ever overwritten by Tigris.
  *
  * What can be seen without privileged permissions, and what cannot:
  * - [android.media.AudioManager.isMusicActive] and `isMusicActiveRemotely` need no special
@@ -36,13 +37,14 @@ package com.leslie.tvhome
 internal object FrameIdlePolicy {
     const val TAG = "TigrisFrame"
     const val VENDOR_LEAD_MS = 15_000L
-    const val MIN_DELAY_MS = 30_000L
+    const val SCREEN_OFF_LEAD_MS = 30_000L
+    const val MIN_SAFE_DELAY_MS = 1_000L
     const val OWN_AUDIO_GRACE_MS = 3_000L
     const val RETRY_MS = 15_000L
     const val DEFAULT_MINUTES = 10
     val CHOICES_MINUTES = listOf(1, 3, 5, 10, 15, 30)
 
-    enum class Source { IN_APP, VENDOR_LEAD, NOT_SCHEDULED }
+    enum class Source { IN_APP, VENDOR_LEAD, SCREEN_OFF_LEAD, NOT_SCHEDULED }
     enum class Block { HOME, FOCUS, ASLEEP, OVERLAY, MEDIA, WAKE }
 
     data class Schedule(val delayMs: Long?, val source: Source, val logLine: String)
@@ -72,28 +74,51 @@ internal object FrameIdlePolicy {
     fun minutes(value: Int) = if (value in CHOICES_MINUTES) value else DEFAULT_MINUTES
 
     /**
-     * Armed when the user turned the idle frame on, or when the firmware publishes a positive
-     * screensaver timeout (the existing early start that stays ahead of that firmware).
-     * The in-app minutes are the delay unless the firmware timeout would fire sooner.
+     * Milliseconds before a system idle deadline. Even a short vendor timeout must not
+     * be pushed past its deadline by a fixed 30-second minimum. We reserve at least 25%
+     * of short timeouts and at most [leadMs] on normal TV timeouts.
      */
-    fun schedule(frameEnabled: Boolean, idleMinutes: Int, screenSaverTimeoutMs: Long?): Schedule {
+    private fun aheadOf(timeoutMs: Long?, leadMs: Long): Long? {
+        if (timeoutMs == null || timeoutMs <= MIN_SAFE_DELAY_MS) return null
+        val margin = minOf(leadMs, maxOf(MIN_SAFE_DELAY_MS, timeoutMs / 4))
+        return (timeoutMs - margin).coerceAtLeast(MIN_SAFE_DELAY_MS)
+    }
+
+    /**
+     * [screenSaverTimeoutMs] is the firmware's dream deadline, if available.
+     * [screenOffTimeoutMs] is the independently configured power/dream timeout;
+     * many TVs sleep directly at this deadline instead of starting their dream.
+     * The in-app timer must always run *before* the earliest applicable deadline.
+     */
+    fun schedule(frameEnabled: Boolean, idleMinutes: Int, screenSaverTimeoutMs: Long?,
+                 screenOffTimeoutMs: Long? = null): Schedule {
         val chosen = minutes(idleMinutes)
         val prefMs = chosen * 60_000L
-        val vendorText = if (screenSaverTimeoutMs == null) "missing" else screenSaverTimeoutMs.toString()
-        val vendorLead = if (screenSaverTimeoutMs != null && screenSaverTimeoutMs > 0)
-            maxOf(MIN_DELAY_MS, screenSaverTimeoutMs - VENDOR_LEAD_MS) else null
+        val vendorLead = aheadOf(screenSaverTimeoutMs, VENDOR_LEAD_MS)
+        val powerLead = aheadOf(screenOffTimeoutMs, SCREEN_OFF_LEAD_MS)
+        val vendorText = screenSaverTimeoutMs?.toString() ?: "missing"
+        val powerText = screenOffTimeoutMs?.toString() ?: "missing"
+
+        // A power timeout alone must not enable a frame the user explicitly turned off.
+        // Preserve the existing behavior for a firmware-managed system dream.
         if (!frameEnabled && vendorLead == null) {
             return Schedule(null, Source.NOT_SCHEDULED,
-                "frame idle: not scheduled; photo frame idle is off and screen_saver_timeout=$vendorText")
+                "frame idle: not scheduled; photo frame idle is off and screen_saver_timeout=$vendorText; screen_off_timeout=$powerText")
         }
-        if (vendorLead == null || prefMs <= vendorLead) {
-            val comparison = if (vendorLead == null) "screen_saver_timeout=$vendorText"
-            else "screen_saver_timeout=$vendorText would lead at ${vendorLead}ms"
-            return Schedule(prefMs, Source.IN_APP,
-                "frame idle: ${prefMs}ms from in-app preference ($chosen min); $comparison")
+        val choices = listOfNotNull(
+            prefMs to Source.IN_APP,
+            vendorLead?.let { it to Source.VENDOR_LEAD },
+            powerLead?.let { it to Source.SCREEN_OFF_LEAD },
+        )
+        val (delay, source) = choices.minByOrNull { it.first }!!
+        val reason = when (source) {
+            Source.IN_APP -> "in-app preference ($chosen min)"
+            Source.VENDOR_LEAD -> "screen_saver_timeout=$vendorText minus up to ${VENDOR_LEAD_MS}ms"
+            Source.SCREEN_OFF_LEAD -> "screen_off_timeout=$powerText minus up to ${SCREEN_OFF_LEAD_MS}ms"
+            Source.NOT_SCHEDULED -> "off"
         }
-        return Schedule(vendorLead, Source.VENDOR_LEAD,
-            "frame idle: ${vendorLead}ms from screen_saver_timeout=$vendorText minus ${VENDOR_LEAD_MS}ms; in-app preference ($chosen min) is later")
+        return Schedule(delay, source,
+            "frame idle: ${delay}ms from $reason; screen_saver_timeout=$vendorText; screen_off_timeout=$powerText")
     }
 
     /** Active [android.media.session.PlaybackState] values that mean "still playing". */

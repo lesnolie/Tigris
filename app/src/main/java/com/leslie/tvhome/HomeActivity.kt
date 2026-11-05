@@ -179,10 +179,9 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     }
 
     /**
-     * In-app idle timer for the photo frame. The deadline is [FrameIdlePolicy]: the minutes
-     * chosen in settings, brought forward only when the firmware's screensaver timeout is sooner.
-     * It runs only while this home screen is resumed. [PhotoDream] independently accepts the
-     * system idle timeout over our own UI, including settings; it does not recheck this timer.
+     * In-app photo-frame idle timer. Always arm before the earliest applicable system dream
+     * or screen-off deadline; otherwise Android may go to sleep before FrameActivity opens.
+     * It only runs while Home is resumed, never over video/casting in another app.
      */
     private var idleToken = 0
     private var idleDueAt = 0L
@@ -193,7 +192,11 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private fun screenSaverTimeout(): Long? =
         runCatching { Settings.System.getLong(contentResolver, "screen_saver_timeout") }.getOrNull()
 
-    private fun readSchedule() = FrameIdlePolicy.schedule(prefs.frameScreensaver, prefs.frameIdleMinutes, screenSaverTimeout())
+    private fun screenOffTimeout(): Long? =
+        runCatching { Settings.System.getLong(contentResolver, Settings.System.SCREEN_OFF_TIMEOUT) }.getOrNull()
+
+    private fun readSchedule() = FrameIdlePolicy.schedule(
+        prefs.frameScreensaver, prefs.frameIdleMinutes, screenSaverTimeout(), screenOffTimeout())
 
     private fun cancelIdle() {
         idleToken++

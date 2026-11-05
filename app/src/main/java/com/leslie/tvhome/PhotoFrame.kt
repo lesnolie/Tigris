@@ -221,6 +221,8 @@ class PhotoDream : DreamService() {
         // Interactive so that left / right can skip a film; every other key ends the dream.
         isInteractive = true
         isFullscreen = true
+        // Some TV firmware dims or sleeps dreams unless they explicitly keep the display lit.
+        setScreenBright(true)
         frame = SaverHost(this).also { setContentView(it) }
     }
 
