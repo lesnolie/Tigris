@@ -125,6 +125,50 @@ class FrameIdlePolicyTest {
         assertFalse(FrameIdlePolicy.sessionActive(null))
     }
 
+    @Test fun pausedVideoCanDreamOnlyWhenTheActualForegroundPlayerReportsPause() {
+        val player = "com.example.videoplayer"
+        val paused = listOf(FrameIdlePolicy.Session(player, 2))
+        assertTrue(FrameIdlePolicy.pausedForegroundVideo(player, paused))
+        assertTrue(FrameIdlePolicy.dreamDecision(false,
+            FrameIdlePolicy.Media(pausedForegroundVideo = true)).show)
+        assertFalse(FrameIdlePolicy.pausedForegroundVideo(null, paused))
+        assertFalse(FrameIdlePolicy.pausedForegroundVideo("com.example.other", paused))
+        assertFalse(FrameIdlePolicy.pausedForegroundVideo(player, emptyList()))
+        assertFalse(FrameIdlePolicy.pausedForegroundVideo(player,
+            listOf(FrameIdlePolicy.Session(player, null))))
+        assertFalse(FrameIdlePolicy.pausedForegroundVideo(player,
+            paused + FrameIdlePolicy.Session(player, 3)))
+        assertFalse(FrameIdlePolicy.pausedForegroundVideo(player,
+            paused + FrameIdlePolicy.Session(player, null)))
+    }
+
+    @Test fun playbackAndCastingOverridePausedVideoAndOurSettingsUi() {
+        val cast = "com.weekd.miracastreceiver"
+        assertTrue(FrameIdlePolicy.isCastingPackage(cast))
+        assertTrue(FrameIdlePolicy.isCastingPackage("com.dangbei.screencast"))
+        assertFalse(FrameIdlePolicy.isCastingPackage("com.example.videoplayer"))
+        assertFalse(FrameIdlePolicy.pausedForegroundVideo(cast,
+            listOf(FrameIdlePolicy.Session(cast, 2))))
+        assertFalse(FrameIdlePolicy.dreamDecision(true,
+            FrameIdlePolicy.Media(castReceiverForeground = true)).show)
+        assertFalse(FrameIdlePolicy.dreamDecision(false,
+            FrameIdlePolicy.Media(pausedForegroundVideo = true, foreignSessionPlaying = true)).show)
+        assertFalse(FrameIdlePolicy.dreamDecision(false,
+            FrameIdlePolicy.Media(pausedForegroundVideo = true, foreignPlayback = true)).show)
+        assertFalse(FrameIdlePolicy.dreamDecision(false,
+            FrameIdlePolicy.Media(pausedForegroundVideo = true, remoteMusicActive = true)).show)
+        assertFalse(FrameIdlePolicy.dreamDecision(false,
+            FrameIdlePolicy.Media(pausedForegroundVideo = true, castReceiverForeground = true)).show)
+    }
+
+    @Test fun noVerifiedPauseNeverClaimsThirdPartyVideoIsSafe() {
+        assertFalse(FrameIdlePolicy.dreamDecision(false, FrameIdlePolicy.Media()).show)
+        assertFalse(FrameIdlePolicy.dreamDecision(false,
+            FrameIdlePolicy.Media(foreignSessionPlaying = false, foreignPlayback = false)).show)
+        assertTrue(FrameIdlePolicy.dreamDecision(true, FrameIdlePolicy.Media()).show)
+        assertTrue(FrameIdlePolicy.sessionActive(11))
+    }
+
     @Test fun playbackSummariesExposeUidAndStartedState() {
         val summary = "AudioPlaybackConfiguration piid:12 type:android.media.AudioTrack u/pid:10123/4321 state:started attr:usage=USAGE_MEDIA"
         assertEquals(10123, FrameIdlePolicy.clientUidFromSummary(summary))

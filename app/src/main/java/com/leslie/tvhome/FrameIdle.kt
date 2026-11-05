@@ -56,7 +56,29 @@ internal object FrameIdlePolicy {
         val ownPlaybackStoppedAgoMs: Long? = null,
         val foreignSessionPlaying: Boolean? = null,
         val foreignPlayback: Boolean? = null,
+        /** Verified PAUSED session belonging to the actual foreground video app. */
+        val pausedForegroundVideo: Boolean = false,
+        /** A known casting/mirroring receiver is in front, even if no audio is playing. */
+        val castReceiverForeground: Boolean = false,
     )
+
+    /** The observed session state, independent of whether it is currently emitting audio. */
+    data class Session(val pkg: String, val state: Int?)
+
+    /**
+     * Only a paused session for the foreground package permits a third-party player dream.
+     * Missing Usage Access, missing Notification Listener, an unknown player state, or
+     * a casting receiver never count as proof of pause.
+     */
+    fun pausedForegroundVideo(foreground: String?, sessions: List<Session>): Boolean {
+        if (foreground.isNullOrBlank() || isCastingPackage(foreground)) return false
+        val matching = sessions.filter { it.pkg == foreground }
+        return matching.isNotEmpty() && matching.any { it.state == 2 } &&
+            matching.all { it.state == 2 || it.state == 1 }
+    }
+
+    /** Known TV mirroring and remote-play receiver packages; silence is NOT proof of inactivity. */
+    fun isCastingPackage(pkg: String?): Boolean = pkg != null && pkg in CAST_RECEIVERS
 
     data class Suppression(val block: Block, val detail: String) {
         /** Overlay, playback and a held screen can clear without a new key. */
@@ -151,6 +173,7 @@ internal object FrameIdlePolicy {
     }
 
     fun mediaBlockReason(media: Media): String? {
+        if (media.castReceiverForeground) return "a screen-casting or remote-play receiver is in front"
         if (media.foreignSessionPlaying == true) return "a media session from another app is playing"
         if (media.foreignPlayback == true) return "another app's media audio is active"
         if (media.remoteMusicActive) return "AudioManager.isMusicActiveRemotely is true"
@@ -177,9 +200,11 @@ internal object FrameIdlePolicy {
     }
 
     fun dreamDecision(coversTigrisUi: Boolean, media: Media): DreamDecision {
-        if (!coversTigrisUi) return DreamDecision(false, "a different app is in front")
+        // Playback and casting always win over the screensaver, regardless of foreground UI.
         mediaBlockReason(media)?.let { return DreamDecision(false, it) }
-        return DreamDecision(true, "system requested the screensaver over idle Tigris UI")
+        if (coversTigrisUi) return DreamDecision(true, "system requested the screensaver over idle Tigris UI")
+        if (media.pausedForegroundVideo) return DreamDecision(true, "system idle and foreground video is explicitly paused")
+        return DreamDecision(false, "foreign foreground has no verified paused media state")
     }
 
     /**
@@ -208,6 +233,15 @@ internal object FrameIdlePolicy {
         return false
     }
 
+    private val CAST_RECEIVERS = setOf(
+        "com.weekd.miracastreceiver",
+        "com.dangbei.screencast",
+        "com.google.android.apps.mediashell",
+        "com.hpplay.happycast",
+        "com.hpplay.happycast.tv",
+        "com.limelight",
+        "com.limelight.qiin",
+    )
     private val HOLD_KEYS = listOf("mHoldScreenWindow=", "mLastWakeLockHoldingWindow=")
     private val PACKAGE_IN_WINDOW = Regex("""([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)*)/""")
     private val UID_IN_SUMMARY = Regex("""u/pid:(\d+)/""")
@@ -221,6 +255,7 @@ internal object FrameIdlePolicy {
         8, // STATE_CONNECTING
         9, // STATE_SKIPPING_TO_PREVIOUS
         10, // STATE_SKIPPING_TO_NEXT
+        11, // STATE_SKIPPING_TO_QUEUE_ITEM
     )
 }
 

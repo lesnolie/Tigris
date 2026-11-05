@@ -194,8 +194,8 @@ class FrameActivity : Activity() {
 /**
  * Android has already decided that the device is idle when it starts this dream. Rechecking
  * Home's independent timer here races the dream's own focus transition and can immediately
- * finish the dream, which lets Android go to sleep. Accept our idle settings/update pages too;
- * the home-only timer and foreign playback/foreground protections remain separate.
+ * finish the dream, which lets Android go to sleep. Accept our idle settings/update pages
+ * and verified paused third-party video; active playback and casting still block the dream.
  */
 class PhotoDream : DreamService() {
     private var frame: SaverHost? = null
@@ -203,7 +203,7 @@ class PhotoDream : DreamService() {
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         val now = SystemClock.elapsedRealtime()
-        val coversOurUi = ScreensaverScope.coversTigrisUi() || HomeForeground.dreamCoversHome(now)
+        val coversOurUi = ScreensaverScope.coversTigrisUi(now) || HomeForeground.dreamCoversHome(now)
         val decision = FrameIdlePolicy.dreamDecision(
             coversTigrisUi = coversOurUi,
             media = FrameIdleProbe.media(this, HomeForeground.mediaHint(now)),

@@ -3,22 +3,38 @@ package com.leslie.tvhome
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
+import android.os.SystemClock
 
-/** Our visible UI stays started while a system dream attaches and takes window focus. */
+/**
+ * A started but long-paused Settings/Home activity may be underneath a full-screen cast.
+ * Count only resumed Tigris UI, with a short pause grace for Android's dream transition.
+ */
 internal object ScreensaverScope : Application.ActivityLifecycleCallbacks {
-    private val visible = mutableSetOf<Activity>()
-    fun register(app: Application) = app.registerActivityLifecycleCallbacks(this)
-    fun coversTigrisUi() = visible.any { !it.isFinishing && !it.isDestroyed }
+    private val resumed = mutableSetOf<Activity>()
+    private var lastOwnUiPausedAt = Long.MIN_VALUE
+    const val DREAM_ATTACH_GRACE_MS = 2_500L
 
-    override fun onActivityStarted(activity: Activity) {
-        // FrameActivity already owns its bounded keep-screen-on period. Never count DreamActivity.
-        if (activity is HomeActivity || activity is SettingsActivity || activity is UpdateActivity ||
-            activity is WallpaperActivity) visible += activity
+    fun register(app: Application) = app.registerActivityLifecycleCallbacks(this)
+
+    fun coversTigrisUi(now: Long = SystemClock.elapsedRealtime()): Boolean =
+        resumed.any { !it.isFinishing && !it.isDestroyed } ||
+            (lastOwnUiPausedAt != Long.MIN_VALUE &&
+                now - lastOwnUiPausedAt in 0..DREAM_ATTACH_GRACE_MS)
+
+    private fun tracked(activity: Activity) =
+        activity is HomeActivity || activity is SettingsActivity || activity is UpdateActivity ||
+            activity is WallpaperActivity
+
+    override fun onActivityResumed(activity: Activity) {
+        if (tracked(activity)) resumed += activity
     }
-    override fun onActivityStopped(activity: Activity) { visible -= activity }
-    override fun onActivityDestroyed(activity: Activity) { visible -= activity }
+    override fun onActivityPaused(activity: Activity) {
+        if (tracked(activity) && resumed.remove(activity))
+            lastOwnUiPausedAt = SystemClock.elapsedRealtime()
+    }
+    override fun onActivityStopped(activity: Activity) { resumed -= activity }
+    override fun onActivityDestroyed(activity: Activity) { resumed -= activity }
     override fun onActivityCreated(activity: Activity, state: Bundle?) = Unit
-    override fun onActivityResumed(activity: Activity) = Unit
-    override fun onActivityPaused(activity: Activity) = Unit
+    override fun onActivityStarted(activity: Activity) = Unit
     override fun onActivitySaveInstanceState(activity: Activity, state: Bundle) = Unit
 }
