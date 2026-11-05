@@ -8,6 +8,8 @@ class OptionalAppPolicyTest {
         assertEquals("HGTV_1.2.6.apk", OptionalAppPolicy.selectApk(
             OptionalAppPolicy.HGTV_PKG, "v1.2.6",
             listOf("HGTV_1.2.6.apk", "update.json", "SHA256SUMS")))
+        assertEquals("HGTV_1.3.1.1.apk", OptionalAppPolicy.selectApk(
+            OptionalAppPolicy.HGTV_PKG, "1.3.1.1", listOf("HGTV_1.3.1.1.apk")))
         assertNull(OptionalAppPolicy.selectApk(OptionalAppPolicy.HGTV_PKG, "v1.2.7",
             listOf("HGTV_1.2.6.apk")))
         assertNull(OptionalAppPolicy.selectApk(OptionalAppPolicy.HGTV_PKG, "v1.2.6",

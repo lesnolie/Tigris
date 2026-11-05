@@ -1,48 +1,11 @@
 package com.leslie.tvhome
 
-/**
- * PackageInstaller on SDK < 31 always needs a system confirmation Activity.
- * Some Sony BRAVIA Android 9 firmwares ship `com.android.packageinstaller`
- * with no activities, so the session can never finish. Callers then keep the
- * verified APK and show `adb install -r` instead of committing that session.
- */
+/** The OS-issued confirmation Intent is authoritative; resolver probes are not. */
 internal object InstallConfirmation {
-    const val ARCHIVE_MIME = "application/vnd.android.package-archive"
-    const val ACTION_CONFIRM_INSTALL = "android.content.pm.action.CONFIRM_INSTALL"
-
-    /** Subdirectory of [android.content.Context.getExternalFilesDir] (DIRECTORY_DOWNLOADS). */
     const val DIRECTORY = "Tigris"
 
-    data class Probe(
-        val action: String,
-        val mime: String? = null,
-        val data: String? = null,
-        val packageName: String? = null,
-    )
-
-    /**
-     * Intents the system install confirmation page handles. Any resolved probe
-     * means this firmware can show that page, so the session path stays unchanged.
-     */
-    val probes: List<Probe> = listOf(
-        Probe("android.intent.action.INSTALL_PACKAGE", ARCHIVE_MIME, "content://com.leslie.tvhome.updates/package.apk"),
-        Probe("android.intent.action.VIEW", ARCHIVE_MIME, "content://com.leslie.tvhome.updates/package.apk"),
-        Probe("android.intent.action.INSTALL_PACKAGE", ARCHIVE_MIME, "file:///tmp/package.apk"),
-        Probe("android.intent.action.VIEW", ARCHIVE_MIME, "file:///tmp/package.apk"),
-        Probe("android.intent.action.INSTALL_PACKAGE", data = "package:com.leslie.tvhome"),
-        Probe(ACTION_CONFIRM_INSTALL),
-        Probe(ACTION_CONFIRM_INSTALL, packageName = "com.android.packageinstaller"),
-    )
-
-    fun sessionAllowed(anyProbeResolved: Boolean) = anyProbeResolved
-
-    /**
-     * STATUS_PENDING_USER_ACTION whose confirmation Intent is missing or cannot
-     * be started (resolve failure or ActivityNotFoundException). Same outcome as
-     * no confirmation page: do not keep the session.
-     */
-    fun pendingActionUnusable(intentPresent: Boolean, intentStartable: Boolean) =
-        !intentPresent || !intentStartable
+    /** Only a missing OS-supplied confirmation Intent requires an immediate fallback. */
+    fun missingSystemIntent(intentPresent: Boolean) = !intentPresent
 
     fun safeToken(value: String): String {
         val cleaned = value.replace(Regex("[^A-Za-z0-9._-]"), "_").trim('_', '.')
@@ -62,8 +25,9 @@ internal object InstallConfirmation {
 
     fun adbCommand(absolutePath: String): String {
         require(absolutePath.isNotBlank())
-        val shown = if (absolutePath.any { it.isWhitespace() }) "\"$absolutePath\"" else absolutePath
-        return "adb install -r $shown"
+        val filename = absolutePath.substringAfterLast('/')
+        require(filename.matches(Regex("[A-Za-z0-9._-]+\\.apk")) && '"' !in absolutePath)
+        return "adb pull \"$absolutePath\" \"$filename\" && adb install -r \"$filename\""
     }
 }
 

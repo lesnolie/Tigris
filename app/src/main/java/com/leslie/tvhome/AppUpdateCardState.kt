@@ -19,8 +19,9 @@ internal object AppUpdateCardState {
     fun action(s: Snapshot): Action = when {
         s.phase == "download" -> Action.DOWNLOADING
         s.phase == "verify" || s.phase == "stage" -> Action.VERIFYING
-        s.phase == "pending" -> if (s.hasConfirmation) Action.CONFIRM else Action.WAITING
-        s.phase == "failed" -> Action.RETRY
+        s.phase == "pending" && (!s.installed || s.updateAvailable) ->
+            if (s.hasConfirmation) Action.CONFIRM else Action.WAITING
+        s.phase == "failed" && (!s.installed || s.updateAvailable) -> Action.RETRY
         !s.installed -> Action.GET
         s.updateAvailable -> Action.UPDATE
         s.optional -> Action.OPEN

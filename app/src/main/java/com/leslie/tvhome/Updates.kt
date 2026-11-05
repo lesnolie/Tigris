@@ -111,11 +111,21 @@ object Updates {
 
     private fun resultReceiver(c: Context, p: Product, id: Int): IntentSender {
         val intent = Intent(c, UpdateResult::class.java).putExtra("product", p.pkg)
+            .putExtra("expected_session", id)
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
         return PendingIntent.getBroadcast(c, id, intent, flags).intentSender
     }
     fun prefs(c: Context) = c.getSharedPreferences("software_updates", Context.MODE_PRIVATE)
     fun installed(c: Context, p: Product) = runCatching { c.packageManager.getPackageInfo(p.pkg, 0).versionName ?: "0.0" }.getOrNull()
+
+    /** Preserve a complete, previously checked GitHub release across transient network failures. */
+    internal fun hasCachedOffer(c: Context, p: Product): Boolean {
+        val sp = prefs(c)
+        return UpdateOfferCache.usable(sp.getBoolean(p.pkg + ".available", false),
+            sp.getString(p.pkg + ".version", null), sp.getString(p.pkg + ".url", null),
+            sp.getString(p.pkg + ".digest", null), sp.getLong(p.pkg + ".size", 0L),
+            p.repo, installed(c, p))
+    }
     fun schedule(c: Context) {
         val scheduler = c.getSystemService(JobScheduler::class.java)
         if (scheduler.getPendingJob(24001) != null) return
@@ -173,8 +183,11 @@ object Updates {
             "${p.name}：$status"
         } catch (e: Exception) {
             val status = I18n.text(R.string.i18n_updates_007, e.message ?: I18n.text(R.string.i18n_updates_028))
-            prefs(c).edit().putString(p.pkg + ".status", status).putBoolean(p.pkg + ".available", false).apply()
-            "${p.name}：$status"
+            val cached = hasCachedOffer(c, p)
+            val shown = if (cached) "$status · ${I18n.text(R.string.update_cached_offer_available)}" else status
+            prefs(c).edit().putString(p.pkg + ".status", shown)
+                .putBoolean(p.pkg + ".available", cached).apply()
+            "${p.name}：$shown"
         }
     }
     private fun hex(bytes: ByteArray) = bytes.joinToString("") { "%02x".format(it) }
@@ -193,24 +206,12 @@ object Updates {
     @SuppressLint("ApplySharedPref") // commit before abandonSession, so its failure callback cannot restore the old session id
     private fun performInstall(c: Context, p: Product) {
         val sp = prefs(c)
-        val ui = confirmationUiAvailable(c.packageManager)
-        Log.i(TAG, "install ${p.pkg} confirmationUi=$ui sdk=${Build.VERSION.SDK_INT}")
-        // The unknown-sources grant only matters when a confirmation page can actually open.
-        if (ui) check(c.packageManager.canRequestPackageInstalls()) { I18n.text(R.string.i18n_updates_008) }
+        // Synthetic resolver probes can return false while the OS can open its confirmation.
+        // Always let PackageInstaller return the real system confirmation Intent.
+        check(c.packageManager.canRequestPackageInstalls()) { I18n.text(R.string.i18n_updates_008) }
         if (pending(c, p)) {
-            if (!ui) {
-                // The stuck session can never show a confirmation page. Drop it and save the APK below.
-                val id = sp.getInt(p.pkg + ".session", -1)
-                sp.edit().remove(p.pkg + ".session").remove(p.pkg + ".confirmation").commit()
-                if (id >= 0) runCatching { c.packageManager.packageInstaller.abandonSession(id) }
-            } else if (UpdateActivity.visible && confirm(c, p)) {
-                return
-            } else if (!pending(c, p) || sp.getString(p.pkg + ".phase", "") == "failed") {
-                // confirm() already switched this product to the sideload instruction.
-                return
-            } else {
-                error(I18n.text(R.string.update_pending_recovery))
-            }
+            if (UpdateActivity.visible && confirm(c, p)) return
+            error(I18n.text(R.string.update_pending_recovery))
         }
         sp.edit().remove(p.pkg + ".session").remove(p.pkg + ".confirmation").remove(p.pkg + ".target_code").apply()
         check(sp.getBoolean(p.pkg + ".available", false)) { I18n.text(R.string.i18n_updates_010) }
@@ -283,11 +284,6 @@ object Updates {
                 }
             }
             verified = true
-            if (!InstallConfirmation.sessionAllowed(ui)) {
-                val saved = publishVerifiedApk(c, p, file, releaseDigest)
-                Log.w(TAG, "no install confirmation page; saved ${saved.absolutePath}")
-                throw SideloadRequired(sideloadMessage(saved.absolutePath))
-            }
             val installer = pm.packageInstaller
             val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
                 setAppPackageName(p.pkg)
@@ -381,33 +377,6 @@ object Updates {
         return dest
     }
 
-    private fun confirmationUiAvailable(pm: PackageManager): Boolean {
-        var found = false
-        for (probe in InstallConfirmation.probes) {
-            val intent = Intent(probe.action).addCategory(Intent.CATEGORY_DEFAULT)
-            when {
-                probe.data != null && probe.mime != null -> intent.setDataAndType(Uri.parse(probe.data), probe.mime)
-                probe.data != null -> intent.data = Uri.parse(probe.data)
-                probe.mime != null -> intent.type = probe.mime
-            }
-            if (probe.packageName != null) intent.setPackage(probe.packageName)
-            if (!resolves(pm, intent)) continue
-            found = true
-            Log.i(TAG, "confirmation probe hit action=${probe.action}")
-        }
-        if (!found) Log.w(TAG, "no install confirmation activity")
-        return found
-    }
-
-    private fun resolves(pm: PackageManager, intent: Intent): Boolean =
-        pm.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY) != null ||
-            pm.resolveActivity(intent, 0) != null
-
-    internal fun confirmationStartable(c: Context, intent: Intent): Boolean {
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        return resolves(c.packageManager, intent)
-    }
-
     /**
      * Session commit asked for a confirmation page that cannot open.
      * Abandon the session, keep a verified APK when the download is still on disk,
@@ -473,16 +442,19 @@ class UpdateResult : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val p = Updates.products.find { it.pkg == intent.getStringExtra("product") } ?: return
         val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
-        val sessionId = intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1)
+        val sessionId = intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID,
+            intent.getIntExtra("expected_session", -1))
         val expected = Updates.prefs(context).getInt(p.pkg + ".session", -1)
         // A cancelled session may deliver its result after the replacement session starts.
         if (sessionId < 0 || sessionId != expected) return
         if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
             val confirmation = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
-            if (InstallConfirmation.pendingActionUnusable(confirmation != null, confirmation != null && Updates.confirmationStartable(context, confirmation))) {
+            if (InstallConfirmation.missingSystemIntent(confirmation != null)) {
+                Log.w("TigrisUpdate", "no system confirmation intent session=$sessionId")
                 Updates.reportMissingInstallUi(context, p)
                 return
             }
+            // Launch the OS-supplied Intent without resolveActivity preflight.
             confirmation!!.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             Updates.prefs(context).edit().putString(p.pkg + ".confirmation", confirmation.toUri(0))
                 .putString(p.pkg + ".phase", "pending").putInt(p.pkg + ".progress", -1)
@@ -491,10 +463,16 @@ class UpdateResult : BroadcastReceiver() {
                 try {
                     context.startActivity(confirmation)
                 } catch (e: ActivityNotFoundException) {
+                    Log.w("TigrisUpdate", "installer activity missing session=$sessionId", e)
+                    Updates.reportMissingInstallUi(context, p)
+                    return
+                } catch (e: SecurityException) {
+                    Log.w("TigrisUpdate", "installer activity blocked session=$sessionId", e)
                     Updates.reportMissingInstallUi(context, p)
                     return
                 }
             }
+            Log.i("TigrisUpdate", "confirmation delivered session=$sessionId visible=${UpdateActivity.visible}")
             // Notifications can outlive a reboot too: route through the page's recommit path.
             Updates.notify(context, p, I18n.text(R.string.i18n_updates_025))
         } else {

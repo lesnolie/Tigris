@@ -29,8 +29,10 @@ internal object OptionalAppPolicy {
                 it == "miracast-receiver-${tag}-universal.apk"
         }
         HGTV_PKG -> {
-            if (!tag.matches(Regex("^v[0-9]+(?:\\.[0-9]+)+$"))) null
-            else names.singleOrNull { it == "HGTV_${tag.removePrefix("v")}.apk" }
+            // Upstream publishes both v-prefixed and plain numeric tags.
+            val version = tag.removePrefix("v")
+            if (!version.matches(Regex("^[0-9]+(?:\\.[0-9]+)+$"))) null
+            else names.singleOrNull { it == "HGTV_$version.apk" }
         }
         else -> null
     }
