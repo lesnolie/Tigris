@@ -3,6 +3,7 @@ import Base from "../../layouts/Base.astro";
 import Header from "../../components/Header.astro";
 import Hero from "../../components/Hero.astro";
 import ReleaseHighlights from "../../components/ReleaseHighlights.astro";
+import ExtremeGlass from "../../components/ExtremeGlass.astro";
 import Aerial from "../../components/Aerial.astro";
 import Features from "../../components/Features.astro";
 import Compare from "../../components/Compare.astro";
@@ -23,6 +24,7 @@ const copy = getCopy(locale);
   <main id="main">
     <Hero copy={copy} locale={locale} />
     <ReleaseHighlights locale={locale} />
+    <ExtremeGlass locale={locale} />
     <Film copy={copy} />
     <Aerial copy={copy} locale={locale} />
     <Features copy={copy} locale={locale} />

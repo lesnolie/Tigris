@@ -1371,6 +1371,38 @@ h3 {
   color: var(--muted-dim);
 }
 
+/* ---------- Extreme Liquid Glass: real-device showcase ---------- */
+.extreme-glass-section {
+  background: radial-gradient(ellipse 65% 55% at 50% 0%, rgba(38, 99, 173, 0.17), transparent 82%), #06080e;
+  border-block: 1px solid rgba(192, 214, 245, 0.12);
+}
+.extreme-glass-section .section-head { max-width: 840px; margin-inline: auto; }
+.extreme-glass-section .section-head .lede { max-width: 760px; margin-inline: auto; }
+.extreme-glass-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(16px, 2.6vw, 32px); }
+.extreme-glass-card { margin: 0; min-width: 0; }
+.extreme-glass-shot {
+  overflow: hidden;
+  padding: 6px;
+  border-radius: clamp(16px, 2vw, 24px);
+  border: 1px solid rgba(193, 213, 244, 0.18);
+  background: linear-gradient(140deg, rgba(144, 173, 217, 0.16), rgba(24, 34, 54, 0.5));
+  box-shadow: 0 24px 90px -45px rgba(37, 107, 199, 0.4), 0 30px 80px -30px rgba(0, 0, 0, 0.85);
+}
+.extreme-glass-shot img {
+  display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain;
+  border-radius: clamp(10px, 1.5vw, 18px); background: #06080e;
+}
+.extreme-glass-card figcaption { margin: 14px 2px 0; color: var(--text); font-size: 0.93rem; font-weight: 500; }
+.extreme-glass-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; margin-top: 25px; }
+.extreme-glass-status { flex-shrink: 0; border: 1px solid rgba(145,191,255,0.33); border-radius: 99px; padding: 8px 13px; font-size: 0.79rem; font-weight: 600; color: #bedaff; }
+.extreme-glass-foot p { flex: 1 1 370px; margin: 0; font-size: 0.85rem; line-height: 1.65; }
+.extreme-glass-more { display: inline-flex; gap: 5px; align-items: center; color: var(--link); font-size: 0.85rem; font-weight: 600; }
+.extreme-glass-more:hover, .extreme-glass-more:focus-visible { text-decoration: underline; }
+@media (max-width: 680px) {
+  .extreme-glass-grid { grid-template-columns: 1fr; }
+  .extreme-glass-foot { align-items: flex-start; }
+}
+
 /* ---------- features ---------- */
 
 .feature {

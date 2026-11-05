@@ -4,13 +4,13 @@ import { brand } from "../data/site";
 interface Props { locale: Locale }
 const zh = Astro.props.locale === "zh";
 const items = zh ? [
-  ["01", "动态壁纸下，Dock 跟手不再滞后。", "提高视频取样频率并缩短玻璃贴图处理时间，让动态画面及时透过 Dock，同时保留液态玻璃质感。"],
-  ["02", "软件更新进度清晰可见。", "显示下载百分比，并可恢复系统安装确认；遇到卡住的任务可取消后重试。"],
-  ["03", "更新选项在自己的区域滚动。", "右侧列表在标题下方独立滚动，页面其他内容保持稳定，避免遮挡和裁切。"],
+  ["01", "App 图标更清晰，比例更协调。", "原生 TV 横幅优先，方形图标不再放大模糊当作背景。"],
+  ["02", "极致液态玻璃，按需开启。", "静态壁纸有细腻折射，动态视频下 Dock 与控制中心可透明显示。默认关闭。"],
+  ["03", "屏保尊重播放与投屏状态。", "改善系统休眠前的计时、暂停视频识别及更新安装恢复。"],
 ] : [
-  ["01", "A more responsive Dock over live wallpaper.", "More frequent video sampling and faster glass updates help moving scenes show through the Dock with less visible lag."],
-  ["02", "Clear software update progress.", "See download percentage, reopen the system install confirmation, or cancel a stuck task and retry."],
-  ["03", "Update options scroll in their own panel.", "The right-hand list stays below its title while the rest of the page remains steady, avoiding overlap and clipping."],
+  ["01", "Sharper, better-proportioned app tiles.", "Preserve TV banners and use crisp native icons rather than blurred, enlarged duplicates."],
+  ["02", "Extreme Liquid Glass, on your terms.", "Refined glass on still wallpapers; transparent video Dock and Control Center. Off by default."],
+  ["03", "Photo frame respects playback and casting.", "Better system idle timing, paused-video handling and safer update recovery."],
 ];
 ---
 <section class="release-strip wrap" aria-label={zh ? "本次更新" : "Latest update"}>

@@ -1,0 +1,38 @@
+---
+import type { Locale } from "../data/lang";
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const zh = locale === "zh";
+const photos = [
+  { src: "/img/extreme-glass-static.png",
+    title: zh ? "静态壁纸 · 细腻折射" : "Still wallpaper · refined refraction",
+    alt: zh ? "索尼电视实拍：静态壁纸上的极致液态玻璃 Dock。" : "Real Sony TV capture of Extreme Liquid Glass Dock over a still wallpaper." },
+  { src: "/img/extreme-glass-video.png",
+    title: zh ? "动态壁纸 · 透明 Dock 与控制中心" : "Moving wallpaper · transparent Dock and controls",
+    alt: zh ? "索尼电视实拍：动态壁纸下的透明 Dock 和控制中心。" : "Real Sony TV capture of transparent Dock and Control Center over moving video." },
+];
+---
+<section class="section extreme-glass-section" id="extreme-glass" aria-labelledby="extreme-glass-title">
+  <div class="wrap">
+    <div class="section-head center reveal">
+      <p class="eyebrow">EXTREME LIQUID GLASS</p>
+      <h2 id="extreme-glass-title">{zh ? "让玻璃融进画面，而不是盖住画面。" : "Glass that belongs in the picture."}</h2>
+      <p class="lede">{zh ? "可选的「极致液态玻璃」：静态壁纸呈现细腻边缘折射与自适应着色；动态视频壁纸下，Dock 和控制中心直接透出原画面。" : "Optional Extreme Liquid Glass: refined refraction and adaptive tint on still wallpapers; a transparent Dock and Control Center revealing the moving wallpaper."}</p>
+    </div>
+    <div class="extreme-glass-grid">
+      {photos.map((photo) => (
+        <figure class="extreme-glass-card reveal">
+          <div class="extreme-glass-shot">
+            <img src={photo.src} alt={photo.alt} width="1920" height="1080" loading="lazy" decoding="async" />
+          </div>
+          <figcaption>{photo.title}</figcaption>
+        </figure>
+      ))}
+    </div>
+    <div class="extreme-glass-foot reveal">
+      <span class="extreme-glass-status">{zh ? "可选功能 · 默认关闭" : "Optional · Off by default"}</span>
+      <p>{zh ? "均为 Sony BRAVIA Android 12 实机截图。动态视频使用透明材质，而非逐帧光学折射；不同机型表现可能不同，可随时关闭。" : "Actual Sony BRAVIA Android 12 captures. Video uses transparency, not per-frame optical refraction. Performance varies by TV; turn it off anytime."}</p>
+      <a class="extreme-glass-more" href="https://github.com/lesnolie/Tigris/blob/main/docs/extreme-glass-validation.md" rel="noopener">{zh ? "实机验证说明" : "Device validation"} <span aria-hidden="true">↗</span></a>
+    </div>
+  </div>
+</section>
