@@ -2,7 +2,21 @@
 
 Reference: [material video](https://x.com/kubai087/status/2117782193108082923) and
 [full prompt](https://x.com/kubai087/status/2117782337698324846), inspected in Ego on 2026-11-05.
-Implementation base: `7697955` (v2.0.20). This preview is not published.
+Hardware validation base: `7697955` (v2.0.20). The feature is integrated with
+v2.0.21 (`cef657e`); screenshots below show the approved feature build before that integration.
+
+## 当前效果 / Current TV screenshots
+
+Sony BRAVIA 4K VH2，Android 12，2026-11-05 实机截图。极致液态玻璃默认关闭。
+These are real TV captures, not mockups; a still image does not demonstrate animation smoothness.
+
+动态壁纸：Dock 和控制中心直接透出原视频，保留轻着色与边缘光。
+
+![动态壁纸下的透明 Dock 和控制中心](screenshots/extreme-glass/video-control-center.png)
+
+静态背景：减轻底部压黑，Dock 两侧留白增加，整体位置下调。
+
+![静态背景下的液态玻璃 Dock](screenshots/extreme-glass/static-dock.png)
 
 ## Transparent video follow-up
 
