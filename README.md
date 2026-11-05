@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.20 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.20)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.20/Tigris-v2.0.20.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.20/Tigris-guard-v2.0.20.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.20/SHA256SUMS-v2.0.20.txt)）
+- 最新正式版：**[v2.0.22 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.22)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.22/Tigris-v2.0.22.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.22/Tigris-guard-v2.0.22.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.22/SHA256SUMS-v2.0.22.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **正式版为 v2.0.20。** 标准版 `Tigris-v2.0.20.apk`，兼容守护版 `Tigris-guard-v2.0.20.apk`，沿用原有签名，可对应类型覆盖升级。本版让 Android 11 及更早的动态视频背景上，Dock 圆角保持清晰，正在播放的画面从半透明磨砂里透出来。Guard 仍按真实固件选择。
+> **最新正式版为 v2.0.22。** 标准版 `Tigris-v2.0.22.apk`，兼容守护版 `Tigris-guard-v2.0.22.apk`；沿用原签名与包名，可对应类型覆盖升级。包含 App 图标显示优化、v2.0.21 的更新安装与屏保修复，以及默认关闭的极致液态玻璃。Guard 仍按真实固件选择。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
@@ -37,6 +37,14 @@
 
 **如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
 
+## v2.0.22：优化 App 图标与可选极致液态玻璃
+
+保留现有 tvOS 16:9 图标卡片、Dock 布局、文件夹及焦点动画：比例合适的电视横幅完整铺满卡片；方形或超宽素材改为等比居中，不再粗暴裁剪；低分辨率横幅改用原生图标。无横幅的 App 改成克制的渐变背景与清晰居中图标，不再把原图标放大模糊当背景。另外包含 [#86](https://github.com/lesnolie/Tigris/pull/86) 的可选极致液态玻璃：静态壁纸的折射材质、动态壁纸的透明 Dock / 控制中心，默认关闭。详见 [v2.0.22 更新说明](docs/releases/v2.0.22.md)。
+
+## v2.0.21：更新安装与相框空闲逻辑
+
+相框会在系统待机截止时间前启动；Tigris 桌面、设置、更新和壁纸页长时间无操作可以进入相框。第三方播放器必须确认前台且 MediaSession 报告 `PAUSED`，同时由 Android 自行启动系统屏保；**视频播放、音频及已识别投屏接收器（包括静音）禁止抢屏**。索尼安装确认改用系统真实 PackageInstaller Intent，暂时无法访问 GitHub 时保留已校验更新信息，兼容 HGTV 的纯数字版本标签。不同厂商机型仍需实机验收。详见 [v2.0.21 更新说明](docs/releases/v2.0.21.md)。
+
 ## v2.0.20：旧版 Android 的 Dock 玻璃
 
 Android 11 及更早的系统上，动态视频背景的 Dock 按真实尺寸画圆角，里面是大约 55% 不透明的慢速模糊，圆角不再被拉糊，视频继续在下面播放。拷贝太慢时改成一层淡罩。Android 12 及以上不变。详见 [v2.0.20 更新说明](docs/releases/v2.0.20.md)。
@@ -47,7 +55,7 @@ Android 11 及更早的系统上，动态视频背景的 Dock 按真实尺寸画
 
 ## v2.0.18：安装确认、相框和唤醒动画
 
-没有安装确认页的电视会保存校验过的 APK，并显示 `adb install -r` 命令。相框只在 Tigris 主屏幕空闲时出现，投屏或播放视频时不再被屏保打断。Android 9–11 从待机唤醒时，开机动画会等屏幕点亮再播放。请参阅 [v2.0.18 更新说明](docs/releases/v2.0.18.md)。
+没有安装确认页的电视会保存校验过的 APK，并显示 `adb install -r` 命令。相框不会打断正在播放的视频或已识别的投屏场景；v2.0.21 进一步扩展了设置页和已确认暂停视频时的空闲规则。Android 9–11 从待机唤醒时，开机动画会等屏幕点亮再播放。请参阅 [v2.0.18 更新说明](docs/releases/v2.0.18.md)。
 
 ## v2.0.17：Sony Android 9 同步权限
 

@@ -14,7 +14,7 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeover fixes and video optimizations still need model-level verification. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.20 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.20)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.20/Tigris-v2.0.20.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.20/Tigris-guard-v2.0.20.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.20/SHA256SUMS-v2.0.20.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.22 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.22)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.22/Tigris-v2.0.22.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.22/Tigris-guard-v2.0.22.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.22/SHA256SUMS-v2.0.22.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -22,7 +22,7 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 ## Which APK should I install? Check the TV OS and firmware
 
-> **Latest official release: v2.0.20.** Upgrade in place with `Tigris-v2.0.20.apk` (Standard) or `Tigris-guard-v2.0.20.apk` (Compatibility Guard), retaining the existing flavor and signing identity. On Android 11 and older, the dock over a moving video keeps sharp corners and lets the video show through a slow frost. Select Guard according to the actual firmware.
+> **Latest official release: v2.0.22.** Upgrade in place with `Tigris-v2.0.22.apk` (Standard) or `Tigris-guard-v2.0.22.apk` (Compatibility Guard), retaining the existing flavor and signing identity. This release improves app artwork and includes the v2.0.21 updater/photo-frame fixes plus optional extreme glass. Select Guard according to the actual firmware.
 
 | TV / platform | First choice | When to use another build | Important limits |
 |---|---|---|---|
@@ -36,6 +36,14 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 **Verification:** After installing, open another app and press the physical Home key; check reboot, standby/wake and long-press Home cleanup separately. If Home does not return to Tigris, keep the stock launcher enabled and use the [brand install and recovery guide](docs/installation-compatibility.md). Preserve the existing APK signing identity and user data; **do not uninstall merely to bypass installation restrictions**.
 
+## v2.0.22: cleaner app artwork and optional extreme glass
+
+App icons now retain their original shapes in the existing 16:9 tvOS tiles: properly proportioned TV banners fill the card, while square or unusually wide artwork fits without destructive center cropping. Low-resolution banners fall back to the app icon; apps without banners receive a consistent, restrained gradient background and a clean, properly scaled icon instead of an enlarged blurred duplicate. Dock layout, user order, folders, focus motion and the original launcher remain unchanged. The optional extreme Liquid Glass material (merged in [#86](https://github.com/lesnolie/Tigris/pull/86)) adds transparent video Dock/Control Center surfaces and refined static-wallpaper glass; it is off by default. Details: [v2.0.22 release notes](docs/releases/v2.0.22.md).
+
+## v2.0.21: reliable updates and idle photo-frame safeguards
+
+The photo frame now starts ahead of Android's system sleep deadline, and an idle Tigris Home, Settings, Updates or Wallpaper page may show it. An external video player is eligible only when the foreground media session explicitly reports PAUSED and Android starts its dream; active playback and recognized casting (even silent) take priority and block the photo frame. Sony install confirmations now use the actual PackageInstaller intent, cached update offers survive temporary GitHub network failures, and HGTV numeric release tags are recognized. Device-specific install/casting still require testing. See [v2.0.21 release notes](docs/releases/v2.0.21.md).
+
 ## v2.0.20: dock glass on Android 11 and older
 
 On Android 11 and older, the dock over a moving video is drawn at its real size: a rounded mask, a slow heavy blur at about 55% opacity, and a light veil if a snapshot is too slow. The video keeps playing underneath. Android 12 and newer are unchanged. See the [v2.0.20 release notes](docs/releases/v2.0.20.md).
@@ -46,7 +54,7 @@ Continue recommits an interrupted installation; Force retry replaces its old tas
 
 ## v2.0.18: install confirmation, photo frame, and wake animation
 
-TVs with no install confirmation page keep the verified APK and show an `adb install -r` command. The photo frame starts only on the idle Tigris home screen, including during casting or video. On Android 9–11 the wake animation waits until the panel is lit. See the [v2.0.18 release notes](docs/releases/v2.0.18.md).
+TVs with no install confirmation page keep the verified APK and show an `adb install -r` command. The photo frame does not interrupt active video or recognized casting; v2.0.21 further refined the idle and paused-video rules. On Android 9–11 the wake animation waits until the panel is lit. See the [v2.0.18 release notes](docs/releases/v2.0.18.md).
 
 ## v2.0.17: Sony Android 9 sync permissions
 
