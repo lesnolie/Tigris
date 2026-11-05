@@ -25,18 +25,51 @@ class FrameIdlePolicyTest {
         val early = FrameIdlePolicy.schedule(true, 10, 120_000L)
         assertEquals(FrameIdlePolicy.Source.VENDOR_LEAD, early.source)
         assertEquals(105_000L, early.delayMs)
-        assertTrue(early.logLine.contains("screen_saver_timeout=120000 minus 15000"))
+        assertTrue(early.logLine.contains("screen_saver_timeout=120000"))
 
         val preferenceWins = FrameIdlePolicy.schedule(true, 3, 600_000L)
         assertEquals(FrameIdlePolicy.Source.IN_APP, preferenceWins.source)
         assertEquals(3 * 60_000L, preferenceWins.delayMs)
-        assertTrue(preferenceWins.logLine.contains("would lead at 585000ms"))
+        assertTrue(preferenceWins.logLine.contains("screen_saver_timeout=600000"))
     }
 
-    @Test fun vendorLeadStaysAtLeastThirtySeconds() {
+    @Test fun shortVendorTimeoutNeverSchedulesTheFrameAfterTheSystemDeadline() {
         val schedule = FrameIdlePolicy.schedule(false, 10, 10_000L)
-        assertEquals(30_000L, schedule.delayMs)
+        assertEquals(7_500L, schedule.delayMs)
         assertEquals(FrameIdlePolicy.Source.VENDOR_LEAD, schedule.source)
+        assertTrue(schedule.delayMs!! < 10_000L)
+    }
+
+    @Test fun screenOffTimeoutWinsWhenHomeAndSystemBothUseTenMinutes() {
+        val frame = FrameIdlePolicy.schedule(true, 10, null, 600_000L)
+        assertEquals(FrameIdlePolicy.Source.SCREEN_OFF_LEAD, frame.source)
+        assertEquals(570_000L, frame.delayMs)
+        assertTrue(frame.logLine.contains("screen_off_timeout=600000"))
+    }
+
+    @Test fun earliestSystemDeadlineWinsEvenWithFirmwareDreamConfigured() {
+        val frame = FrameIdlePolicy.schedule(true, 10, 600_000L, 600_000L)
+        assertEquals(FrameIdlePolicy.Source.SCREEN_OFF_LEAD, frame.source)
+        assertEquals(570_000L, frame.delayMs)
+        val earlyDream = FrameIdlePolicy.schedule(true, 10, 120_000L, 300_000L)
+        assertEquals(FrameIdlePolicy.Source.VENDOR_LEAD, earlyDream.source)
+        assertEquals(105_000L, earlyDream.delayMs)
+    }
+
+    @Test fun shortPowerTimeoutAndEarlierUserPreferenceAreRespected() {
+        val fastSleep = FrameIdlePolicy.schedule(true, 10, -1L, 60_000L)
+        assertEquals(FrameIdlePolicy.Source.SCREEN_OFF_LEAD, fastSleep.source)
+        assertEquals(45_000L, fastSleep.delayMs)
+        val appWins = FrameIdlePolicy.schedule(true, 1, -1L, 600_000L)
+        assertEquals(FrameIdlePolicy.Source.IN_APP, appWins.source)
+        assertEquals(60_000L, appWins.delayMs)
+    }
+
+    @Test fun disabledPhotoFrameDoesNotStartJustBecauseTheTvHasASleepTimeout() {
+        val disabled = FrameIdlePolicy.schedule(false, 10, -1L, 600_000L)
+        assertNull(disabled.delayMs)
+        assertEquals(FrameIdlePolicy.Source.NOT_SCHEDULED, disabled.source)
+        assertNull(FrameIdlePolicy.schedule(false, 10, -1L, null).delayMs)
     }
 
     @Test fun idleFrameStaysOffWithoutAPreferenceOrAVendorTimeout() {
