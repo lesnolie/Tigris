@@ -17,7 +17,7 @@ const photos = [
     <div class="section-head center reveal">
       <p class="eyebrow">EXTREME LIQUID GLASS</p>
       <h2 id="extreme-glass-title">{zh ? "让玻璃融进画面，而不是盖住画面。" : "Glass that belongs in the picture."}</h2>
-      <p class="lede">{zh ? "可选的「极致液态玻璃」：静态壁纸呈现细腻边缘折射与自适应着色；动态视频壁纸下，Dock 和控制中心直接透出原画面。" : "Optional Extreme Liquid Glass: refined refraction and adaptive tint on still wallpapers; a transparent Dock and Control Center revealing the moving wallpaper."}</p>
+      <p class="lede">{zh ? "可选的「极致液态玻璃」：静态壁纸呈现细腻边缘折射与自适应着色；动态视频壁纸下，Dock 和控制中心直接透出原画面。进入设置、更换壁纸或切换顶部内容预览时，玻璃与背景同步变化，滚动时的绘制开销也更低。" : "Optional Extreme Liquid Glass: refined refraction and adaptive tint on still wallpapers; a transparent Dock and Control Center revealing the moving wallpaper. Glass now switches with the backdrop when opening Settings, changing wallpapers or switching Top Shelf, with less drawing work while scrolling."}</p>
     </div>
     <div class="extreme-glass-grid">
       {photos.map((photo) => (
@@ -31,7 +31,7 @@ const photos = [
     </div>
     <div class="extreme-glass-foot reveal">
       <span class="extreme-glass-status">{zh ? "可选功能 · 默认关闭" : "Optional · Off by default"}</span>
-      <p>{zh ? "均为 Sony BRAVIA Android 12 实机截图。动态视频使用透明材质，而非逐帧光学折射；不同机型表现可能不同，可随时关闭。" : "Actual Sony BRAVIA Android 12 captures. Video uses transparency, not per-frame optical refraction. Performance varies by TV; turn it off anytime."}</p>
+      <p>{zh ? "均为 Sony BRAVIA Android 12 实机截图。本次性能测量限 Sony XR-55A80J，其他机型未验证；空闲唤醒后的按键首帧仍偶有延迟。动态视频使用透明材质，而非逐帧光学折射，可随时关闭。" : "Actual Sony BRAVIA Android 12 captures. Performance measurements are limited to Sony XR-55A80J; other TVs remain unverified, and the first key-press frame after idle can still be late. Video uses transparency, not per-frame optical refraction; turn it off anytime."}</p>
       <a class="extreme-glass-more" href="https://github.com/lesnolie/Tigris/blob/main/docs/extreme-glass-validation.md" rel="noopener">{zh ? "实机验证说明" : "Device validation"} <span aria-hidden="true">↗</span></a>
     </div>
   </div>

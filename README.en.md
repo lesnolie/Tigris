@@ -36,6 +36,16 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 **Verification:** After installing, open another app and press the physical Home key; check reboot, standby/wake and long-press Home cleanup separately. If Home does not return to Tigris, keep the stock launcher enabled and use the [brand install and recovery guide](docs/installation-compatibility.md). Preserve the existing APK signing identity and user data; **do not uninstall merely to bypass installation restrictions**.
 
+## v2.0.24: glass and backdrop switch together
+
+Opening Settings, changing wallpapers, and entering or leaving Top Shelf now prepare Extreme Liquid Glass with the backdrop, apply both in the same frame, and fade them together. Settings scrolling also takes less drawing work. On a Sony XR-55A80J (Android 12), Settings settled in 0.13–0.22 seconds instead of about 1.05–1.27 seconds.
+
+Extreme Liquid Glass remains off by default; enable it below Control Center style in Home Settings. The first frame after a key press can still be late while the GPU wakes from idle; other TV models remain unverified. Matching Standard/Compatibility Guard upgrades keep the existing signing identity and user data. See the [v2.0.24 release notes](docs/releases/v2.0.24.md).
+
+## v2.0.23: unified photo-frame timing after HOME takeover
+
+After verified HOME takeover and the required permissions, Android's standard screensaver follows Tigris's photo-frame delay. Opting out or losing takeover attempts to restore the original settings while preserving later user edits. A confirmed paused foreground video may enter the system-triggered photo frame; playback and casting remain protected. Normal app mode leaves system timers alone. See the [v2.0.23 release notes](docs/releases/v2.0.23.md).
+
 ## v2.0.22: cleaner app artwork and optional extreme glass
 
 App icons now retain their original shapes in the existing 16:9 tvOS tiles: properly proportioned TV banners fill the card, while square or unusually wide artwork fits without destructive center cropping. Low-resolution banners fall back to the app icon; apps without banners receive a consistent, restrained gradient background and a clean, properly scaled icon instead of an enlarged blurred duplicate. Dock layout, user order, folders, focus motion and the original launcher remain unchanged. The optional extreme Liquid Glass material (merged in [#86](https://github.com/lesnolie/Tigris/pull/86)) adds transparent video Dock/Control Center surfaces and refined static-wallpaper glass; it is off by default. Details: [v2.0.22 release notes](docs/releases/v2.0.22.md).
