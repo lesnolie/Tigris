@@ -35,6 +35,27 @@ package com.leslie.tvhome
  *   timeout can let Android sleep; DreamService.wakeUp() does not keep the device awake.
  */
 internal object FrameIdlePolicy {
+    fun sessionsFromDump(dump: String?): List<Session>? {
+        if (dump == null || !dump.contains("MEDIA SESSION SERVICE")) return null
+        val result = mutableListOf<Session>()
+        var pkg: String? = null
+        for (raw in dump.lineSequence()) {
+            val line = raw.trim()
+            if (line.startsWith("package=")) pkg = line.substringAfter("package=")
+            // A player may deactivate its session when the dream covers its activity.
+            // Keep its explicit PAUSED state; the caller still matches the foreground app.
+            if (line.startsWith("state=PlaybackState")) {
+                val state = Regex("state=PlaybackState \\{state=(\\d+)").find(line)?.groupValues?.get(1)?.toIntOrNull()
+                pkg?.let { result.add(Session(it, state)) }
+                pkg = null
+            }
+        }
+        return result
+    }
+
+    fun isContentForeground(activityClass: String?): Boolean =
+        activityClass != "android.service.dreams.DreamActivity"
+
     const val TAG = "TigrisFrame"
     const val VENDOR_LEAD_MS = 15_000L
     const val SCREEN_OFF_LEAD_MS = 30_000L

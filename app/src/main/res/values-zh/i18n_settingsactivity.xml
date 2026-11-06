@@ -80,7 +80,7 @@
     <string name="i18n_settingsactivity_078" formatted="false">Apple TV 航拍视频</string>
     <string name="i18n_settingsactivity_079" formatted="false">照片</string>
     <string name="i18n_settingsactivity_080" formatted="false">空闲多久显示相框</string>
-    <string name="i18n_settingsactivity_081" formatted="false">Tigris 在自己的主屏幕上等待多久后显示相框。只改应用内倒计时，不改电视熄屏时间。固件如果公布了屏保超时，相框会提前，以免被系统屏保抢先。</string>
+    <string name="i18n_settingsactivity_081" formatted="false">等待多久后显示相框。统一计时生效后，系统屏保也用这个时间；确认暂停的视频可以进入相框，播放和投屏时不打断。未接管时只管理 Tigris 桌面。</string>
     <string name="i18n_settingsactivity_084" formatted="false">相框每张照片停留</string>
     <string name="i18n_settingsactivity_085" formatted="false">相框里每张照片显示多久。</string>
     <string name="i18n_settingsactivity_086">%1$s 秒</string>
@@ -163,4 +163,7 @@
     <string name="glass_tint_help">每次调整 25%，范围 0%–150%。100% 为参考材质，0% 仅保留模糊、折射和边缘光。</string>
     <string name="glass_reduce_transparency">减少玻璃透明效果</string>
     <string name="glass_reduce_transparency_help">改用实色表面，让文字更清楚。系统开启高对比度文字时也会自动使用实色。</string>
+    <string name="unified_idle_title" formatted="false">统一相框与待机计时</string>
+    <string name="unified_idle_desc" formatted="false">接管桌面且授权完成后，Android 屏保也使用上面的相框时间，关闭独立的标准系统自动待机计时。播放和投屏继续避让；关闭此项恢复原设置。厂商私有计时不自动修改。</string>
+    <string name="unified_idle_pending" formatted="false">等待接管或授权</string>
 </resources>

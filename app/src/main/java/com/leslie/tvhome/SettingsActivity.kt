@@ -501,6 +501,7 @@ class SettingsActivity : Activity() {
             Thread {
                 val ok = putSecure("screensaver_components", comp) && putSecure("screensaver_enabled", "1")
                 if (ok) prefs.frameScreensaver = on
+                IdleTimerTakeover.sync(applicationContext)
                 runOnUiThread { v.text = if (ok) onOff(prefs.frameScreensaver) else I18n.text(R.string.i18n_settingsactivity_075) }
             }.start()
         }
@@ -523,6 +524,13 @@ class SettingsActivity : Activity() {
         }
         row(I18n.text(R.string.i18n_settingsactivity_080), I18n.text(R.string.i18n_settingsactivity_081), { minutesLabel(prefs.frameIdleMinutes) }) {
             prefs.frameIdleMinutes = FrameIdlePolicy.nextMinutes(prefs.frameIdleMinutes)
+            IdleTimerTakeover.sync(this)
+        }
+        row(I18n.text(R.string.unified_idle_title), I18n.text(R.string.unified_idle_desc),
+            { if (!prefs.unifiedIdle) onOff(false) else if (IdleTimerTakeover.isActive(this)) onOff(true)
+              else I18n.text(R.string.unified_idle_pending) }, checked = { prefs.unifiedIdle }) {
+            prefs.unifiedIdle = !prefs.unifiedIdle
+            IdleTimerTakeover.sync(this)
         }
         row(I18n.text(R.string.i18n_settingsactivity_084), I18n.text(R.string.i18n_settingsactivity_085), { I18n.text(R.string.i18n_settingsactivity_086, prefs.frameSeconds) }) {
             val opts = listOf(15, 30, 60, 120)

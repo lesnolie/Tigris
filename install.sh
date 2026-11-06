@@ -167,7 +167,7 @@ if [[ "$MODE" == restore ]]; then
   [[ -f "$STATE/home" ]] || fail "No saved original launcher at $STATE. Follow AGENTS.md; do not guess the original launcher."
   ORIGINAL=$(cat "$STATE/home")
   [[ "$ORIGINAL" == */* && "$ORIGINAL" != *"$PKG"* && "$ORIGINAL" =~ ^[a-zA-Z0-9._/]+$ ]] || fail 'Saved original launcher is invalid; restore manually with AGENTS.md'
-  ad shell am broadcast -a "$PKG.CONFIG" -n "$PKG/.ConfigReceiver" --ez guard false --ez keep_adb false
+  ad shell am broadcast -a "$PKG.CONFIG" -n "$PKG/.ConfigReceiver" --ez unified_idle false --ez guard false --ez keep_adb false
   CURRENT_SAVER=$(shread settings get secure screensaver_components)
   if [[ "$CURRENT_SAVER" == *"$PKG"* && -f "$STATE/screensaver" ]]; then
     SAVER=$(cat "$STATE/screensaver")

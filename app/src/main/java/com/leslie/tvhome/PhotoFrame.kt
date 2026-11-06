@@ -199,14 +199,36 @@ class FrameActivity : Activity() {
  */
 class PhotoDream : DreamService() {
     private var frame: SaverHost? = null
+    private var attached = false
+    private var started = false
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        attached = true
+        isInteractive = true
+        isFullscreen = true
+        setScreenBright(true)
+        setContentView(FrameLayout(this))
         val now = SystemClock.elapsedRealtime()
         val coversOurUi = ScreensaverScope.coversTigrisUi(now) || HomeForeground.dreamCoversHome(now)
+        Thread {
+            val media = FrameIdleProbe.media(this, HomeForeground.mediaHint(now), shellFallback = true)
+            // Rejecting a dream without recording user activity lets some TV firmware
+            // immediately sleep. Reset only an explicitly managed timer, using the
+            // existing authorized shell; never send POWER or SLEEP.
+            if (!FrameIdlePolicy.dreamDecision(coversOurUi, media).show && IdleTimerTakeover.isActive(this)) {
+                LocalAdb.shell(this, "input keyevent KEYCODE_WAKEUP", 2500)
+            }
+            Handler(Looper.getMainLooper()).post {
+                if (attached) showOrDismiss(coversOurUi, media, now)
+            }
+        }.start()
+    }
+
+    private fun showOrDismiss(coversOurUi: Boolean, media: FrameIdlePolicy.Media, now: Long) {
         val decision = FrameIdlePolicy.dreamDecision(
             coversTigrisUi = coversOurUi,
-            media = FrameIdleProbe.media(this, HomeForeground.mediaHint(now)),
+            media = media,
         )
         if (!decision.show) {
             Log.i(FrameIdlePolicy.TAG, "dismissing system photo dream: ${decision.reason}")
@@ -224,6 +246,7 @@ class PhotoDream : DreamService() {
         // Some TV firmware dims or sleeps dreams unless they explicitly keep the display lit.
         setScreenBright(true)
         frame = SaverHost(this).also { setContentView(it) }
+        if (started) frame?.start()
     }
 
     override fun dispatchKeyEvent(e: KeyEvent): Boolean {
@@ -235,6 +258,7 @@ class PhotoDream : DreamService() {
         return true
     }
 
-    override fun onDreamingStarted() { super.onDreamingStarted(); frame?.start() }
-    override fun onDreamingStopped() { frame?.stop(); super.onDreamingStopped() }
+    override fun onDreamingStarted() { super.onDreamingStarted(); started = true; frame?.start() }
+    override fun onDreamingStopped() { started = false; attached = false; frame?.stop(); super.onDreamingStopped() }
+    override fun onDetachedFromWindow() { attached = false; super.onDetachedFromWindow() }
 }

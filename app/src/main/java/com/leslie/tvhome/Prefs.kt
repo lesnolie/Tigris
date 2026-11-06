@@ -116,16 +116,22 @@ class Prefs(ctx: Context) {
 
     /**
      * Minutes the home screen must sit idle before the photo frame.
-     * This is Tigris's timer. It is not written to the system screen-off timeout.
+     * After verified takeover, the optional unified mode also controls the system dream timer.
      */
     var frameIdleMinutes: Int
         get() = FrameIdlePolicy.minutes(sp.getInt("frame_idle_minutes", FrameIdlePolicy.DEFAULT_MINUTES))
         set(v) = sp.edit().putInt("frame_idle_minutes", FrameIdlePolicy.minutes(v)).apply()
 
+    var unifiedIdle: Boolean
+        get() = sp.getBoolean("unified_idle", true)
+        set(v) = sp.edit().putBoolean("unified_idle", v).apply()
+
     /** The photo frame is the system screensaver (instead of Sony's). */
     var frameScreensaver: Boolean
         get() = sp.getBoolean("frame_screensaver", false)
         set(v) = sp.edit().putBoolean("frame_screensaver", v).apply()
+
+    val frameScreensaverConfigured: Boolean get() = sp.contains("frame_screensaver")
 
     /** Preinstalled apps removed for this user from the long-press menu; restorable in settings. */
     var removed: Set<String>

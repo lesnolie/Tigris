@@ -200,7 +200,9 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         runCatching { Settings.System.getLong(contentResolver, Settings.System.SCREEN_OFF_TIMEOUT) }.getOrNull()
 
     private fun readSchedule() = FrameIdlePolicy.schedule(
-        prefs.frameScreensaver, prefs.frameIdleMinutes, screenSaverTimeout(), screenOffTimeout())
+        prefs.frameScreensaver, prefs.frameIdleMinutes,
+        if (IdleTimerTakeover.isActive(this)) null else screenSaverTimeout(),
+        if (IdleTimerTakeover.isActive(this)) null else screenOffTimeout())
 
     private fun cancelIdle() {
         idleToken++
@@ -1559,6 +1561,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     override fun onResume() {
         super.onResume()
+        IdleTimerTakeover.noteHomeResumed()
+        IdleTimerTakeover.sync(this)
         // Rebuild only after Settings changes column count; order/folders remain in Prefs.
         if (cols != prefs.dockColumns) { recreate(); return }
         val appearance = "${prefs.extremeGlass}:${prefs.glassTint(isNight())}:${prefs.solidGlass(this)}:${isNight()}"

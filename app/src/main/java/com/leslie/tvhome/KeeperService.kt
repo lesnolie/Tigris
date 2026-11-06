@@ -55,6 +55,14 @@ class KeeperService : Service() {
         }
     }
 
+    // Also releases owned timer settings when another launcher becomes default.
+    private val idleOwnership = object : Runnable {
+        override fun run() {
+            worker.execute { runCatching { IdleTimerTakeover.sync(applicationContext) } }
+            main.postDelayed(this, 30_000)
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         prefs = Prefs(this)
@@ -71,6 +79,7 @@ class KeeperService : Service() {
         })
         contentResolver.registerContentObserver(Settings.Global.getUriFor(Settings.Global.ADB_ENABLED), false, adbObserver)
         Guard.ensure(this)
+        main.post(idleOwnership)
         // START_STICKY may revive us without rebinding the enabled accessibility service.
         main.postDelayed({ Guard.rebindIfStalled(this) }, 5_000)
         schedule()
