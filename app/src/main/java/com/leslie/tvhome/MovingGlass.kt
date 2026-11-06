@@ -39,6 +39,7 @@ internal class MovingGlass(
     )
     private val restorePaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val channelBlend = PorterDuffXfermode(PorterDuff.Mode.ADD)
+    private val replace = PorterDuffXfermode(PorterDuff.Mode.SRC)
 
     internal class Mesh(width: Float, height: Float, radius: Float, extreme: Boolean = true) {
         val vertices: FloatArray
@@ -46,7 +47,12 @@ internal class MovingGlass(
         val dispersion: FloatArray
         val textures: Array<FloatArray>
         val indices: ShortArray
+        /** Triangles whose channels coincide, drawn once in full colour. */
+        val flatIndices: ShortArray
+        /** Triangles where the rim splits the channels, drawn once per channel. */
+        val rimIndices: ShortArray
         val clip = Path().apply { addRoundRect(0f, 0f, width, height, radius, radius, Path.Direction.CW) }
+        val outside = Path(clip).apply { fillType = Path.FillType.INVERSE_WINDING }
         val lastTransform = FloatArray(9) { Float.NaN }
         var lastImageWidth = -1
         var lastImageHeight = -1
@@ -112,6 +118,18 @@ internal class MovingGlass(
                 val d = c + 1
                 for (v in intArrayOf(a, b, c, b, d, c)) indices[i++] = v.toShort()
             }
+            // Where no corner of a triangle disperses, the three channels sample the
+            // same point, so one full-colour pass there equals the three added together.
+            fun flat(v: Int) = dispersion[v * 2] == 0f && dispersion[v * 2 + 1] == 0f
+            val center = ArrayList<Short>()
+            val rimList = ArrayList<Short>()
+            for (t in indices.indices step 3) {
+                val target = if (flat(indices[t].toInt()) && flat(indices[t + 1].toInt()) && flat(indices[t + 2].toInt()))
+                    center else rimList
+                for (k in 0..2) target += indices[t + k]
+            }
+            flatIndices = center.toShortArray()
+            rimIndices = rimList.toShortArray()
         }
     }
 
@@ -120,7 +138,7 @@ internal class MovingGlass(
         owner: View,
         mesh: Mesh,
         alpha: Int,
-        colorFilter: ColorFilter? = null,
+        colorFilter: ColorMatrixColorFilter? = null,
         chromatic: Boolean = true,
     ) {
         ownerToRoot.reset()
@@ -186,24 +204,73 @@ internal class MovingGlass(
             return
         }
 
-        // Paint the isolated channels into a layer with additive blending. Restoring
-        // the layer then applies the glass tone and the surface's own opacity once.
-        val restore = restorePaint.apply {
-            this.alpha = alpha
-            this.colorFilter = colorFilter
+        val filters = channelsFor(colorFilter)
+        if (alpha == 255) {
+            // Straight onto the canvas, no offscreen layer. On the rim, red replaces
+            // what is underneath (with the clip's coverage: black plus red) and green
+            // and blue are added over it, which is the layer's sum exactly; an opaque
+            // surface leaves nothing of the scene below. The flat middle needs one
+            // pass, since there all three channels read the same point. The tone is
+            // applied as each channel is sampled, so colour is filtered before the
+            // rim bends it, the order the reference's backdrop-filter uses.
+            val save = canvas.save()
+            canvas.clipPath(mesh.clip)
+            paint.alpha = 255
+            if (mesh.flatIndices.isNotEmpty()) {
+                paint.colorFilter = colorFilter
+                canvas.drawVertices(Canvas.VertexMode.TRIANGLES, mesh.vertices.size, mesh.vertices, 0,
+                    mesh.textures[1], 0, null, 0, mesh.flatIndices, 0, mesh.flatIndices.size, paint)
+            }
+            for (channel in 0..2) {
+                paint.colorFilter = filters[channel]
+                paint.xfermode = if (channel == 0) replace else channelBlend
+                canvas.drawVertices(Canvas.VertexMode.TRIANGLES, mesh.vertices.size, mesh.vertices, 0,
+                    mesh.textures[channel], 0, null, 0, mesh.rimIndices, 0, mesh.rimIndices.size, paint)
+            }
+            paint.xfermode = null
+            paint.colorFilter = null
+            canvas.restoreToCount(save)
+            return
         }
-        val save = canvas.saveLayer(0f, 0f, owner.width.toFloat(), owner.height.toFloat(), restore)
-        canvas.clipPath(mesh.clip)
+        // A surface fading in or out cannot cover what is underneath, so it adds the
+        // channels in a layer and lays that over at the surface's own opacity.
+        restorePaint.alpha = alpha
+        val save = canvas.saveLayer(0f, 0f, owner.width.toFloat(), owner.height.toFloat(), restorePaint)
+        // The mesh covers the whole layer, so every pass is fully covered and the sum
+        // is exact. The rounded shape is cut afterwards: adding three anti-aliased
+        // passes would count the edge's coverage three times in alpha and once in
+        // colour, which drew a dark, stepped line around every corner.
         paint.xfermode = channelBlend
         for (channel in 0..2) {
-            paint.colorFilter = channelFilters[channel]
+            paint.colorFilter = filters[channel]
             paint.alpha = 255
             canvas.drawVertices(Canvas.VertexMode.TRIANGLES, mesh.vertices.size, mesh.vertices, 0,
                 mesh.textures[channel], 0, null, 0, mesh.indices, 0, mesh.indices.size, paint)
         }
         paint.xfermode = null
         paint.colorFilter = null
+        canvas.drawPath(mesh.outside, cut)
         canvas.restoreToCount(save)
+    }
+
+    private val cut = Paint(Paint.ANTI_ALIAS_FLAG).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.CLEAR) }
+
+    /** The tone folded into each channel's isolation: channel k of (tone · sample). */
+    private fun channelsFor(tone: ColorMatrixColorFilter?): Array<ColorMatrixColorFilter> {
+        if (tone == null) return channelFilters
+        toned[tone]?.let { return it }
+        val matrix = ColorMatrix().also(tone::getColorMatrix)
+        val made = Array(3) { channel ->
+            val rows = matrix.array.copyOf()
+            for (row in 0..2) if (row != channel) for (i in 0..4) rows[row * 5 + i] = 0f
+            ColorMatrixColorFilter(rows)
+        }
+        toned[tone] = made
+        return made
+    }
+    /** Callers cache their tone filters, so a few entries cover every surface on screen. */
+    private val toned = object : LinkedHashMap<ColorMatrixColorFilter, Array<ColorMatrixColorFilter>>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<ColorMatrixColorFilter, Array<ColorMatrixColorFilter>>) = size > 24
     }
 
     private companion object {

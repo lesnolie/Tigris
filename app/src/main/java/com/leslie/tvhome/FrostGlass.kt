@@ -34,20 +34,48 @@ class FrostGlass(private val owner: View, private val radius: Float) : Drawable(
     fun texture(image: Bitmap, clearImage: Bitmap = image) {
         bitmap = image; texture = BitmapShader(image, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP); invalidateSelf()
         if (prefs.extremeGlass) {
-            val material = extremeGlass ?: UpdateGlass(owner.rootView, moving = true, shadowsEnabled = false, tintStrength = 0.25f).also {
-                extremeGlass = it
-                extremeSurface = it.control(owner,
-                    (radius / owner.resources.displayMetrics.density).toInt(), installBackground = false)
-                    .also { surface -> surface.callback = surfaceCallback }
-            }
-            material.texture(clearImage)
-            val soft = softGlass ?: UpdateGlass(owner.rootView, moving = true, shadowsEnabled = false, tintStrength = 0.25f).also {
-                softGlass = it
-                softSurface = it.control(owner,
-                    (radius / owner.resources.displayMetrics.density).toInt(), installBackground = false)
-                    .also { surface -> surface.callback = surfaceCallback }
-            }
-            soft.texture(image)
+            clearGlass().texture(clearImage)
+            frostedGlass().texture(image)
+        }
+    }
+
+    /** The clear lens and the scrolled-up frosted one, both prepared off the UI thread. */
+    class Lenses internal constructor(internal val clear: UpdateGlass.Lens, internal val soft: UpdateGlass.Lens)
+
+    /**
+     * Commits [lenses] in this frame. [fadeMs] cross-fades from the old ones so
+     * the dock changes with a backdrop that fades over the same time.
+     */
+    fun texture(lenses: Lenses, fadeMs: Long = 0L, curve: android.animation.TimeInterpolator? = null) {
+        val image = lenses.soft.origin
+        bitmap = image; texture = BitmapShader(image, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP); invalidateSelf()
+        if (!prefs.extremeGlass) return
+        clearGlass().texture(lenses.clear, fadeMs, curve)
+        frostedGlass().texture(lenses.soft, fadeMs, curve)
+    }
+
+    private fun clearGlass(): UpdateGlass = extremeGlass
+        ?: UpdateGlass(owner.rootView, moving = true, shadowsEnabled = false, tintStrength = 0.25f).also {
+            extremeGlass = it
+            extremeSurface = it.control(owner,
+                (radius / owner.resources.displayMetrics.density).toInt(), installBackground = false)
+                .also { surface -> surface.callback = surfaceCallback }
+        }
+
+    private fun frostedGlass(): UpdateGlass = softGlass
+        ?: UpdateGlass(owner.rootView, moving = true, shadowsEnabled = false, tintStrength = 0.25f).also {
+            softGlass = it
+            softSurface = it.control(owner,
+                (radius / owner.resources.displayMetrics.density).toInt(), installBackground = false)
+                .also { surface -> surface.callback = surfaceCallback }
+        }
+
+    companion object {
+        /** Any thread: the work [texture] used to queue after the backdrop was already on screen. */
+        fun prepare(soft: Bitmap, clear: Bitmap, sceneWidth: Int): Lenses {
+            val lens = UpdateGlass.prepare(clear, sceneWidth)
+            // A Top Shelf picture is both: one lens, shared read-only by the two glasses.
+            return Lenses(lens, if (soft === clear) lens else UpdateGlass.prepare(soft, sceneWidth))
         }
     }
     fun liveTexture(image: Bitmap) {

@@ -455,10 +455,13 @@ class UpdateActivity : Activity() {
     private fun loadBackdrop(view: ImageView) {
         artwork.execute {
             val backdrop = SettingsBackdrop.load(this)
+            // Extreme glass: the lens is made here too, so picture and glass land in one frame.
+            val lens = if (Prefs(this).extremeGlass)
+                runCatching { UpdateGlass.prepare(backdrop, resources.displayMetrics.widthPixels) }.getOrNull() else null
             runOnUiThread {
                 if (!isFinishing && !isDestroyed) {
                     view.setImageBitmap(backdrop)
-                    glass.texture(backdrop)
+                    if (lens != null) glass.texture(lens) else glass.texture(backdrop)
                 }
             }
         }

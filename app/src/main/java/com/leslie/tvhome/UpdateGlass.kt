@@ -25,6 +25,13 @@ internal class UpdateGlass(private val root: View, private val moving: Boolean =
     @Volatile private var textureRevision = 0
     private var appearance = ""
     private var live: MovingGlass? = null
+    /** The lens fading out while [live] fades in, in step with the page's own backdrop fade. */
+    private var previousLive: MovingGlass? = null
+    private var fadeStart = 0L
+    private var fadeMs = 1L
+    private var fadeCurve: android.animation.TimeInterpolator? = null
+    /** The last lens committed, reused when the same picture comes back (leaving a Top Shelf). */
+    private var lens: Lens? = null
     @Volatile private var liveExtreme = false
     private var nextLiveSample = 0L
     private var transmission = false
@@ -44,8 +51,15 @@ internal class UpdateGlass(private val root: View, private val moving: Boolean =
                 val owner = surface.owner
                 if (!owner.isShown) continue
                 owner.getLocationInWindow(xy)
+                val x = xy[0] - rootXY[0]
+                val y = xy[1] - rootXY[1]
+                // Rows scrolled out of the page would only add clips the renderer throws away.
+                val reach = owner.dp(16)
+                if (x + owner.width * owner.scaleX + reach < 0 || x - reach > root.width ||
+                    y + owner.height * owner.scaleY + reach < 0 || y - reach > root.height
+                ) continue
                 val saved = canvas.save()
-                canvas.translate((xy[0] - rootXY[0]).toFloat(), (xy[1] - rootXY[1]).toFloat())
+                canvas.translate(x.toFloat(), y.toFloat())
                 canvas.scale(owner.scaleX, owner.scaleY)
                 path.reset()
                 val radius = surface.radius.coerceAtMost(minOf(owner.width, owner.height) / 2f)
@@ -74,7 +88,8 @@ internal class UpdateGlass(private val root: View, private val moving: Boolean =
         onTone: ((GlassTone) -> Unit)? = null,
     ): Surface =
         Surface(view, view.dp(radius).toFloat(), content, { live }, { prefs.extremeGlass },
-            { prefs.solidGlass(root.context) }, { transmission }, onTone, { shadowLayer.invalidateSelf() }).also {
+            { prefs.solidGlass(root.context) }, { transmission }, onTone, { shadowLayer.invalidateSelf() },
+            previous = { previousLive }, fade = { fadeProgress() }).also {
             surfaces += it
             if (installBackground) view.background = it
             view.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or, ob ->
@@ -85,6 +100,12 @@ internal class UpdateGlass(private val root: View, private val moving: Boolean =
     fun texture(bitmap: Bitmap) {
         requestedSource = bitmap
         liveExtreme = prefs.extremeGlass
+        val ready = lens?.takeIf { it.origin === bitmap }
+        if (liveExtreme && ready != null) {
+            textureRevision++
+            commit(ready, 0L)
+            return
+        }
         if (liveExtreme) prepareExtremeSource(bitmap)
         else {
             transmission = false
@@ -97,8 +118,50 @@ internal class UpdateGlass(private val root: View, private val moving: Boolean =
         refresh()
     }
 
+    /**
+     * Commits a lens that [prepare] built off the UI thread, in this frame. With
+     * [fadeMs] the old lens cross-fades into it, so the glass follows a backdrop
+     * that fades over the same time instead of jumping before or after it.
+     */
+    fun texture(prepared: Lens, fadeMs: Long = 0L, curve: android.animation.TimeInterpolator? = null) {
+        if (closed) return
+        if (!prefs.extremeGlass) { texture(prepared.origin); return }
+        requestedSource = prepared.origin
+        liveExtreme = true
+        textureRevision++
+        commit(prepared, fadeMs, curve)
+    }
+
+    private fun commit(prepared: Lens, fade: Long, curve: android.animation.TimeInterpolator? = null) {
+        val old = live
+        lens = prepared
+        source = prepared.image
+        transmission = false
+        sourcePixels = prepared.pixels
+        softSource = prepared.blurred
+        live = MovingGlass(root, prepared.blurred)
+        if (fade > 0L && old != null) {
+            previousLive = old
+            fadeStart = android.os.SystemClock.uptimeMillis()
+            fadeMs = fade
+            fadeCurve = curve
+        } else previousLive = null
+        refresh()
+    }
+
+    private fun fadeProgress(): Float {
+        if (previousLive == null) return 1f
+        val t = ((android.os.SystemClock.uptimeMillis() - fadeStart).toFloat() / fadeMs).coerceIn(0f, 1f)
+        if (t >= 1f) {
+            previousLive = null
+            return 1f
+        }
+        return fadeCurve?.getInterpolation(t) ?: t
+    }
+
     fun liveTexture(bitmap: Bitmap) {
         if (closed || !prefs.extremeGlass) return
+        previousLive = null
         textureRevision++
         requestedSource = bitmap
         source = bitmap
@@ -121,35 +184,38 @@ internal class UpdateGlass(private val root: View, private val moving: Boolean =
         val sceneWidth = root.width.coerceAtLeast(root.resources.displayMetrics.widthPixels)
         worker.execute {
             if (closed || revision != textureRevision) return@execute
+            val prepared = prepare(bitmap, sceneWidth)
+            root.post {
+                if (!closed && revision == textureRevision && requestedSource === bitmap && prefs.extremeGlass) {
+                    commit(prepared, 0L)
+                }
+            }
+        }
+    }
+
+    /** Everything the extreme lens needs from one picture, made ready off the UI thread. */
+    internal class Lens(val origin: Bitmap, val image: Bitmap, val pixels: IntArray, val blurred: Bitmap)
+
+    companion object {
+        /**
+         * Any thread. A copy of at most 960 px is all the lens samples; its pixels
+         * feed the ink/tint reading, and a light blur of them is what refracts.
+         */
+        fun prepare(bitmap: Bitmap, sceneWidth: Int): Lens {
             val sampleWidth = minOf(bitmap.width, 960)
             val sampleHeight = (bitmap.height * sampleWidth.toFloat() / bitmap.width).roundToInt().coerceAtLeast(1)
             val image = if (sampleWidth == bitmap.width) bitmap
                 else Bitmap.createScaledBitmap(bitmap, sampleWidth, sampleHeight, true)
             val pixels = IntArray(image.width * image.height)
             image.getPixels(pixels, 0, image.width, 0, 0, image.width, image.height)
-            val blurred = blurred(image, sceneWidth)
-            root.post {
-                if (!closed && revision == textureRevision && requestedSource === bitmap && prefs.extremeGlass) {
-                    source = image
-                    transmission = false
-                    sourcePixels = pixels
-                    softSource = blurred
-                    live = MovingGlass(root, blurred)
-                    refresh()
-                }
-            }
+            // Blur a copy of the pixels already read: no second bitmap copy and readback.
+            val px = pixels.copyOf()
+            val radius = (2f * image.width / sceneWidth.coerceAtLeast(1)).roundToInt().coerceAtLeast(1)
+            repeat(2) { LiquidGlass.boxBlur(px, image.width, image.height, radius) }
+            val blurred = Bitmap.createBitmap(px, image.width, image.height, Bitmap.Config.ARGB_8888)
+            blurred.prepareToDraw()
+            return Lens(bitmap, image, pixels, blurred)
         }
-    }
-
-    private fun blurred(source: Bitmap, sceneWidth: Int): Bitmap {
-        val copy = source.copy(Bitmap.Config.ARGB_8888, true)
-        val px = IntArray(copy.width * copy.height)
-        copy.getPixels(px, 0, copy.width, 0, 0, copy.width, copy.height)
-        val radius = (2f * copy.width / sceneWidth).roundToInt().coerceAtLeast(1)
-        if (radius > 0) repeat(2) { LiquidGlass.boxBlur(px, copy.width, copy.height, radius) }
-        copy.setPixels(px, 0, copy.width, 0, 0, copy.width, copy.height)
-        copy.prepareToDraw()
-        return copy
     }
 
     /** Rebuilt settings subpages must not retain their old rows or textures. */
@@ -173,7 +239,9 @@ internal class UpdateGlass(private val root: View, private val moving: Boolean =
         if (changed) {
             liveExtreme = prefs.extremeGlass
             (requestedSource ?: source)?.let {
-                if (liveExtreme) prepareExtremeSource(it)
+                val ready = lens?.takeIf { prepared -> prepared.origin === it }
+                if (liveExtreme && ready != null) commit(ready, 0L)
+                else if (liveExtreme) prepareExtremeSource(it)
                 else {
                     textureRevision++
                     source = it
@@ -183,8 +251,13 @@ internal class UpdateGlass(private val root: View, private val moving: Boolean =
             }
         }
         if (moving || liveExtreme) {
+            root.getLocationInWindow(rootXY)
             surfaces.forEach {
-                if (it.owner.isShown) {
+                // A long page holds dozens of rows, most of them scrolled away. Only those
+                // within a screen of the viewport are re-sampled and re-recorded; any other
+                // row gets the same treatment on the scroll step that brings it this close,
+                // before it can be seen.
+                if (it.owner.isShown && near(it.owner)) {
                     it.invalidateSelf()
                     it.owner.invalidate()
                     if (!liveExtreme) prepareLighting(it)
@@ -199,6 +272,17 @@ internal class UpdateGlass(private val root: View, private val moving: Boolean =
         generation++
         root.removeCallbacks(rebake)
         root.postDelayed(rebake, 80)
+    }
+
+    private val rootXY = IntArray(2)
+    private val nearXY = IntArray(2)
+
+    private fun near(view: View): Boolean {
+        view.getLocationInWindow(nearXY)
+        val top = nearXY[1] - rootXY[1]
+        val left = nearXY[0] - rootXY[0]
+        return top + view.height > -root.height && top < root.height * 2 &&
+            left + view.width > -root.width && left < root.width * 2
     }
 
     private fun prepareShadow(surface: Surface) {
@@ -357,6 +441,8 @@ internal class UpdateGlass(private val root: View, private val moving: Boolean =
         sourcePixels = null
         softSource = null
         live = null
+        previousLive = null
+        lens = null
         lighting.clear()
         shadows.clear()
         worker.shutdownNow()
@@ -372,6 +458,8 @@ internal class UpdateGlass(private val root: View, private val moving: Boolean =
         private val transmission: () -> Boolean,
         private val onTone: ((GlassTone) -> Unit)? = null,
         private val onFrame: () -> Unit = {},
+        private val previous: () -> MovingGlass? = { null },
+        private val fade: () -> Float = { 1f },
     ) : Drawable() {
         var bitmap: Bitmap? = null
         var shadow: Bitmap? = null
@@ -419,7 +507,10 @@ internal class UpdateGlass(private val root: View, private val moving: Boolean =
         fun applyTone(tone: GlassTone, force: Boolean = false) {
             if (!force && targetTone == tone) return
             val from = material
-            val glide = extreme() && (from.tintScale != tone.tintScale || from.light != tone.light)
+            // The first reading lands at once: gliding from the unsampled fallback made
+            // every row visibly settle after the page was already on screen.
+            val glide = extreme() && from != GlassTone.Fallback &&
+                (from.tintScale != tone.tintScale || from.light != tone.light)
             targetTone = tone
             tintTween.cancel()
             material = tone
@@ -507,11 +598,19 @@ internal class UpdateGlass(private val root: View, private val moving: Boolean =
                 paint.alpha = (GlassMaterial.recipe(material).tintAlpha * opacity).roundToInt()
                 canvas.drawRoundRect(rect, r, r, paint)
             } else if (movingTexture != null && geometry != null) {
+                val filter = if (isExtreme) toneFilter() else null
+                val amount = fade()
+                val outgoing = if (amount < 1f) previous() else null
+                // Old lens underneath at full strength, the new one over it: an opaque
+                // cross-fade, the same maths as the backdrop's TransitionDrawable.
+                outgoing?.draw(canvas, owner, geometry, paint.alpha, colorFilter = filter, chromatic = isExtreme)
                 movingTexture.draw(
-                    canvas, owner, geometry, paint.alpha,
-                    colorFilter = if (isExtreme) toneFilter() else null,
+                    canvas, owner, geometry,
+                    if (outgoing != null) (paint.alpha * amount).roundToInt() else paint.alpha,
+                    colorFilter = filter,
                     chromatic = isExtreme,
                 )
+                if (outgoing != null) invalidateSelf()
                 if (isExtreme) {
                     val tint = material.tint
                     val amount = GlassMaterial.recipe(material).tintAlpha
@@ -533,8 +632,12 @@ internal class UpdateGlass(private val root: View, private val moving: Boolean =
             } else {
                 if (content) 3 + 8 * lit else 4 + 22 * lit
             }
-            paint.color = Color.argb((highlight * opacity / 255).toInt(), 255, 255, 255)
-            canvas.drawRoundRect(rect, r, r, paint)
+            val highlightAlpha = (highlight * opacity / 255).toInt()
+            // Unlit rows are most of a page: an invisible wash would still cost a draw call.
+            if (highlightAlpha > 0) {
+                paint.color = Color.argb(highlightAlpha, 255, 255, 255)
+                canvas.drawRoundRect(rect, r, r, paint)
+            }
             paint.shader = sheen
             val edgeStrength = if (isExtreme) GlassMaterial.recipe(material).edgeStrength else 1f
             paint.alpha = (opacity * (if (content) 0.3f else if (isExtreme) 0.4f else 0.6f) * edgeStrength).toInt()
