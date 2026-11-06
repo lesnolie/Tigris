@@ -399,7 +399,10 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         fun applyTone(tone: GlassTone) {
             if (targetTone == tone) return
             val from = material
-            val glide = extremeGlass && (from.tintScale != tone.tintScale || from.light != tone.light)
+            // The first reading lands at once: gliding from the unsampled fallback made
+            // every control visibly settle after the page was already on screen.
+            val glide = extremeGlass && from != GlassTone.Fallback &&
+                (from.tintScale != tone.tintScale || from.light != tone.light)
             targetTone = tone
             tintTween.cancel()
             material = tone

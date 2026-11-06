@@ -72,6 +72,90 @@ class SettingsActivity : Activity() {
 
         private val IDLE_TEXT = Color.argb(235, 255, 255, 255)
         private val IDLE_VALUE = Color.argb(195, 255, 255, 255)
+
+        /** Everything the page shows behind its rows, the extreme lens included. Read-only once built. */
+        private class Scene(val key: String, val image: Bitmap, val material: Bitmap, val custom: Boolean,
+                            val lens: UpdateGlass.Lens?)
+
+        /**
+         * The last two scenes (about 3.5 MB each at 720 px), so the page opens
+         * complete and the settings-background switch flips both ways at once.
+         */
+        private val scenes = ArrayDeque<Scene>()
+
+        private fun cachedScene(key: String): Scene? = synchronized(scenes) { scenes.firstOrNull { it.key == key } }
+
+        private fun remember(scene: Scene) = synchronized(scenes) {
+            scenes.removeAll { it.key == scene.key }
+            scenes.addLast(scene)
+            while (scenes.size > 2) scenes.removeFirst()
+        }
+
+        private fun sceneKey(ctx: android.content.Context, own: Boolean = Prefs(ctx).settingsBg): String {
+            val prefs = Prefs(ctx)
+            val selected = if (own) backdropFile(ctx) else null
+            val metrics = ctx.resources.displayMetrics
+            return "${selected?.path}:${selected?.lastModified()}:$own:" +
+                "${SettingsBackdrop.key(ctx)}:${prefs.extremeGlass}:${metrics.widthPixels}:${metrics.heightPixels}"
+        }
+
+        /** Worker thread. [own]: the uploaded settings picture rather than the Home wallpaper. */
+        private fun buildScene(ctx: android.content.Context, key: String,
+                               own: Boolean = Prefs(ctx).settingsBg): Scene {
+            val prefs = Prefs(ctx)
+            val selected = if (own) backdropFile(ctx) else null
+            val sw = ctx.resources.displayMetrics.widthPixels
+            val sh = ctx.resources.displayMetrics.heightPixels
+            val original = selected?.let { runCatching { decodeIcon(it, 1440) }.getOrNull() }
+            val source = original ?: SettingsBackdrop.load(ctx)
+            val width = 720
+            val height = (width.toLong() * sh / sw).toInt().coerceAtLeast(1)
+            val image = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(image)
+            val scale = maxOf(width.toFloat() / source.width, height.toFloat() / source.height) * if (original != null) 1.08f else 1f
+            val matrix = android.graphics.Matrix().apply {
+                setScale(scale, scale)
+                postTranslate(if (original != null) width - source.width * scale else (width - source.width * scale) / 2f,
+                    (height - source.height * scale) / 2f)
+            }
+            canvas.drawBitmap(source, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
+            // Match the actual crop and page scrim; never re-center the original artwork in the glass.
+            // Without the scrim the material is the picture itself: no second 720 px copy.
+            val material = if (original == null) image else image.copy(Bitmap.Config.ARGB_8888, true).also {
+                val shade = Paint().apply {
+                    shader = android.graphics.LinearGradient(0f, 0f, 0f, height.toFloat(),
+                        intArrayOf(0x28030a14, 0x00030a14, 0xb0030a14.toInt()), null,
+                        android.graphics.Shader.TileMode.CLAMP)
+                }
+                Canvas(it).drawRect(0f, 0f, width.toFloat(), height.toFloat(), shade)
+            }
+            image.prepareToDraw()
+            val lens = if (prefs.extremeGlass) UpdateGlass.prepare(material, sw) else null
+            return Scene(key, image, material, original != null, lens).also { remember(it) }
+        }
+
+        /**
+         * Home calls this on its worker after a new wallpaper, so the first visit
+         * to Settings opens complete too. Skipped on low-end TVs, which build on entry.
+         */
+        fun warm(ctx: android.content.Context) {
+            if (Device.isLowEnd(ctx)) return
+            val key = sceneKey(ctx)
+            if (cachedScene(key) == null) runCatching { buildScene(ctx, key) }
+        }
+
+        /** Worker thread: the other side of the settings-background switch, ready before it is pressed. */
+        private fun warmOther(ctx: android.content.Context) {
+            if (Device.isLowEnd(ctx) || backdropFile(ctx) == null) return
+            val own = !Prefs(ctx).settingsBg
+            val key = sceneKey(ctx, own)
+            if (cachedScene(key) == null) runCatching { buildScene(ctx, key, own) }
+        }
+
+        fun trimMemory() {
+            synchronized(scenes) { scenes.clear() }
+            SettingsBackdrop.clear()
+        }
     }
 
     private lateinit var prefs: Prefs
@@ -91,6 +175,7 @@ class SettingsActivity : Activity() {
     private var scene: Bitmap? = null
     private var backdropKey: String? = null
     private var backdropRevision = 0
+    private var resumedOnce = false
     private var activeDialog: SettingsDialog? = null
     private var adbAuthorizing = false
     private var page = Page.MAIN
@@ -220,7 +305,14 @@ class SettingsActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        backdropKey = null
+        // onCreate has just built the page and its backdrop. Doing both again here
+        // threw the first backdrop away and made the page wait for a second one.
+        if (!resumedOnce) {
+            resumedOnce = true
+            return
+        }
+        // The key covers the uploaded picture and the Home photo, so an unchanged
+        // backdrop costs nothing here, and a changed one is rebuilt.
         showBackdrop()
         if (page == Page.MAIN) show(Page.MAIN, opener)
     }
@@ -253,46 +345,34 @@ class SettingsActivity : Activity() {
     }
 
     private fun showBackdrop() {
-        val file = if (prefs.settingsBg) backdropFile(this) else null
-        val selected = file
-        val sw = resources.displayMetrics.widthPixels
-        val sh = resources.displayMetrics.heightPixels
-        val key = "${selected?.path}:${selected?.lastModified()}:${prefs.settingsBg}:${prefs.background}:$sw:$sh"
+        val key = sceneKey(this)
         if (key == backdropKey) return
         backdropKey = key
         val revision = ++backdropRevision
+        // Already built (by an earlier visit, or warmed by Home): on screen in the
+        // first frame, picture and glass together.
+        val cached = cachedScene(key)
+        if (cached != null) showScene(cached)
+        val app = applicationContext
         artwork.execute {
-            val original = selected?.let { runCatching { decodeIcon(it, 1440) }.getOrNull() }
-            val source = original ?: SettingsBackdrop.load(this)
-            val width = 720
-            val height = (width.toLong() * sh / sw).toInt().coerceAtLeast(1)
-            val image = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(image)
-            val scale = maxOf(width.toFloat() / source.width, height.toFloat() / source.height) * if (original != null) 1.08f else 1f
-            val matrix = android.graphics.Matrix().apply {
-                setScale(scale, scale)
-                postTranslate(if (original != null) width - source.width * scale else (width - source.width * scale) / 2f,
-                    (height - source.height * scale) / 2f)
-            }
-            canvas.drawBitmap(source, matrix, Paint(Paint.FILTER_BITMAP_FLAG))
-            // Match the actual crop and page scrim; never re-center the original artwork in the glass.
-            val shade = Paint().apply {
-                shader = android.graphics.LinearGradient(0f, 0f, 0f, height.toFloat(),
-                    intArrayOf(0x28030a14, 0x00030a14, 0xb0030a14.toInt()), null,
-                    android.graphics.Shader.TileMode.CLAMP)
-            }
-            val material = image.copy(Bitmap.Config.ARGB_8888, true)
-            if (original != null) Canvas(material).drawRect(0f, 0f, width.toFloat(), height.toFloat(), shade)
-            runOnUiThread {
-                if (!isFinishing && !isDestroyed && revision == backdropRevision) {
-                    backdrop.setImageBitmap(image)
-                    pageShade.visibility = if (original != null) View.VISIBLE else View.GONE
-                    icon.visibility = if (original != null || resources.configuration.fontScale > 1.15f) View.INVISIBLE else View.VISIBLE
-                    scene = material
-                    glass.texture(material)
+            if (cached == null) {
+                val built = buildScene(app, key)
+                runOnUiThread {
+                    if (!isFinishing && !isDestroyed && revision == backdropRevision) showScene(built)
                 }
             }
+            warmOther(app)
         }
+    }
+
+    /** The backdrop, its scrim, the icon and the glass lens change in one frame. */
+    private fun showScene(built: Scene) {
+        backdrop.setImageBitmap(built.image)
+        pageShade.visibility = if (built.custom) View.VISIBLE else View.GONE
+        icon.visibility = if (built.custom || resources.configuration.fontScale > 1.15f) View.INVISIBLE else View.VISIBLE
+        scene = built.material
+        val lens = built.lens
+        if (lens != null) glass.texture(lens) else glass.texture(built.material)
     }
 
     override fun onPause() {

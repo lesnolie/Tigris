@@ -14,4 +14,13 @@ class App : Application() {
             Updates.executor.execute { Updates.check(this) }
         }
     }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        // Prebuilt Settings scenes are a convenience; give them back under pressure.
+        // Not on UI_HIDDEN: that is every app launch from Home, not memory pressure.
+        @Suppress("DEPRECATION")
+        if (level in TRIM_MEMORY_RUNNING_LOW..TRIM_MEMORY_RUNNING_CRITICAL || level >= TRIM_MEMORY_BACKGROUND)
+            SettingsActivity.trimMemory()
+    }
 }

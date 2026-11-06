@@ -394,15 +394,26 @@ class Wallpapers(private val ctx: Context, private val source: String = BING) {
         return c.inputStream.use { it.readBytes() }
     }
 
-    fun decode(f: File, full: Boolean = false): Bitmap? = try {
+    /**
+     * [minWidth] > 0 lets the JPEG decoder skip to a power-of-two size still at
+     * least that wide: a 480 px settings backdrop needn't decode a 4K photo.
+     */
+    fun decode(f: File, full: Boolean = false, minWidth: Int = 0): Bitmap? = try {
+        var sample = 1
+        if (minWidth > 0) {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(f.path, bounds)
+            while (bounds.outWidth / (sample * 2) >= minWidth) sample *= 2
+        }
         BitmapFactory.decodeFile(f.path, BitmapFactory.Options().apply {
             inPreferredConfig = if (full) Bitmap.Config.ARGB_8888 else Bitmap.Config.RGB_565
             inMutable = true
+            inSampleSize = sample
         })
     } catch (e: OutOfMemoryError) { null }
 
     /** A photo dressed for the home screen: darker at the bottom and top-left so tiles and clock stay legible. */
-    fun forHome(f: File, clearDock: Boolean = false): Bitmap? = decode(f)?.also { b ->
+    fun forHome(f: File, clearDock: Boolean = false, minWidth: Int = 0): Bitmap? = decode(f, minWidth = minWidth)?.also { b ->
         val c = Canvas(b)
         val w = b.width.toFloat()
         val h = b.height.toFloat()

@@ -16,7 +16,16 @@ internal class GlassTextView(context: Context) : TextView(context) {
     override fun onDraw(canvas: Canvas) {
         val paint = glassInkPaint
         if (paint == null) super.onDraw(canvas)
-        else {
+        else if (android.os.Build.VERSION.SDK_INT >= 29 && shadowRadius == 0f) {
+            // Blend the glyphs straight into the glass. Skia applies multiply and plus
+            // with coverage exactly as compositing a layer of the same text would, so
+            // the pixels match, without an offscreen pass for every label each frame.
+            // A shadow would be blended under the glyphs twice, so it keeps the layer.
+            val text = getPaint()
+            text.blendMode = paint.blendMode
+            super.onDraw(canvas)
+            text.blendMode = null
+        } else {
             val saved = canvas.saveLayer(0f, 0f, width.toFloat(), height.toFloat(), paint)
             super.onDraw(canvas)
             canvas.restoreToCount(saved)

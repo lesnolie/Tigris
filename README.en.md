@@ -14,7 +14,7 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeover fixes and video optimizations still need model-level verification. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.23 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.23)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.23/Tigris-v2.0.23.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.23/Tigris-guard-v2.0.23.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.23/SHA256SUMS-v2.0.23.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.24 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.24)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.24/Tigris-v2.0.24.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.24/Tigris-guard-v2.0.24.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.24/SHA256SUMS-v2.0.24.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -22,7 +22,7 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 ## Which APK should I install? Check the TV OS and firmware
 
-> **Latest official release: v2.0.23.** Upgrade in place with the matching Standard/Guard flavor. Adds takeover-gated unified idle timing, reversible standard sleep settings, and paused-video dream fixes. See [release notes](docs/releases/v2.0.23.md) for permissions and compatibility limits.
+> **Latest official release: v2.0.24.** Upgrade in place with the matching Standard/Guard flavor. Extreme Liquid Glass now switches with no visible delay: entering Settings, changing the background and Top Shelf transitions move glass and backdrop in the same frame, with lower drawing cost while scrolling. Includes v2.0.23's unified idle timing. See [release notes](docs/releases/v2.0.24.md).
 
 | TV / platform | First choice | When to use another build | Important limits |
 |---|---|---|---|
