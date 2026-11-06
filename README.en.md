@@ -14,7 +14,7 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeover fixes and video optimizations still need model-level verification. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.22 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.22)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.22/Tigris-v2.0.22.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.22/Tigris-guard-v2.0.22.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.22/SHA256SUMS-v2.0.22.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.23 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.23)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.23/Tigris-v2.0.23.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.23/Tigris-guard-v2.0.23.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.23/SHA256SUMS-v2.0.23.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -22,7 +22,7 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 ## Which APK should I install? Check the TV OS and firmware
 
-> **Latest official release: v2.0.22.** Upgrade in place with `Tigris-v2.0.22.apk` (Standard) or `Tigris-guard-v2.0.22.apk` (Compatibility Guard), retaining the existing flavor and signing identity. This release improves app artwork and includes the v2.0.21 updater/photo-frame fixes plus optional extreme glass. Select Guard according to the actual firmware.
+> **Latest official release: v2.0.23.** Upgrade in place with the matching Standard/Guard flavor. Adds takeover-gated unified idle timing, reversible standard sleep settings, and paused-video dream fixes. See [release notes](docs/releases/v2.0.23.md) for permissions and compatibility limits.
 
 | TV / platform | First choice | When to use another build | Important limits |
 |---|---|---|---|

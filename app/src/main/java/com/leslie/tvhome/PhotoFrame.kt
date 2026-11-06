@@ -213,6 +213,12 @@ class PhotoDream : DreamService() {
         val coversOurUi = ScreensaverScope.coversTigrisUi(now) || HomeForeground.dreamCoversHome(now)
         Thread {
             val media = FrameIdleProbe.media(this, HomeForeground.mediaHint(now), shellFallback = true)
+            // Rejecting a dream without recording user activity lets some TV firmware
+            // immediately sleep. Reset only an explicitly managed timer, using the
+            // existing authorized shell; never send POWER or SLEEP.
+            if (!FrameIdlePolicy.dreamDecision(coversOurUi, media).show && IdleTimerTakeover.isActive(this)) {
+                LocalAdb.shell(this, "input keyevent KEYCODE_WAKEUP", 2500)
+            }
             Handler(Looper.getMainLooper()).post {
                 if (attached) showOrDismiss(coversOurUi, media, now)
             }

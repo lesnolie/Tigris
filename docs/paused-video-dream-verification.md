@@ -1,6 +1,6 @@
 # Paused video screensaver repair — 2026-11-05
 
-Local repair based on v2.0.22; not an upstream release.
+Initial local repair based on v2.0.22, followed by the v2.0.23 unified-timer validation.
 
 Device: Sony BRAVIA 4K VH2, Android 12 / SDK 31, firmware 682241.
 
@@ -18,3 +18,13 @@ Validation:
 - HGTV (`com.hgtv.star`) explicitly paused, system idle triggered PhotoDream, log accepted the paused foreground video, power state was Dreaming, screenshot showed the photo frame.
 - Temporary timeout changes restored to the original 600000 ms (10 minutes).
 - Long-duration natural timeout, active-playback hardware verification, restart and standby/wake are not covered by this check.
+
+## v2.0.23 — 2026-11-06
+
+- Before the new build, a natural system timeout entered PhotoDream at 19:10:27 local TV time, confirming the former 10-minute system path was still separate from the 1-minute Home preference.
+- Both Standard and Guard: 195 JVM tests each, no failures; both release builds and full Android lint passed. 75 Python installer/tool tests, installer shell contracts and locale checks passed.
+- Standard APK verified as an in-place upgrade from official v2.0.22 (versionCode 30, unchanged signer), then installed successfully with data retained.
+- With verified native HOME and existing local ADB / usage access plus WRITE_SETTINGS authorized, takeover automatically used 60000 ms from the existing 1-minute preference. Standard sleep_timeout and attentive_timeout became -1.
+- Turning unified mode off restored exactly 600000 / 86400000 / 86400000, then re-enabling took ownership again.
+- HGTV remained explicitly paused. At 19:23:31 PhotoDream accepted the paused player and power state became Dreaming. Screenshot showed the actual frame. This used the configured 1-minute interval, not a temporary system-timeout override.
+- No vendor-private timers or stock packages were modified. Other models, HDMI-CEC, scheduled shutdown and cold boot are not hardware certified.

@@ -80,7 +80,7 @@
     <string name="i18n_settingsactivity_078" formatted="false">Aerials</string>
     <string name="i18n_settingsactivity_079" formatted="false">Photos</string>
     <string name="i18n_settingsactivity_080" formatted="false">Start After</string>
-    <string name="i18n_settingsactivity_081" formatted="false">How long Tigris waits on its own home screen before showing the frame. This timer does not change the TV screen-off timeout. If the firmware publishes a screensaver timeout, the frame starts early enough to come up first.</string>
+    <string name="i18n_settingsactivity_081" formatted="false">How long to wait before showing the frame. Unified mode also applies this time to the system screensaver after verified takeover. Confirmed paused video may enter the frame; active playback and casting are excluded. Without takeover this only controls Tigris Home.</string>
     <string name="i18n_settingsactivity_084" formatted="false">Time per Photo</string>
     <string name="i18n_settingsactivity_085" formatted="false">How long each photo is shown in the frame.</string>
     <string name="i18n_settingsactivity_086">%1$s s</string>
@@ -163,4 +163,7 @@
     <string name="glass_tint_help">Adjust tint from 0% to 150%. 100% is the reference material; 0% keeps the blur, lens and edge light.</string>
     <string name="glass_reduce_transparency">Reduce glass transparency</string>
     <string name="glass_reduce_transparency_help">Use solid surfaces for clearer text. System high contrast text also enables this fallback.</string>
+    <string name="unified_idle_title" formatted="false">Unified idle timer</string>
+    <string name="unified_idle_desc" formatted="false">After verified Home takeover and authorization, use the photo-frame time for Android screensaver idle. Disable separate standard Android sleep deadlines. Playback and casting remain protected. Turning this off restores saved settings; vendor-private timers are unchanged.</string>
+    <string name="unified_idle_pending" formatted="false">Waiting for takeover / permissions</string>
 </resources>

@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.22 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.22)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.22/Tigris-v2.0.22.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.22/Tigris-guard-v2.0.22.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.22/SHA256SUMS-v2.0.22.txt)）
+- 最新正式版：**[v2.0.23 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.23)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.23/Tigris-v2.0.23.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.23/Tigris-guard-v2.0.23.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.23/SHA256SUMS-v2.0.23.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **最新正式版为 v2.0.22。** 标准版 `Tigris-v2.0.22.apk`，兼容守护版 `Tigris-guard-v2.0.22.apk`；沿用原签名与包名，可对应类型覆盖升级。包含 App 图标显示优化、v2.0.21 的更新安装与屏保修复，以及默认关闭的极致液态玻璃。Guard 仍按真实固件选择。
+> **最新正式版为 v2.0.23。** 对应 Standard/Guard 类型覆盖升级。新增接管后统一相框计时、标准系统待机计时可还原管理，以及暂停屏保识别修复；权限和机型限制见 [更新说明](docs/releases/v2.0.23.md)。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
