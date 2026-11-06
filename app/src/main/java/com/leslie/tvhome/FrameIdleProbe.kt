@@ -17,11 +17,17 @@ import android.provider.Settings
  * require the revival notification listener; the music-stream booleans do not.
  */
 internal object FrameIdleProbe {
-    fun media(ctx: Context, hint: FrameIdlePolicy.Media = FrameIdlePolicy.Media()): FrameIdlePolicy.Media {
+    fun media(ctx: Context, hint: FrameIdlePolicy.Media = FrameIdlePolicy.Media(), shellFallback: Boolean = false): FrameIdlePolicy.Media {
         val am = ctx.getSystemService(AudioManager::class.java)
         val sessionsVisible = listenerEnabled(ctx)
         val foreground = recentForegroundPackage(ctx)
-        val sessions = if (sessionsVisible) foreignSessions(ctx) else null
+        val visible = if (sessionsVisible) foreignSessions(ctx) else null
+        // Some Sony firmware exposes no controllers to an enabled listener. Only use
+        // the existing, explicitly authorized local ADB connection, off the UI thread.
+        val sessions = if (shellFallback && visible.isNullOrEmpty() && Prefs(ctx).adbAuthorized) {
+            FrameIdlePolicy.sessionsFromDump(LocalAdb.shell(ctx, "dumpsys media_session", 2500))
+                ?.filter { it.pkg != ctx.packageName } ?: visible
+        } else visible
         return hint.copy(
             musicActive = runCatching { am?.isMusicActive == true }.getOrDefault(false),
             remoteMusicActive = remoteMusic(am),
@@ -72,7 +78,11 @@ internal object FrameIdleProbe {
             events.getNextEvent(event)
             if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND ||
                 (Build.VERSION.SDK_INT >= 29 && event.eventType == UsageEvents.Event.ACTIVITY_RESUMED)) {
-                lastForeground = event.packageName
+                // Android resumes our DreamActivity before attaching PhotoDream. It is
+                // an overlay, not the player whose paused session we need to verify.
+                if (FrameIdlePolicy.isContentForeground(event.className)) {
+                    lastForeground = event.packageName
+                }
             }
         }
         return lastForeground

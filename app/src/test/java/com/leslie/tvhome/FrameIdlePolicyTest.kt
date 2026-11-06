@@ -9,6 +9,38 @@ import org.junit.Test
 import java.io.File
 
 class FrameIdlePolicyTest {
+    @Test fun shellSessionsKeepPausedAndPlayingStatesAndRejectUnavailableDump() {
+        assertNull(FrameIdlePolicy.sessionsFromDump("Permission Denial"))
+        val sessions = FrameIdlePolicy.sessionsFromDump("""
+            MEDIA SESSION SERVICE (dumpsys media_session)
+              package=com.hgtv.star
+              active=false
+              state=PlaybackState {state=2, position=1}
+              package=other.player
+              active=true
+              state=PlaybackState {state=3, position=1}
+        """.trimIndent())!!
+        assertTrue(FrameIdlePolicy.pausedForegroundVideo("com.hgtv.star", sessions))
+        assertTrue(sessions.any { FrameIdlePolicy.sessionActive(it.state) })
+        assertFalse(FrameIdlePolicy.dreamDecision(false, FrameIdlePolicy.Media(
+            pausedForegroundVideo = true, foreignSessionPlaying = true)).show)
+    }
+
+    @Test fun dreamOverlayKeepsThePausedPlayersForegroundIdentity() {
+        var foreground: String? = null
+        for ((pkg, activity) in listOf(
+            "com.hgtv.star" to "com.hgtv.star.tv.MainActivity",
+            "com.leslie.tvhome" to "android.service.dreams.DreamActivity",
+        )) {
+            if (FrameIdlePolicy.isContentForeground(activity)) foreground = pkg
+        }
+        assertEquals("com.hgtv.star", foreground)
+        assertTrue(FrameIdlePolicy.dreamDecision(false, FrameIdlePolicy.Media(
+            pausedForegroundVideo = FrameIdlePolicy.pausedForegroundVideo(
+                foreground, listOf(FrameIdlePolicy.Session("com.hgtv.star", 2))),
+        )).show)
+    }
+
     @Before fun resetForeground() = HomeForeground.resetForTests()
 
     @Test fun missingOrNonPositiveTimeoutUsesTheInAppMinutes() {
