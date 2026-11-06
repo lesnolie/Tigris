@@ -36,7 +36,10 @@ internal object IdleTimerTakeover {
         fun write(key: String, value: String?): Boolean = if (key == "screen_off_timeout")
             Settings.System.putString(ctx.contentResolver, key, value)
         else Settings.Secure.putString(ctx.contentResolver, key, value)
-        if (!Guard.hasSecureSettings(ctx) || !Settings.System.canWrite(ctx)) return
+        if (!Guard.hasSecureSettings(ctx) || !Settings.System.canWrite(ctx)) {
+            store.edit().putBoolean("active", false).commit()
+            return
+        }
         val takeoverReady = ownsHome(ctx) && prefs.adbAuthorized && Guard.usageStatsAllowed(ctx)
         // New installs opt in only after takeover. Preserve an existing explicit opt-out.
         if (prefs.unifiedIdle && takeoverReady && !prefs.frameScreensaverConfigured) prefs.frameScreensaver = true

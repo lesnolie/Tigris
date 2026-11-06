@@ -199,7 +199,7 @@ class FrameActivity : Activity() {
  */
 class PhotoDream : DreamService() {
     private var frame: SaverHost? = null
-    private var attached = false
+    @Volatile private var attached = false
     private var started = false
 
     override fun onAttachedToWindow() {
@@ -217,7 +217,7 @@ class PhotoDream : DreamService() {
             // immediately sleep. Reset only an explicitly managed timer, using the
             // existing authorized shell; never send POWER or SLEEP.
             if (!FrameIdlePolicy.dreamDecision(coversOurUi, media).show && IdleTimerTakeover.isActive(this)) {
-                LocalAdb.shell(this, "input keyevent KEYCODE_WAKEUP", 2500)
+                LocalAdb.refreshIdleIfInteractive(this) { attached }
             }
             Handler(Looper.getMainLooper()).post {
                 if (attached) showOrDismiss(coversOurUi, media, now)

@@ -78,6 +78,13 @@ object LocalAdb {
         }
     }
 
+    /** Recheck after ADB connection setup; a deliberate screen-off cancels an idle refresh. */
+    internal fun refreshIdleIfInteractive(ctx: Context, stillCurrent: () -> Boolean) {
+        execute(ctx, "input keyevent KEYCODE_WAKEUP", 2500) {
+            stillCurrent() && ctx.getSystemService(android.os.PowerManager::class.java).isInteractive
+        }
+    }
+
     /** Fire-and-forget variant for commands that kill the connection (shutdown). */
     fun shellAsync(ctx: Context, cmd: String) {
         Thread { shell(ctx.applicationContext, cmd, 60_000) }.start()
