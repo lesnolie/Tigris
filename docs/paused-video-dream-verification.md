@@ -28,3 +28,4 @@ Validation:
 - Turning unified mode off restored exactly 600000 / 86400000 / 86400000, then re-enabling took ownership again.
 - HGTV remained explicitly paused. At 19:23:31 PhotoDream accepted the paused player and power state became Dreaming. Screenshot showed the actual frame. This used the configured 1-minute interval, not a temporary system-timeout override.
 - No vendor-private timers or stock packages were modified. Other models, HDMI-CEC, scheduled shutdown and cold boot are not hardware certified.
+- HGTV was resumed with MEDIA_PLAY. Its media session remained PLAYING for more than the configured 1-minute idle interval; no dream was active and HGTV retained focus. MEDIA_PAUSE restored the prior paused state afterwards. Prolonged playback and casting are still not certified.

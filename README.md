@@ -565,6 +565,7 @@ adb -s 192.168.1.20:5555 uninstall com.leslie.tvhome
 <!-- TV_COMPATIBILITY_AUTO_START -->
 | 品牌与型号 | Android | Tigris / 安装包 | 安装结果 | Issue 状态 | 来源 |
 |---|---|---|---|---|---|
+| TCL Q10L | 安卓12 | 2.0.22 / 标准版 | 已安装且能启动（自报） | 未关闭 | [#89](https://github.com/lesnolie/Tigris/issues/89) |
 | SONY 9500G | 10 | 2.0.17 / 标准版 | 已安装且能启动（自报） | 未关闭 | [#77](https://github.com/lesnolie/Tigris/issues/77) |
 | Sony XR-55A80K &#124; BRAVIA 4K VH21 | Android 12 (API level 31) | v2.0.15 / 标准版 | 已安装且能启动（自报） | 已关闭（未验证修复） | [#69](https://github.com/lesnolie/Tigris/issues/69) |
 | Sony BRAVIA 4K GB（BRAVIA_ATV2_CN，国行，2017 平台） | Android 9 (API 28) | v2.0.11 / 标准版 | 已安装且能启动（自报） | 未关闭 | [#53](https://github.com/lesnolie/Tigris/issues/53) |
