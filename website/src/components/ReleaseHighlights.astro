@@ -4,13 +4,13 @@ import { brand } from "../data/site";
 interface Props { locale: Locale }
 const zh = Astro.props.locale === "zh";
 const items = zh ? [
-  ["01", "App 图标更清晰，比例更协调。", "原生 TV 横幅优先，方形图标不再放大模糊当作背景。"],
-  ["02", "极致液态玻璃，按需开启。", "静态壁纸有细腻折射，动态视频下 Dock 与控制中心可透明显示。默认关闭。"],
-  ["03", "屏保尊重播放与投屏状态。", "改善系统休眠前的计时、暂停视频识别及更新安装恢复。"],
+  ["01", "玻璃与背景，同步变化。", "进入设置、更换壁纸、切换顶部内容预览时，极致液态玻璃与背景同帧切换、同步淡入。"],
+  ["02", "设置更快打开，滚动更轻快。", "提前准备设置页画面，减少滚动时的绘制开销。极致液态玻璃仍默认关闭，可按需开启。"],
+  ["03", "相框等待时间，统一设置。", "确认 Tigris 成为电视主屏幕并完成授权后，系统屏保沿用相框计时；播放与投屏继续避让，关闭时可还原。"],
 ] : [
-  ["01", "Sharper, better-proportioned app tiles.", "Preserve TV banners and use crisp native icons rather than blurred, enlarged duplicates."],
-  ["02", "Extreme Liquid Glass, on your terms.", "Refined glass on still wallpapers; transparent video Dock and Control Center. Off by default."],
-  ["03", "Photo frame respects playback and casting.", "Better system idle timing, paused-video handling and safer update recovery."],
+  ["01", "Glass and backdrop move together.", "Opening Settings, changing wallpapers and switching Top Shelf now apply Extreme Liquid Glass and the backdrop in the same frame, with matching fades."],
+  ["02", "Faster Settings, lighter scrolling.", "Settings prepares its backdrop ahead of time and scrolling takes less drawing work. Extreme Liquid Glass remains optional and off by default."],
+  ["03", "One photo-frame delay.", "Once Tigris is confirmed as the TV's Home screen and permissions are granted, the system screensaver follows its timer. Playback and casting stay protected; opting out attempts to restore settings."],
 ];
 ---
 <section class="release-strip wrap" aria-label={zh ? "本次更新" : "Latest update"}>
