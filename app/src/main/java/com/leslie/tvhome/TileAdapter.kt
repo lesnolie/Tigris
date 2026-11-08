@@ -23,7 +23,7 @@ class TileCell(ctx: Context, val tileW: Int, val tileH: Int) : FrameLayout(ctx) 
         setBackgroundColor(TileSkin.FILL)
     }
     /** Real adaptive foreground, if the source APK exposes a separately usable layer. */
-    val foreground = ImageView(ctx).apply {
+    val foregroundLayer = ImageView(ctx).apply {
         scaleType = ImageView.ScaleType.FIT_XY
         isClickable = false
     }
@@ -58,7 +58,7 @@ class TileCell(ctx: Context, val tileW: Int, val tileH: Int) : FrameLayout(ctx) 
         background = ring(ctx, TileSkin.FOCUS_RING_DP, TileSkin.FOCUS_RING)
         alpha = 0f
     }
-    private val focusRenderer = TvOSFocusRenderer(card, foreground, specular, shadow,
+    private val focusRenderer = TvOSFocusRenderer(card, foregroundLayer, specular, shadow,
         border, focusRing, glow, label, shadowPad)
 
     init {
@@ -74,7 +74,7 @@ class TileCell(ctx: Context, val tileW: Int, val tileH: Int) : FrameLayout(ctx) 
         glow.translationX = -glowPad.toFloat()
         glow.translationY = -glowPad.toFloat()
         card.addView(image, LayoutParams(tileW, tileH))
-        card.addView(foreground, LayoutParams(tileW, tileH))
+        card.addView(foregroundLayer, LayoutParams(tileW, tileH))
         card.addView(specular, LayoutParams(tileW, tileH))
         card.clipRounded(dp(TileSkin.RADIUS_DP).toFloat())
         addView(card, LayoutParams(tileW, tileH))
@@ -96,8 +96,8 @@ class TileCell(ctx: Context, val tileW: Int, val tileH: Int) : FrameLayout(ctx) 
 
     fun setArtwork(art: AppTileArt?) {
         image.setImageBitmap(art?.background)
-        foreground.setImageBitmap(art?.foreground)
-        foreground.visibility = if (art?.foreground != null) View.VISIBLE else View.GONE
+        foregroundLayer.setImageBitmap(art?.foreground)
+        foregroundLayer.visibility = if (art?.foreground != null) View.VISIBLE else View.GONE
     }
 
     fun setJiggle(on: Boolean) {
