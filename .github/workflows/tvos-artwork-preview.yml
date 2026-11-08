@@ -1,0 +1,104 @@
+name: Preview — tvOS app artwork and focus engine
+on:
+  push:
+    branches:
+      - preview/tvos-artwork-focus-v2.0.27
+permissions:
+  contents: write
+concurrency:
+  group: tigris-preview-artwork-v2-0-27
+  cancel-in-progress: false
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install Android SDK
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager -print -quit)"
+          test -n "$SDKMANAGER"
+          "$SDKMANAGER" --install 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Check preview version and branch isolation
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "preview/tvos-artwork-focus-v2.0.27"
+          grep -Fq 'versionCode = 34' app/build.gradle.kts
+          grep -Fq 'versionName = "2.0.27-pre1"' app/build.gradle.kts
+          test -f docs/releases/v2.0.27-preview.1.md
+      - name: Restore stable signing identity
+        env:
+          KEYSTORE_BASE64: ${{ secrets.TIGRIS_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_BASE64"
+          umask 077
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/tigris.keystore"
+      - name: Unit, installer, release build and lint (both flavors)
+        env:
+          TIGRIS_KEYSTORE: ${{ runner.temp }}/tigris.keystore
+          TIGRIS_STORE_PASSWORD: ${{ secrets.TIGRIS_STORE_PASSWORD }}
+          TIGRIS_KEY_PASSWORD: ${{ secrets.TIGRIS_KEY_PASSWORD }}
+          TIGRIS_KEY_ALIAS: ${{ secrets.TIGRIS_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          python3 tools/test_i18n.py
+          bash tools/test-install.sh
+          python3 -m unittest discover -s tools -p 'test_*.py' -v
+          bash ./gradlew --no-daemon :app:testStandardDebugUnitTest :app:testGuardDebugUnitTest \
+            :app:assembleStandardRelease :app:assembleGuardRelease \
+            :app:lintStandardRelease :app:lintGuardRelease --stacktrace
+      - name: Validate signed preview APK metadata and upgrade safety
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp app/build/outputs/apk/standard/release/app-standard-release.apk dist/Tigris-v2.0.27-preview.1.apk
+          cp app/build/outputs/apk/guard/release/app-guard-release.apk dist/Tigris-guard-v2.0.27-preview.1.apk
+          for apk in dist/*.apk; do
+            "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" | head -1 | \
+              grep -F "name='com.leslie.tvhome'" | grep -F "versionCode='34'" | grep -F "versionName='2.0.27-pre1'"
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk" | \
+              grep -F '7d2b6be8a86ce8981e368dde4920869b90c8206137934a6d1fc89a2d1d1b6114'
+          done
+          OLD_STANDARD=$(python3 tools/download-release.py standard)
+          OLD_GUARD=$(python3 tools/download-release.py guard)
+          python3 tools/verify-apk-upgrade.py "$OLD_STANDARD" dist/Tigris-v2.0.27-preview.1.apk \
+            --tools "$ANDROID_HOME/build-tools/36.0.0" --version 2.0.27-pre1 --flavor standard
+          python3 tools/verify-apk-upgrade.py "$OLD_GUARD" dist/Tigris-guard-v2.0.27-preview.1.apk \
+            --tools "$ANDROID_HOME/build-tools/36.0.0" --version 2.0.27-pre1 --flavor guard
+          (cd dist && sha256sum Tigris-v2.0.27-preview.1.apk \
+            Tigris-guard-v2.0.27-preview.1.apk > SHA256SUMS-v2.0.27-preview.1.txt)
+      - name: Archive signed APKs and test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tvos-artwork-focus-preview-results
+          path: |
+            dist/
+            app/build/test-results/
+            app/build/reports/tests/
+            app/build/reports/lint-results-*
+          if-no-files-found: ignore
+          retention-days: 21
+      - name: Publish isolated PRE-RELEASE (never set latest)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=v2.0.27-preview.1
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Preview tag already exists; refusing to overwrite it" >&2
+            exit 1
+          fi
+          gh release create "$TAG" dist/*.apk dist/SHA256SUMS-"$TAG".txt \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Tigris v2.0.27 Preview 1 — App Artwork + Focus" \
+            --notes-file docs/releases/v2.0.27-preview.1.md --prerelease --latest=false
+      - name: Remove signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/tigris.keystore"
