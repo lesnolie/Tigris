@@ -14,7 +14,7 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeover fixes and video optimizations still need model-level verification. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.25 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.25)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.25/Tigris-v2.0.25.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.25/Tigris-guard-v2.0.25.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.25/SHA256SUMS-v2.0.25.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.26 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.26)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.26/Tigris-v2.0.26.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.26/Tigris-guard-v2.0.26.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.26/SHA256SUMS-v2.0.26.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -22,7 +22,7 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 ## Which APK should I install? Check the TV OS and firmware
 
-> **Latest official release: v2.0.25.** Upgrade in place with the matching Standard/Guard flavor. Upstream MiracastReceiver v1.2.14 renamed its package; this release teaches the update center to install the new identity, offers to uninstall the old package first, and keeps the screensaver off while casting. See [release notes](docs/releases/v2.0.25.md).
+> **Latest official release: v2.0.26.** Upgrade in place with the matching Standard/Guard flavor. Every home-screen app tile now uses one frost-grey surface while the original icons stay untouched; this build also includes v2.0.25's MiracastReceiver package rename fix. See [release notes](docs/releases/v2.0.26.md).
 
 | TV / platform | First choice | When to use another build | Important limits |
 |---|---|---|---|
@@ -35,6 +35,10 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 | Samsung **Tizen**, Hisense **native VIDAA** | **No supported Android APK** | Neither | Do not run Android ADB installer commands |
 
 **Verification:** After installing, open another app and press the physical Home key; check reboot, standby/wake and long-press Home cleanup separately. If Home does not return to Tigris, keep the stock launcher enabled and use the [brand install and recovery guide](docs/installation-compatibility.md). Preserve the existing APK signing identity and user data; **do not uninstall merely to bypass installation restrictions**.
+
+## v2.0.26: one frost-grey surface for every app tile
+
+Every home-screen app tile now uses the same `#E1E5EA` frost-grey card: a barely-there top-light/bottom-dark gradient, a 1 dp grey hairline and a soft outer shadow. Icons keep their original artwork, colour and proportions; nothing is redrawn, cropped or feathered. Settings uses its gear icon, the wallpaper screen keeps its blue-violet icon, and focus adds a white ring with a soft blue halo so the selected tile stays readable on dark, light, photo and video wallpapers. App order, launch, long-press and update behaviour are unchanged. This build also includes v2.0.25's MiracastReceiver package rename fix. See the [v2.0.26 release notes](docs/releases/v2.0.26.md).
 
 ## v2.0.25: casting update follows the renamed package
 

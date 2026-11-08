@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.25 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.25)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.25/Tigris-v2.0.25.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.25/Tigris-guard-v2.0.25.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.25/SHA256SUMS-v2.0.25.txt)）
+- 最新正式版：**[v2.0.26 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.26)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.26/Tigris-v2.0.26.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.26/Tigris-guard-v2.0.26.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.26/SHA256SUMS-v2.0.26.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **最新正式版为 v2.0.25。** 对应 Standard/Guard 类型覆盖升级。上游 MiracastReceiver v1.2.14 更换了包名，本版让更新中心正确识别并安装新包；电视上还留着旧版时会提示先卸载，投屏期间相框也不再遮挡。详见 [更新说明](docs/releases/v2.0.25.md)。
+> **最新正式版为 v2.0.26。** 对应 Standard/Guard 类型覆盖升级。所有桌面 App 磁贴统一为雾面浅灰底板，图标本身保持原样；本版同时包含 v2.0.25 的 MiracastReceiver 新包名适配。详见 [更新说明](docs/releases/v2.0.26.md)。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
@@ -36,6 +36,10 @@
 | Samsung **Tizen**、海信**原生 VIDAA** | **无兼容的 Android APK 安装方式** | 不适用 | 请勿执行 Android ADB 安装命令 |
 
 **如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
+
+## v2.0.26：应用图标统一雾面浅灰底板
+
+桌面所有 App 磁贴改用同一块 `#E1E5EA` 雾面浅灰底板：顶部略亮、底部略暗的轻微渐变，1dp 淡灰细边，柔和外阴影。App 图标保持原资源、原色、原比例，不重绘、不裁切、不羽化；设置页使用齿轮图标，壁纸页保留原蓝紫图标。焦点状态在同一灰底上加白色细环和浅蓝光晕，深色、浅色、照片和动态壁纸下都能看清边界。应用排列、启动、长按与更新逻辑不变。本版同时包含 v2.0.25 的 MiracastReceiver 新包名适配。详见 [v2.0.26 更新说明](docs/releases/v2.0.26.md)。
 
 ## v2.0.25：投屏更新适配新包名
 
