@@ -350,6 +350,7 @@ class Prefs(ctx: Context) {
 
         val DEFAULT_KEEP = setOf(
             "com.dangbei.screencast",
+            "top.jast.miracastreceiver",
             "com.weekd.miracastreceiver",
             "com.xiaodianshi.tv.yst",
             "dev.vodik7.atvtoolsserver",

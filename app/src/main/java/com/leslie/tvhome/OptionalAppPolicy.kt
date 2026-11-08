@@ -8,23 +8,27 @@ package com.leslie.tvhome
  * Any upstream certificate rotation requires an explicit reviewed Tigris change.
  */
 internal object OptionalAppPolicy {
-    const val MIRACAST_PKG = "com.weekd.miracastreceiver"
+    // Upstream v1.2.14 renamed the app from MIRACAST_LEGACY_PKG to MIRACAST_PKG. Android treats
+    // the rename as a new app, so the old package can never be upgraded in place; it has to be
+    // uninstalled first (its in-app settings are lost, which upstream documents).
+    const val MIRACAST_PKG = "top.jast.miracastreceiver"
+    const val MIRACAST_LEGACY_PKG = "com.weekd.miracastreceiver"
     const val HGTV_PKG = "com.hgtv.star"
 
     // Both fingerprints originate in their respective upstream release records.
     const val MIRACAST_CERT = "ea7f4568203d294bd37acac966d6d707f79147549d24c2244f58a6fbc27a6291"
     const val HGTV_CERT = "b237b1d3714a5a010b453e0a51ed32bceac40d8d4207c61bfdf8d6c97a0caeaa"
 
-    fun isOptional(pkg: String) = pkg == MIRACAST_PKG || pkg == HGTV_PKG
+    fun isOptional(pkg: String) = pkg == MIRACAST_PKG || pkg == MIRACAST_LEGACY_PKG || pkg == HGTV_PKG
 
     fun trustedCertificate(pkg: String) = when (pkg) {
-        MIRACAST_PKG -> MIRACAST_CERT
+        MIRACAST_PKG, MIRACAST_LEGACY_PKG -> MIRACAST_CERT
         HGTV_PKG -> HGTV_CERT
         else -> null
     }
 
     fun selectApk(pkg: String, tag: String, names: Collection<String>): String? = when (pkg) {
-        MIRACAST_PKG -> names.singleOrNull {
+        MIRACAST_PKG, MIRACAST_LEGACY_PKG -> names.singleOrNull {
             it.matches(Regex("^miracast-receiver-v[0-9]+(?:\\.[0-9]+)*-universal\\.apk$")) &&
                 it == "miracast-receiver-${tag}-universal.apk"
         }

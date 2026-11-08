@@ -27,9 +27,23 @@ class OptionalAppPolicyTest {
             listOf("miracast-receiver-v1.2.8-arm64-v8a.apk")))
     }
 
+    @Test fun renamedPackageKeepsUpstreamIdentityAndAssetNaming() {
+        // v1.2.14 renamed com.weekd.miracastreceiver to top.jast.miracastreceiver, but the
+        // release assets and the signing key stayed the same.
+        assertEquals("top.jast.miracastreceiver", OptionalAppPolicy.MIRACAST_PKG)
+        assertEquals("com.weekd.miracastreceiver", OptionalAppPolicy.MIRACAST_LEGACY_PKG)
+        assertEquals("miracast-receiver-v1.2.14-universal.apk",
+            OptionalAppPolicy.selectApk(OptionalAppPolicy.MIRACAST_PKG, "v1.2.14",
+                listOf("miracast-receiver-v1.2.14-universal.apk",
+                    "miracast-receiver-v1.2.14-armeabi-v7a.apk")))
+        assertEquals(OptionalAppPolicy.trustedCertificate(OptionalAppPolicy.MIRACAST_PKG),
+            OptionalAppPolicy.trustedCertificate(OptionalAppPolicy.MIRACAST_LEGACY_PKG))
+    }
+
     @Test fun optionalDownloadsNeedReleaseDigestAndTrustedSigner() {
         val digest = "sha256:" + "a".repeat(64)
-        for (pkg in listOf(OptionalAppPolicy.MIRACAST_PKG, OptionalAppPolicy.HGTV_PKG)) {
+        for (pkg in listOf(OptionalAppPolicy.MIRACAST_PKG, OptionalAppPolicy.MIRACAST_LEGACY_PKG,
+            OptionalAppPolicy.HGTV_PKG)) {
             assertTrue(OptionalAppPolicy.validDigest(pkg, digest))
             assertFalse(OptionalAppPolicy.validDigest(pkg, ""))
             assertFalse(OptionalAppPolicy.validDigest(pkg, "sha256:invalid"))

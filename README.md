@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.24 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.24)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.24/Tigris-v2.0.24.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.24/Tigris-guard-v2.0.24.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.24/SHA256SUMS-v2.0.24.txt)）
+- 最新正式版：**[v2.0.26 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.26)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.26/Tigris-v2.0.26.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.26/Tigris-guard-v2.0.26.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.26/SHA256SUMS-v2.0.26.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **最新正式版为 v2.0.24。** 对应 Standard/Guard 类型覆盖升级。极致液态玻璃切换无延迟：进入设置、更换背景、Top Shelf 切换时玻璃与背景同帧变化，并降低滚动时的绘制开销；包含 v2.0.23 的统一相框计时。详见 [更新说明](docs/releases/v2.0.24.md)。
+> **最新正式版为 v2.0.26。** 对应 Standard/Guard 类型覆盖升级。所有桌面 App 磁贴统一为雾面浅灰底板，图标本身保持原样；本版同时包含 v2.0.25 的 MiracastReceiver 新包名适配。详见 [更新说明](docs/releases/v2.0.26.md)。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
@@ -36,6 +36,16 @@
 | Samsung **Tizen**、海信**原生 VIDAA** | **无兼容的 Android APK 安装方式** | 不适用 | 请勿执行 Android ADB 安装命令 |
 
 **如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
+
+## v2.0.26：应用图标统一雾面浅灰底板
+
+桌面所有 App 磁贴改用同一块 `#E1E5EA` 雾面浅灰底板：顶部略亮、底部略暗的轻微渐变，1dp 淡灰细边，柔和外阴影。App 图标保持原资源、原色、原比例，不重绘、不裁切、不羽化；设置页使用齿轮图标，壁纸页保留原蓝紫图标。焦点状态在同一灰底上加白色细环和浅蓝光晕，深色、浅色、照片和动态壁纸下都能看清边界。应用排列、启动、长按与更新逻辑不变。本版同时包含 v2.0.25 的 MiracastReceiver 新包名适配。详见 [v2.0.26 更新说明](docs/releases/v2.0.26.md)。
+
+## v2.0.25：投屏更新适配新包名
+
+上游 MiracastReceiver v1.2.14 为接入 AirPlay 把包名从 `com.weekd.miracastreceiver` 改成 `top.jast.miracastreceiver`，Android 会把它当成另一个应用。此前 Tigris 仍按旧包名校验，官方安装包会被判为「安装包身份不符」而无法安装。本版按新包名检查、安装和打开，仍只接受上游同一签名与 `miracast-receiver-vX.Y.Z-universal.apk` 文件。
+
+电视上若还装着 1.2.13 或更早的旧包名，投屏卡片会改为「卸载旧版」，在系统卸载页确认后再安装新版；上游说明包名变更不会迁移旧应用数据。新包名同时加入投屏保活和相框避让名单，投屏时不会被相框盖住。详见 [v2.0.25 更新说明](docs/releases/v2.0.25.md)。
 
 ## v2.0.24：玻璃与背景同步切换
 

@@ -35,6 +35,8 @@ Tigris 本体包含**零份** HGTV 或 MiracastReceiver APK。默认 Dock 和桌
 |---|---|---|---|---|
 | Tigris 桌面 | [lesnolie/Tigris](https://github.com/lesnolie/Tigris) | 匹配当前 Standard / Guard | 桌面本体 | 可检查并更新 |
 | 投屏 MiracastReceiver | [weekdayjast/MiracastReceiver](https://github.com/weekdayjast/MiracastReceiver) | 官方 GitHub Latest 的 `miracast-receiver-vX.Y.Z-universal.apk` | **只有点安装后**才下载与安装 | 可打开、更新、移动至 Dock |
+
+MiracastReceiver 从 v1.2.14 起把包名从 `com.weekd.miracastreceiver` 改为 `top.jast.miracastreceiver`（上游为接入 AirPlay 改名），Android 会视为新应用。Tigris 按新包名检查和安装；电视上仍有旧包名时，投屏卡片显示「卸载旧版」，确认卸载后再安装新版。上游明确说明旧应用数据不会迁移，因此不要把它当作可覆盖升级。
 | HGTV 红果短剧（第三方） | [pan8664716/HGTV](https://github.com/pan8664716/HGTV) | 官方 GitHub Latest 的 `HGTV_X.Y.Z.apk` | **只有点安装后**才下载与安装 | 可打开、更新、移动至 Dock |
 
 桌面常规应用扫描自动识别已安装的第三方 App；用户可以自己移动到 Dock / 文件夹。不在首页塞默认预装推广图标。
@@ -44,7 +46,7 @@ Tigris 本体包含**零份** HGTV 或 MiracastReceiver APK。默认 Dock 和桌
 1. 后台每六小时检查 GitHub Latest **元数据**，但**不下载可选 APK**；自动更新仅处理已安装应用。
 2. 用户选择“安装 / 更新”之后，下载 GitHub 正式版 APK。严格匹配资产文件名、发布仓库和 HTTPS 下载域名。
 3. 第三方 APK 必须有 SHA-256 发布元数据，下载后再次计算 SHA-256，校验大小、包名、Android 最低版本和签名。
-4. 首次安装 MiracastReceiver 要求已记录的官方签名 SHA-256 `ea7f4568203d294bd37acac966d6d707f79147549d24c2244f58a6fbc27a6291`；首次安装 HGTV 要求上游历史发布记录证书 `b237b1d3714a5a010b453e0a51ed32bceac40d8d4207c61bfdf8d6c97a0caeaa`，包名预期 `com.hgtv.star`。如果上游新版本不符，则**阻止安装**，等待重新审查；不能默默忽略。
+4. 首次安装 MiracastReceiver（`top.jast.miracastreceiver`，旧包名 `com.weekd.miracastreceiver` 视为待卸载的旧版）要求已记录的官方签名 SHA-256 `ea7f4568203d294bd37acac966d6d707f79147549d24c2244f58a6fbc27a6291`；首次安装 HGTV 要求上游历史发布记录证书 `b237b1d3714a5a010b453e0a51ed32bceac40d8d4207c61bfdf8d6c97a0caeaa`，包名预期 `com.hgtv.star`。如果上游新版本不符，则**阻止安装**，等待重新审查；不能默默忽略。
 5. 升级仅允许相同签名且 versionCode 增加。不卸载已有包，不清理 HGTV 收藏/历史/登录状态，也不请求 ROOT。
 6. Android PackageInstaller 最终处理安装权限和电视端确认。固件若无法解析安装确认页（例如部分 Sony BRAVIA Android 9 的安装器没有 Activity），则不提交会话；SHA-256 校验通过后把 APK 保存到应用外部目录 `Download/Tigris/`，并给出 `adb install -r` 与该路径。有确认页的设备仍走原来的会话安装。
 7. 投屏和 HGTV 都是独立应用，不获得 Tigris 特权；Tigris 不整合 HGTV 非官方内容接口，也不分发其 APK。

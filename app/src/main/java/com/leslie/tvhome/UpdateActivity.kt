@@ -20,7 +20,10 @@ import java.util.concurrent.Executors
 
 /** tvOS settings composition: quiet content, with refracting glass on interactive controls. */
 class UpdateActivity : Activity() {
-    companion object { @Volatile var visible = false }
+    companion object {
+        @Volatile var visible = false
+        private const val LEGACY_UNINSTALL_REQUESTED = "legacy_uninstall_requested"
+    }
 
     private data class AppCard(
         val product: Updates.Product,
@@ -55,6 +58,12 @@ class UpdateActivity : Activity() {
         super.onResume()
         visible = true
         Updates.executor.execute { Updates.reconcile(applicationContext) }
+        // Returning from the system uninstaller: refresh so the card turns into Install.
+        if (Updates.prefs(this).getBoolean(LEGACY_UNINSTALL_REQUESTED, false) &&
+            Updates.legacyCastVersion(this) == null) {
+            Updates.prefs(this).edit().remove(LEGACY_UNINSTALL_REQUESTED).apply()
+            Updates.executor.execute { Updates.check(applicationContext) }
+        }
         Updates.prefs(this).registerOnSharedPreferenceChangeListener(listener)
         if (::autoButton.isInitialized) render()
         if (::permissionButton.isInitialized) {
@@ -121,6 +130,9 @@ class UpdateActivity : Activity() {
             setPadding(dp(10), dp(10), dp(10), dp(10))
         }
         val installedIcon = runCatching { packageManager.getApplicationIcon(p.pkg) }.getOrNull()
+            ?: if (p.pkg == OptionalAppPolicy.MIRACAST_PKG && Updates.legacyCastVersion(this) != null)
+                runCatching { packageManager.getApplicationIcon(OptionalAppPolicy.MIRACAST_LEGACY_PKG) }.getOrNull()
+            else null
         if (installedIcon != null) return ImageView(this).apply {
             setImageDrawable(installedIcon)
             scaleType = ImageView.ScaleType.FIT_CENTER
@@ -229,6 +241,7 @@ class UpdateActivity : Activity() {
         AppUpdateCardState.Action.WAITING -> R.string.optional_action_waiting
         AppUpdateCardState.Action.CONFIRM -> R.string.optional_action_confirm
         AppUpdateCardState.Action.RETRY -> R.string.optional_action_retry
+        AppUpdateCardState.Action.UNINSTALL -> R.string.optional_action_uninstall
     })
 
     private fun cardAction(p: Updates.Product): AppUpdateCardState.Action {
@@ -241,7 +254,8 @@ class UpdateActivity : Activity() {
                 (Updates.installed(this, p) == null || UpdatePolicy.newer(
                     sp.getString(p.pkg + ".version", "").orEmpty(), Updates.installed(this, p).orEmpty())),
             phase = sp.getString(p.pkg + ".phase", "idle") ?: "idle",
-            hasConfirmation = sp.getString(p.pkg + ".phase", "") == "pending" && Updates.canResume(this, p)
+            hasConfirmation = sp.getString(p.pkg + ".phase", "") == "pending" && Updates.canResume(this, p),
+            legacyInstalled = p.pkg == OptionalAppPolicy.MIRACAST_PKG && Updates.legacyCastVersion(this) != null
         ))
     }
 
@@ -256,6 +270,7 @@ class UpdateActivity : Activity() {
             val release = sp.getString(pkg + ".version", "") ?: ""
             val current = version != null && saved in listOf(
                 I18n.text(R.string.i18n_updates_026), I18n.text(R.string.i18n_updates_005, version, release))
+            val legacy = if (pkg == OptionalAppPolicy.MIRACAST_PKG) Updates.legacyCastVersion(this) else null
             val status = when {
                 phase == "download" && percent >= 0 -> I18n.text(R.string.update_download_percent, percent)
                 current && !sp.getBoolean(pkg + ".available", false) ->
@@ -266,6 +281,8 @@ class UpdateActivity : Activity() {
             val shown = when {
                 version != null && !status.isNullOrBlank() -> I18n.text(R.string.update_version_status, version, status)
                 version != null -> I18n.text(R.string.i18n_updateactivity_001, version)
+                // Explain the rename even before the first network check updates .status.
+                legacy != null -> I18n.text(R.string.i18n_updates_029, legacy)
                 !status.isNullOrBlank() -> status
                 else -> I18n.text(R.string.optional_status_not_installed)
             }
@@ -304,6 +321,11 @@ class UpdateActivity : Activity() {
                     ?: packageManager.getLaunchIntentForPackage(p.pkg)
                 if (launch != null) startActivity(launch)
                 else Toast.makeText(this, I18n.text(R.string.optional_app_not_installed), Toast.LENGTH_LONG).show()
+            }
+            AppUpdateCardState.Action.UNINSTALL -> {
+                Updates.prefs(this).edit().putBoolean(LEGACY_UNINSTALL_REQUESTED, true).apply()
+                startActivity(Intent(Intent.ACTION_DELETE,
+                    Uri.parse("package:" + OptionalAppPolicy.MIRACAST_LEGACY_PKG)))
             }
             AppUpdateCardState.Action.CONFIRM -> work {
                 if (!Updates.confirm(this, p)) {

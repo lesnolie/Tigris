@@ -118,6 +118,16 @@ object Updates {
     fun prefs(c: Context) = c.getSharedPreferences("software_updates", Context.MODE_PRIVATE)
     fun installed(c: Context, p: Product) = runCatching { c.packageManager.getPackageInfo(p.pkg, 0).versionName ?: "0.0" }.getOrNull()
 
+    /**
+     * MiracastReceiver 1.2.13 and older shipped as [OptionalAppPolicy.MIRACAST_LEGACY_PKG].
+     * v1.2.14 renamed the package, so Android cannot upgrade the old install in place; the
+     * update center offers an explicit uninstall instead of a download that can never pass the
+     * package-identity check.
+     */
+    fun legacyCastVersion(c: Context): String? = runCatching {
+        c.packageManager.getPackageInfo(OptionalAppPolicy.MIRACAST_LEGACY_PKG, 0).versionName
+    }.getOrNull()
+
     /** Preserve a complete, previously checked GitHub release across transient network failures. */
     internal fun hasCachedOffer(c: Context, p: Product): Boolean {
         val sp = prefs(c)
@@ -161,7 +171,7 @@ object Updates {
             } ?: error(I18n.text(R.string.i18n_updates_003))
             val url = asset.getString("browser_download_url")
             check(url.startsWith("https://github.com/${p.repo}/releases/download/"))
-            val status = when { current == null -> I18n.text(R.string.i18n_updates_004, version); update -> "$current → $version"; else -> I18n.text(R.string.i18n_updates_005, current, version) }
+            val status = when { p.pkg == OptionalAppPolicy.MIRACAST_PKG && legacyCastVersion(c) != null && current == null -> I18n.text(R.string.i18n_updates_029, legacyCastVersion(c)); p.pkg == OptionalAppPolicy.MIRACAST_PKG && legacyCastVersion(c) != null -> I18n.text(R.string.i18n_updates_030, legacyCastVersion(c)); current == null -> I18n.text(R.string.i18n_updates_004, version); update -> "$current → $version"; else -> I18n.text(R.string.i18n_updates_005, current, version) }
             // An external upgrade can leave the old self-install session behind.
             // Installed current-or-newer software no longer needs that pending session.
             if (!update && p.pkg !in transferring) {
