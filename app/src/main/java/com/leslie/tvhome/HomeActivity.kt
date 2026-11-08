@@ -1310,6 +1310,21 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             showSheet(s.button(I18n.text(R.string.i18n_homeactivity_012)) {}, restoreFocusTo = pos)
             return
         }
+        s.button(getString(R.string.tile_source_choose)) {
+            val modes = arrayOf(Prefs.TILE_AUTO, Prefs.TILE_BANNER, Prefs.TILE_ICON, Prefs.TILE_CLASSIC)
+            val titles = arrayOf(R.string.tile_source_auto, R.string.tile_source_banner,
+                R.string.tile_source_icon, R.string.tile_source_classic).map { getString(it) }.toTypedArray()
+            android.app.AlertDialog.Builder(this)
+                .setTitle(getString(R.string.tile_source_choose) + " · " + app.label)
+                .setSingleChoiceItems(titles, modes.indexOf(prefs.appTileSource(app.pkg)).coerceAtLeast(0)) { dialog, index ->
+                    prefs.setAppTileSource(app.pkg, modes[index])
+                    repo.invalidate(app.pkg)
+                    reload(changed = app.pkg, forceFocus = true)
+                    dialog.dismiss()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
         s.button(I18n.text(R.string.i18n_homeactivity_013)) {
                 startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${app.pkg}"))
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
