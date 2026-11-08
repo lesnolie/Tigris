@@ -229,7 +229,7 @@ class AppRepo(private val ctx: Context) {
                         bg?.recycle()
                         layer = Bitmap.createBitmap(TILE_W, heightPx, Bitmap.Config.ARGB_8888)
                         drawCenteredIcon(Canvas(layer!!), candidate!!, 0.90f)
-                        candidate.recycle()
+                        candidate?.recycle()
                     }
                     BrandTilePolicy.Source.ICON -> {
                         val icon = drawable?.let { raster(it, 256) }
