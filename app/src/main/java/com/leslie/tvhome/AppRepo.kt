@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -14,10 +13,8 @@ import android.graphics.LinearGradient
 import android.graphics.Shader
 import android.graphics.Rect
 import android.graphics.RectF
-import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.util.LruCache
-import androidx.palette.graphics.Palette
 import com.leslie.tvhome.tv.Input
 import java.text.Collator
 import java.util.Locale
@@ -178,18 +175,19 @@ class AppRepo(private val ctx: Context) {
             tiles.put(key, bmp); return bmp
         }
         app.input?.let { drawInputTile(c, it); tiles.put(key, bmp); return bmp }
-        val own = if (app.component.className == SettingsActivity::class.java.name)
-            SettingsActivity.customIcon(ctx)?.let { SettingsActivity.decodeIcon(it, TILE_W) }?.let { BitmapDrawable(ctx.resources, it) }
+        val ownIcon = if (app.component.className == SettingsActivity::class.java.name)
+            SettingsActivity.customIcon(ctx)?.let { SettingsActivity.decodeIcon(it, TILE_W) }
         else null
-        val banner = own ?: try {
-            pm.getActivityInfo(app.component, 0).loadBanner(pm)
-                ?: pm.getApplicationInfo(app.pkg, 0).loadBanner(pm)
-        } catch (e: Exception) { null }
-        if (banner != null && (own != null ||
-                AppTileArtwork.usableBanner(banner.intrinsicWidth, banner.intrinsicHeight))) {
-            drawBannerTile(c, banner)
+        if (app.component.className == WallpaperActivity::class.java.name && ownIcon == null) {
+            drawWallpaperIconTile(c)
+        } else if (ownIcon != null) {
+            drawIconBitmapTile(c, ownIcon)
         } else {
-            val icon = try { pm.getActivityIcon(app.component) } catch (e: Exception) { pm.defaultActivityIcon }
+            val icon = if (app.component.className == SettingsActivity::class.java.name) {
+                // Settings has a 16:9 silver banner but no launcher icon of its own; the gear is
+                // the icon it uses on its own page, so the grid uses the same one.
+                ctx.getDrawable(R.drawable.ic_gear)!!.mutate().apply { setTint(TileSkin.SETTINGS_GEAR) }
+            } else try { pm.getActivityIcon(app.component) } catch (e: Exception) { pm.defaultActivityIcon }
             drawIconTile(c, icon)
         }
         tiles.put(key, bmp)
@@ -199,63 +197,65 @@ class AppRepo(private val ctx: Context) {
     /** Drops the cached tile of [pkg] (it was updated or removed), or of every app. */
     fun invalidate(pkg: String? = null) { if (pkg == null) tiles.evictAll() else tiles.remove(tileKey(pkg)) }
 
-    /**
-     * Keep actual TV artwork intact. Well-proportioned banners can fill the 16:9 card;
-     * odd or square banners are fitted into a quiet background, not center-cropped.
-     * Never distort the original image to the tile's aspect ratio.
-     */
-    private fun drawBannerTile(c: Canvas, banner: Drawable) {
-        val width = banner.intrinsicWidth.takeIf { it > 0 } ?: TILE_W
-        val height = banner.intrinsicHeight.takeIf { it > 0 } ?: TILE_H
-        val placement = AppTileArtwork.banner(width, height, TILE_W, TILE_H)
-        if (placement.mode == AppTileArtwork.Mode.CONTAIN) {
-            drawArtworkBackground(c, Color.rgb(57, 66, 79))
-        } else {
-            c.drawColor(Color.rgb(16, 19, 25))
-        }
-        banner.setBounds(placement.left, placement.top, placement.right, placement.bottom)
-        banner.draw(c)
+    /** The wallpaper screen has no square launcher icon; draw the same blue-violet tile it uses. */
+    private fun drawWallpaperIconTile(c: Canvas) {
+        val size = 256
+        val icon = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val ic = Canvas(icon)
+        val radius = size * 0.225f
+        ic.drawRoundRect(0f, 0f, size.toFloat(), size.toFloat(), radius, radius,
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                shader = LinearGradient(0f, 0f, size.toFloat(), size.toFloat(),
+                    0xFF2F6FE0.toInt(), 0xFF7A3FD0.toInt(), Shader.TileMode.CLAMP)
+            })
+        val glyph = ctx.getDrawable(R.drawable.ic_photo)!!.mutate()
+        glyph.setTint(Color.WHITE)
+        val g = (size * 0.58f).roundToInt()
+        glyph.setBounds((size - g) / 2, (size - g) / 2, (size + g) / 2, (size + g) / 2)
+        glyph.draw(ic)
+        drawIconBitmapTile(c, icon)
+        icon.recycle()
     }
 
     /**
-     * A stable dark material with restrained accent tint; do not enlarge and blur low-res
-     * square icons behind themselves. This works consistently for native and sideloaded apps.
+     * Every app tile shares one frost-grey surface; the icon itself is untouched. Rounded corners
+     * and the hairline border live in TileCell, over this bitmap, so the edge stays crisp at any
+     * resolution and against any wallpaper.
      */
-    private fun drawArtworkBackground(c: Canvas, accent: Int) {
-        fun mix(base: Int, tint: Int, portion: Float): Int = Color.rgb(
-            (Color.red(base) * (1f - portion) + Color.red(tint) * portion).roundToInt(),
-            (Color.green(base) * (1f - portion) + Color.green(tint) * portion).roundToInt(),
-            (Color.blue(base) * (1f - portion) + Color.blue(tint) * portion).roundToInt(),
-        )
-        val top = mix(Color.rgb(39, 44, 55), accent, 0.26f)
-        val bottom = mix(Color.rgb(14, 17, 24), accent, 0.15f)
+    private fun drawTileSurface(c: Canvas) {
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            shader = LinearGradient(0f, 0f, TILE_W.toFloat(), TILE_H.toFloat(),
-                top, bottom, Shader.TileMode.CLAMP)
+            shader = LinearGradient(0f, 0f, 0f, TILE_H.toFloat(),
+                TileSkin.TOP, TileSkin.BOTTOM, Shader.TileMode.CLAMP)
         }
         c.drawRect(0f, 0f, TILE_W.toFloat(), TILE_H.toFloat(), paint)
-        paint.shader = null
     }
 
-    /** Render a real icon at high resolution, then scale it down once over a calm backdrop. */
+    /** Draw the icon at its original colours and proportions, centred with a calm margin. */
     private fun drawIconTile(c: Canvas, icon: Drawable) {
         val sourceSize = 256
+        val iw = icon.intrinsicWidth.takeIf { it > 0 } ?: sourceSize
+        val ih = icon.intrinsicHeight.takeIf { it > 0 } ?: sourceSize
+        val fit = minOf(sourceSize.toFloat() / iw, sourceSize.toFloat() / ih)
+        val w = (iw * fit).roundToInt().coerceAtLeast(1)
+        val h = (ih * fit).roundToInt().coerceAtLeast(1)
         val source = Bitmap.createBitmap(sourceSize, sourceSize, Bitmap.Config.ARGB_8888)
-        icon.setBounds(0, 0, sourceSize, sourceSize)
+        val left = (sourceSize - w) / 2
+        val top = (sourceSize - h) / 2
+        icon.setBounds(left, top, left + w, top + h)
         icon.draw(Canvas(source))
-        val accent = runCatching {
-            Palette.from(source).maximumColorCount(8).generate().let {
-                it.vibrantSwatch ?: it.mutedSwatch ?: it.dominantSwatch
-            }?.rgb
-        }.getOrNull() ?: Color.rgb(79, 95, 124)
-        drawArtworkBackground(c, accent)
-        val side = AppTileArtwork.iconSize(TILE_H)
-        val left = (TILE_W - side) / 2f
-        val top = (TILE_H - side) / 2f
-        c.drawBitmap(source, Rect(0, 0, sourceSize, sourceSize),
-            RectF(left, top, left + side, top + side),
-            Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
+        drawIconBitmapTile(c, source)
         source.recycle()
+    }
+
+    private fun drawIconBitmapTile(c: Canvas, source: Bitmap) {
+        drawTileSurface(c)
+        val side = AppTileArtwork.iconSize(TILE_H)
+        val fit = minOf(side.toFloat() / source.width, side.toFloat() / source.height)
+        val w = (source.width * fit).coerceAtLeast(1f)
+        val h = (source.height * fit).coerceAtLeast(1f)
+        c.drawBitmap(source, Rect(0, 0, source.width, source.height),
+            RectF((TILE_W - w) / 2f, (TILE_H - h) / 2f, (TILE_W + w) / 2f, (TILE_H + h) / 2f),
+            Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
     }
 
     /** An input tile: a dark glass card with the input glyph and its name, like tvOS's own inputs. */
