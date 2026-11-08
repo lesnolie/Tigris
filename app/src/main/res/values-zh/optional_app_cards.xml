@@ -13,6 +13,7 @@
     <string name="optional_action_verifying">安装中…</string>
     <string name="optional_action_waiting">等待安装…</string>
     <string name="optional_action_confirm">继续安装</string>
+    <string name="optional_action_uninstall">卸载旧版</string>
     <string name="optional_action_retry">重试</string>
     <string name="optional_auto_update">自动更新已安装应用</string>
 </resources>

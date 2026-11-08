@@ -13,6 +13,7 @@
     <string name="optional_action_verifying">Installing…</string>
     <string name="optional_action_waiting">Installing…</string>
     <string name="optional_action_confirm">Continue</string>
+    <string name="optional_action_uninstall">Uninstall old</string>
     <string name="optional_action_retry">Retry</string>
     <string name="optional_auto_update">Auto-update installed apps</string>
 </resources>

@@ -43,6 +43,23 @@ class AppUpdateCardStateTest {
             AppUpdateCardState.action(state(false, true, phase="failed")))
     }
 
+    @Test fun legacyPackageOffersUninstallInsteadOfAnImpossibleInstall() {
+        val legacy = AppUpdateCardState.Snapshot(
+            installed = false, optional = true, checked = true, updateAvailable = true,
+            legacyInstalled = true)
+        assertEquals(AppUpdateCardState.Action.UNINSTALL, AppUpdateCardState.action(legacy))
+        assertTrue(AppUpdateCardState.actionable(AppUpdateCardState.Action.UNINSTALL))
+        // A stale failed phase from the refused download still routes to the uninstall.
+        assertEquals(AppUpdateCardState.Action.UNINSTALL,
+            AppUpdateCardState.action(legacy.copy(phase = "failed")))
+        // Once the rename target is installed the card opens it, not the uninstaller.
+        assertEquals(AppUpdateCardState.Action.OPEN,
+            AppUpdateCardState.action(legacy.copy(installed = true, updateAvailable = false)))
+        // Without the legacy app the normal Get flow is unchanged.
+        assertEquals(AppUpdateCardState.Action.GET,
+            AppUpdateCardState.action(legacy.copy(legacyInstalled = false)))
+    }
+
     @Test fun downloadAndVerifyNeverShowAnUnrelatedAction() {
         for (phase in listOf("download", "verify", "stage")) {
             val action=AppUpdateCardState.action(state(true, true, true, true, phase))
