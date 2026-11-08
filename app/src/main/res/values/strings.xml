@@ -19,4 +19,15 @@
     <string name="install_home_next_generic">This firmware does not currently report Tigris as native HOME or a connected Guard. Use the official installation guide and a read-only device diagnosis first.</string>
     <string name="install_home_guide_open">Installation guide</string>
     <string name="app_name_guard">Tigris · Guard Mode</string>
+    <string name="tile_style_title">App tile appearance</string>
+    <string name="tile_style_detail">Automatically composed brand artwork or original frost-grey cards; applies when returning Home</string>
+    <string name="tile_style_brand">Automatic brand artwork</string>
+    <string name="tile_style_classic">Classic frost-grey</string>
+    <string name="tile_aspect_title">App tile aspect ratio</string>
+    <string name="tile_aspect_detail">Compare Apple tvOS 5:3 and Android TV 16:9 with actual layouts</string>
+    <string name="tile_source_choose">App artwork source</string>
+    <string name="tile_source_auto">Automatic</string>
+    <string name="tile_source_banner">Prefer TV banner</string>
+    <string name="tile_source_icon">Native icon only</string>
+    <string name="tile_source_classic">Classic frost-grey</string>
 </resources>

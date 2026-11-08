@@ -414,6 +414,16 @@ class SettingsActivity : Activity() {
         section(I18n.text(R.string.i18n_settingsactivity_008))
         row(I18n.text(R.string.dock_columns_title), I18n.text(R.string.dock_columns_description),
             { prefs.dockColumns.toString() }) { prefs.dockColumns = DockLayout.next(prefs.dockColumns) }
+        row(getString(R.string.tile_style_title), getString(R.string.tile_style_detail), {
+            getString(if (prefs.appTileStyle == Prefs.TILE_BRAND) R.string.tile_style_brand else R.string.tile_style_classic)
+        }) {
+            prefs.appTileStyle = if (prefs.appTileStyle == Prefs.TILE_BRAND) Prefs.TILE_CLASSIC else Prefs.TILE_BRAND
+        }
+        row(getString(R.string.tile_aspect_title), getString(R.string.tile_aspect_detail), {
+            if (prefs.appTileAspect == Prefs.TILE_TVOS) "5:3 · tvOS" else "16:9 · Android TV"
+        }) {
+            prefs.appTileAspect = if (prefs.appTileAspect == Prefs.TILE_TVOS) Prefs.TILE_WIDE else Prefs.TILE_TVOS
+        }
         row(I18n.text(R.string.i18n_settingsactivity_009), I18n.text(R.string.i18n_settingsactivity_010),
             { if (prefs.clock24) I18n.text(R.string.i18n_settingsactivity_011) else I18n.text(R.string.i18n_settingsactivity_012) }) { prefs.clock24 = !prefs.clock24 }
         row(I18n.text(R.string.i18n_settingsactivity_013), I18n.text(R.string.i18n_settingsactivity_014), {

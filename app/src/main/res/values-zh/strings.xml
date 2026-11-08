@@ -19,4 +19,15 @@
     <string name="install_home_next_generic">该固件尚未确认 Tigris 是默认 HOME 或守护已绑定。请先使用官网安装指南和只读设备诊断，不要直接禁用原厂桌面。</string>
     <string name="install_home_guide_open">查看安装指南</string>
     <string name="app_name_guard">Tigris · 兼容守护版</string>
+    <string name="tile_style_title">App 图标外观</string>
+    <string name="tile_style_detail">品牌横幅自动适配或使用旧版浅灰底板；变更后返回桌面即生效</string>
+    <string name="tile_style_brand">自动品牌卡片</string>
+    <string name="tile_style_classic">经典浅灰卡片</string>
+    <string name="tile_aspect_title">图标卡片比例</string>
+    <string name="tile_aspect_detail">预览 Apple tvOS 5:3 或 Android TV 16:9 的真实布局</string>
+    <string name="tile_source_choose">图标来源</string>
+    <string name="tile_source_auto">自动选择</string>
+    <string name="tile_source_banner">优先电视横幅</string>
+    <string name="tile_source_icon">仅使用原生图标</string>
+    <string name="tile_source_classic">旧版浅灰样式</string>
 </resources>

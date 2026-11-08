@@ -281,6 +281,28 @@ class Prefs(ctx: Context) {
     fun solidGlass(ctx: Context) = reduceGlassTransparency ||
         android.provider.Settings.Secure.getInt(ctx.contentResolver, "high_text_contrast_enabled", 0) == 1
 
+    /**
+     * Preview-only art direction. BRAND selects native TV banners, validated adaptive
+     * layers, then normal native icons; CLASSIC is the unchanged v2.0.26 frost tile.
+     * A per-package override may choose the simpler ICON or BANNER path.
+     */
+    var appTileStyle: String
+        get() = sp.getString("app_tile_style", TILE_BRAND) ?: TILE_BRAND
+        set(v) = sp.edit().putString("app_tile_style", if (v == TILE_CLASSIC) TILE_CLASSIC else TILE_BRAND).apply()
+
+    /** Keep all layout geometry in sync when experimenting with tvOS 5:3 vs TV 16:9. */
+    var appTileAspect: String
+        get() = sp.getString("app_tile_aspect", TILE_WIDE) ?: TILE_WIDE
+        set(v) = sp.edit().putString("app_tile_aspect", if (v == TILE_TVOS) TILE_TVOS else TILE_WIDE).apply()
+
+    /** Per-app artwork source override; stored by package, no hand-maintained allowlist. */
+    fun appTileSource(pkg: String): String = sp.getString("tile_source_" + pkg, TILE_AUTO) ?: TILE_AUTO
+
+    fun setAppTileSource(pkg: String, mode: String) {
+        val allowed = setOf(TILE_AUTO, TILE_BANNER, TILE_ICON, TILE_CLASSIC)
+        sp.edit().putString("tile_source_" + pkg, if (mode in allowed) mode else TILE_AUTO).apply()
+    }
+
     /** [AUTO], [FOCUS_TVOS] (tilt and a gliding highlight) or [FOCUS_SIMPLE] (scale and shadow only). */
     var focusStyle: String
         get() = sp.getString("focus_style", AUTO)!!
@@ -342,6 +364,13 @@ class Prefs(ctx: Context) {
         const val CC_PANEL = "panel"
         const val FOCUS_TVOS = "tvos"
         const val FOCUS_SIMPLE = "simple"
+        const val TILE_BRAND = "brand"
+        const val TILE_CLASSIC = "classic"
+        const val TILE_WIDE = "wide"
+        const val TILE_TVOS = "tvos"
+        const val TILE_AUTO = "auto"
+        const val TILE_BANNER = "banner"
+        const val TILE_ICON = "icon"
         const val INTRO_OFF = "off"
         const val INTRO_BOOT = "boot"
         const val INTRO_WAKE = "wake"

@@ -94,6 +94,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private lateinit var ccButton: IconButton
     private lateinit var grid: RecyclerView
     private lateinit var adapter: TileAdapter
+    private var tileStyleSeen = ""
     private lateinit var repo: AppRepo
     private lateinit var prefs: Prefs
     private lateinit var control: ControlCenter
@@ -330,6 +331,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         glassExtreme = prefs.extremeGlass
         cols = prefs.dockColumns
         repo = AppRepo(this)
+        tileStyleSeen = prefs.appTileStyle
         buildViews()
         control = ControlCenter(this, root)
         // Covers the screen before its first frame, so the home screen is never seen ahead of it.
@@ -513,10 +515,11 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val side = (sw * 0.06875f).toInt()
         val gap = (sw * 0.0292f).toInt()           // 56 px
         tileW = DockLayout.tileWidth(sw, side, gap, cols)
-        tileH = tileW * 9 / 16
+        tileH = if (prefs.appTileAspect == Prefs.TILE_TVOS) tileW * 3 / 5 else tileW * 9 / 16
         rowPitch = (sh * 0.2463f).toInt()          // 266 px
         // The dock sits at the bottom; only the top edge of the next row peeks out below it.
-        val defaultTileHeight = DockLayout.tileWidth(sw, side, gap, DockLayout.DEFAULT_COLUMNS) * 9 / 16
+        val defaultTileWidth = DockLayout.tileWidth(sw, side, gap, DockLayout.DEFAULT_COLUMNS)
+        val defaultTileHeight = if (prefs.appTileAspect == Prefs.TILE_TVOS) defaultTileWidth * 3 / 5 else defaultTileWidth * 9 / 16
         firstRowY = DockLayout.dockTop((sh * 0.744f).toInt(), defaultTileHeight, tileH) + dp(10)
         expandedRowY = (sh * 0.36f).toInt()
 
@@ -1597,7 +1600,13 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         IdleTimerTakeover.noteHomeResumed()
         IdleTimerTakeover.sync(this)
         // Rebuild only after Settings changes column count; order/folders remain in Prefs.
-        if (cols != prefs.dockColumns) { recreate(); return }
+        val expectedH = if (prefs.appTileAspect == Prefs.TILE_TVOS) tileW * 3 / 5 else tileW * 9 / 16
+        if (cols != prefs.dockColumns || tileH != expectedH) { recreate(); return }
+        if (tileStyleSeen != prefs.appTileStyle) {
+            tileStyleSeen = prefs.appTileStyle
+            repo.invalidate()
+            reload(forceFocus = true)
+        }
         val appearance = "${prefs.extremeGlass}:${prefs.glassTint(isNight())}:${prefs.solidGlass(this)}:${isNight()}"
         if (glassAppearance != appearance) {
             glassAppearance = appearance
