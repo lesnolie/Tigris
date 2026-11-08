@@ -255,6 +255,7 @@ internal object FrameIdlePolicy {
     }
 
     private val CAST_RECEIVERS = setOf(
+        "top.jast.miracastreceiver",
         "com.weekd.miracastreceiver",
         "com.dangbei.screencast",
         "com.google.android.apps.mediashell",

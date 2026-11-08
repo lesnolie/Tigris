@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.24 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.24)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.24/Tigris-v2.0.24.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.24/Tigris-guard-v2.0.24.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.24/SHA256SUMS-v2.0.24.txt)）
+- 最新正式版：**[v2.0.25 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.25)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.25/Tigris-v2.0.25.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.25/Tigris-guard-v2.0.25.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.25/SHA256SUMS-v2.0.25.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **最新正式版为 v2.0.24。** 对应 Standard/Guard 类型覆盖升级。极致液态玻璃切换无延迟：进入设置、更换背景、Top Shelf 切换时玻璃与背景同帧变化，并降低滚动时的绘制开销；包含 v2.0.23 的统一相框计时。详见 [更新说明](docs/releases/v2.0.24.md)。
+> **最新正式版为 v2.0.25。** 对应 Standard/Guard 类型覆盖升级。上游 MiracastReceiver v1.2.14 更换了包名，本版让更新中心正确识别并安装新包；电视上还留着旧版时会提示先卸载，投屏期间相框也不再遮挡。详见 [更新说明](docs/releases/v2.0.25.md)。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
@@ -36,6 +36,12 @@
 | Samsung **Tizen**、海信**原生 VIDAA** | **无兼容的 Android APK 安装方式** | 不适用 | 请勿执行 Android ADB 安装命令 |
 
 **如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
+
+## v2.0.25：投屏更新适配新包名
+
+上游 MiracastReceiver v1.2.14 为接入 AirPlay 把包名从 `com.weekd.miracastreceiver` 改成 `top.jast.miracastreceiver`，Android 会把它当成另一个应用。此前 Tigris 仍按旧包名校验，官方安装包会被判为「安装包身份不符」而无法安装。本版按新包名检查、安装和打开，仍只接受上游同一签名与 `miracast-receiver-vX.Y.Z-universal.apk` 文件。
+
+电视上若还装着 1.2.13 或更早的旧包名，投屏卡片会改为「卸载旧版」，在系统卸载页确认后再安装新版；上游说明包名变更不会迁移旧应用数据。新包名同时加入投屏保活和相框避让名单，投屏时不会被相框盖住。详见 [v2.0.25 更新说明](docs/releases/v2.0.25.md)。
 
 ## v2.0.24：玻璃与背景同步切换
 

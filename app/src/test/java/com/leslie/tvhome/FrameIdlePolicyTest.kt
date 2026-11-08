@@ -175,8 +175,10 @@ class FrameIdlePolicyTest {
     }
 
     @Test fun playbackAndCastingOverridePausedVideoAndOurSettingsUi() {
-        val cast = "com.weekd.miracastreceiver"
+        val cast = "top.jast.miracastreceiver"
         assertTrue(FrameIdlePolicy.isCastingPackage(cast))
+        // 1.2.13 and older keep the pre-rename package; both must suppress the dream.
+        assertTrue(FrameIdlePolicy.isCastingPackage("com.weekd.miracastreceiver"))
         assertTrue(FrameIdlePolicy.isCastingPackage("com.dangbei.screencast"))
         assertFalse(FrameIdlePolicy.isCastingPackage("com.example.videoplayer"))
         assertFalse(FrameIdlePolicy.pausedForegroundVideo(cast,
