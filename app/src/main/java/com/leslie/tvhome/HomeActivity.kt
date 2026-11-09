@@ -1806,8 +1806,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         if (intent.getBooleanExtra(Intro.EXTRA_PREVIEW, false)) { playIntro(preview = true); return }
         if (intent.getBooleanExtra(EXTRA_WAKE, false)) {
             outboundLaunch = null
-            return // consume only the pending wake
-        }, never re-arm
+            return // consume only the pending wake; never re-arm
+        }
         // Home pressed while already home: close everything and go back to the top.
         sheets.toList().forEach { it.dismiss() }
         control.close()
