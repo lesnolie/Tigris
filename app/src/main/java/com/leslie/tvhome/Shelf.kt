@@ -20,7 +20,7 @@ import java.net.URL
  * leaves the built-in feed for that package in place when one exists.
  */
 object Shelf {
-    data class Item(val title: String, val meta: String, val image: String)
+    data class Item(val title: String, val meta: String, val image: String, val url: String? = null)
     data class Source(val name: String, val fetch: () -> List<Item>)
 
     /** One user-entered feed, shown when [pkg] is focused in the dock. */
@@ -123,7 +123,7 @@ object Shelf {
         val text = get(url, ShelfLimits.MAX_JSON_BYTES).toString(Charsets.UTF_8)
         val parsed = ShelfJson.parse(text) ?: return null
         if (parsed.isEmpty()) return null
-        return parsed.map { Item(it.title, it.meta, it.image) }
+        return parsed.map { Item(it.title, it.meta, it.image, it.url) }
     }
 
     private fun readCache(key: String, pkg: String): List<Item>? = synchronized(cache) {

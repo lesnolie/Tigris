@@ -59,13 +59,14 @@ internal object ShelfLimits {
 
 /**
  * The custom Top Shelf document: a JSON array of `{title, meta, image}`.
- * Extra fields (a per-item page URL, for example) are ignored. The shelf is
- * display-only; confirming the dock tile still opens the linked app.
+ * Optional HTTPS "url" opens only when the associated app explicitly handles it.
+ * Invalid/untrusted schemes never become executable intents, and a missing handler
+ * simply opens the parent app as before.
  * Returns null when the body is not a JSON array, and an empty list when the
  * array contains nothing usable.
  */
 internal object ShelfJson {
-    data class Item(val title: String, val meta: String, val image: String)
+    data class Item(val title: String, val meta: String, val image: String, val url: String? = null)
 
     fun parse(text: String): List<Item>? {
         val body = text.removePrefix("\uFEFF").trim()
@@ -82,7 +83,10 @@ internal object ShelfJson {
             val title = field(obj, "title").take(ShelfLimits.MAX_TITLE)
             val image = field(obj, "image")
             if (title.isEmpty() || !ShelfLimits.isHttpUrl(image)) continue
-            out.add(Item(title, field(obj, "meta").take(ShelfLimits.MAX_META), image))
+            val link = field(obj, "url").takeIf {
+                it.startsWith("https://", ignoreCase = true) && ShelfLimits.isHttpUrl(it)
+            }
+            out.add(Item(title, field(obj, "meta").take(ShelfLimits.MAX_META), image, link))
         }
         return out
     }

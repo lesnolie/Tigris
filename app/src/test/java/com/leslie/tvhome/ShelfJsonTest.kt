@@ -144,4 +144,12 @@ class ShelfJsonTest {
         assertTrue(Shelf.has("org.jellyfin.androidtv", jellyfin))
         assertFalse(Shelf.has("org.jellyfin.androidtv"))
     }
+
+    @org.junit.Test fun shelfSafeDeepLinkParsing() {
+        val good = """[{"title":"Video","image":"https://example.com/a.jpg","url":"https://example.com/watch?id=1"}]"""
+        val parsed = ShelfJson.parse(good)
+        org.junit.Assert.assertEquals("https://example.com/watch?id=1", parsed?.firstOrNull()?.url)
+        val bad = """[{"title":"Video","image":"https://example.com/a.jpg","url":"javascript:alert(1)"}]"""
+        org.junit.Assert.assertNull(ShelfJson.parse(bad)?.firstOrNull()?.url)
+    }
 }

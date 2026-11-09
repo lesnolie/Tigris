@@ -1279,7 +1279,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             rememberOpened(app.pkg)
             return
         }
-        val intent = repo.launchIntent(app) ?: return
+        val intent = shelfDeepLink(app) ?: repo.launchIntent(app) ?: return
         val opts = ActivityOptions.makeScaleUpAnimation(cell.card, 0, 0, cell.card.width, cell.card.height)
         try {
             startActivity(intent, opts.toBundle())
@@ -1288,6 +1288,21 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         } catch (e: Exception) {
             Toast.makeText(this, I18n.text(R.string.i18n_homeactivity_005, app.label), Toast.LENGTH_SHORT).show()
         }
+    }
+
+    /**
+     * A user-supplied Top Shelf link may deep-link to the focused app, but only when
+     * that *same package* resolves an HTTPS view intent. Never hand an untrusted
+     * feed URL to a browser or an arbitrary third-party application.
+     */
+    private fun shelfDeepLink(app: AppEntry): Intent? {
+        if (!shelfShown || shelfPkg != app.pkg || shelfIndex < 0) return null
+        val link = shelfItems.getOrNull(shelfIndex)?.url ?: return null
+        if (!link.startsWith("https://", ignoreCase = true) || !ShelfLimits.isHttpUrl(link)) return null
+        val candidate = Intent(Intent.ACTION_VIEW, Uri.parse(link))
+            .addCategory(Intent.CATEGORY_BROWSABLE)
+            .setPackage(app.pkg)
+        return candidate.takeIf { packageManager.resolveActivity(it, 0) != null }
     }
 
     /** A disabled recent-first preference preserves manual order, including folders. */
