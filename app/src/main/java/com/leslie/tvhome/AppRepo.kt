@@ -211,12 +211,10 @@ class AppRepo(private val ctx: Context) {
                 } else runCatching { pm.getActivityIcon(app.component) }.getOrNull()
                 val mode = prefs.appTileSource(app.pkg)
                 val classic = prefs.appTileStyle == Prefs.TILE_CLASSIC || mode == Prefs.TILE_CLASSIC
-                val banner = if (classic || mode == Prefs.TILE_ICON) null else runCatching {
-                    pm.getActivityInfo(app.component, 0).loadBanner(pm)
-                        ?: pm.getApplicationInfo(app.component.packageName, 0).loadBanner(pm)
-                }.getOrNull()
-                val goodBanner = banner != null &&
-                    BrandTilePolicy.goodBanner(banner.intrinsicWidth, banner.intrinsicHeight)
+                // Home tiles use brand-colour rendering for a consistent look. TV banners are
+                // often pale/white and read as a "white base", so they are skipped here.
+                val banner: Drawable? = null
+                val goodBanner = false
                 val adaptive = drawable as? AdaptiveIconDrawable
                 val candidate = if (classic || goodBanner) null else adaptive?.let { validatedForeground(it.foreground) }
                 val choice = BrandTilePolicy.select(classic, mode, goodBanner, candidate != null, drawable != null)
@@ -419,7 +417,9 @@ class AppRepo(private val ctx: Context) {
     }
 
     private fun drawIconBitmapTile(c: Canvas, source: Bitmap) {
-        drawTileSurface(c)
+        // Brand-coloured surface (from the icon's own dominant colour) instead of the old
+        // frost-grey base, so icon-only apps are rendered in their brand colour.
+        drawBrandSurface(c, brandColor(source))
         val side = AppTileArtwork.iconSize(heightPx)
         val fit = minOf(side.toFloat() / source.width, side.toFloat() / source.height)
         val w = (source.width * fit).coerceAtLeast(1f)

@@ -20,7 +20,6 @@ class TileCell(ctx: Context, val tileW: Int, val tileH: Int) : FrameLayout(ctx) 
     val card = FrameLayout(ctx)
     val image = ImageView(ctx).apply {
         scaleType = ImageView.ScaleType.CENTER_CROP
-        setBackgroundColor(TileSkin.FILL)
     }
     /** Real adaptive foreground, if the source APK exposes a separately usable layer. */
     val foregroundLayer = ImageView(ctx).apply {
@@ -75,10 +74,8 @@ class TileCell(ctx: Context, val tileW: Int, val tileH: Int) : FrameLayout(ctx) 
         glow.translationY = -glowPad.toFloat()
         card.addView(image, LayoutParams(tileW, tileH))
         card.addView(foregroundLayer, LayoutParams(tileW, tileH))
-        card.addView(specular, LayoutParams(tileW, tileH))
         card.clipRounded(dp(TileSkin.RADIUS_DP).toFloat())
         addView(card, LayoutParams(tileW, tileH))
-        addView(border, LayoutParams(tileW, tileH))
         addView(focusRing, LayoutParams(tileW, tileH))
         // The name hangs below the tile without taking layout space, so rows keep an exact pitch.
         addView(label, LayoutParams(tileW + dp(30), LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
