@@ -6,9 +6,9 @@ internal object RecentAppOrder {
 
     /** Prefer observed foreground activity; fall back to Tigris launch history.
      * Never include apps that are no longer installed or are not real launchable apps. */
-    fun merge(observed: List<String>, saved: List<String>, available: Set<String>): List<String> =
+    fun merge(observed: List<String>, saved: List<String>, available: Set<String>, dismissed: Set<String> = emptySet()): List<String> =
         (observed + saved).asSequence()
-            .filter { it in available }
+            .filter { it in available && it !in dismissed }
             .distinct()
             .take(MAX_VISIBLE)
             .toList()

@@ -32,4 +32,18 @@ class RecentAppOrderTest {
         assertEquals(emptyList<String>(),
             RecentAppOrder.merge(listOf("old"), listOf("new"), emptySet()))
     }
+    @Test fun dismissedCardsStayHiddenEvenWhenSystemUsageReportsThem() {
+        assertEquals(listOf("still-visible"),
+            RecentAppOrder.merge(
+                listOf("dismissed", "still-visible"),
+                listOf("dismissed", "still-visible"),
+                setOf("dismissed", "still-visible"),
+                setOf("dismissed")))
+    }
+
+    @Test fun previouslyDismissedCardCanReturnAfterExplicitLaunch() {
+        assertEquals(listOf("returned"),
+            RecentAppOrder.merge(listOf("returned"), listOf("returned"), setOf("returned")))
+    }
+
 }
