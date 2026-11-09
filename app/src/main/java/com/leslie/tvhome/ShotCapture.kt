@@ -28,8 +28,8 @@ internal object ShotCapture {
     private const val CAPTURE_DELAY_MS = 900L
     private const val MIN_INTERVAL_MS = 1200L
     private const val REFRESH_MS = 4000L
-    private const val MAX_KEEP = 20
-    private const val TARGET_WIDTH = 720
+    private const val MAX_KEEP = 12
+    private const val TARGET_WIDTH = 1280
 
     @Volatile private var service: AccessibilityService? = null
     @Volatile private var currentApp: String? = null
@@ -37,7 +37,9 @@ internal object ShotCapture {
     private var looping = false
     private val handler = Handler(Looper.getMainLooper())
 
-    private fun dir(ctx: Context) = File(ctx.filesDir, DIR).apply { mkdirs() }
+    // Stored in the app cache so it is treated as disposable (system may clear it) and
+    // never accumulates: one file per package, hard-capped by [MAX_KEEP], deleted on removal.
+    private fun dir(ctx: Context) = File(ctx.cacheDir, DIR).apply { mkdirs() }
 
     private fun file(ctx: Context, pkg: String) = File(dir(ctx), ShelfImageCacheKey.name(pkg))
 
@@ -47,6 +49,10 @@ internal object ShotCapture {
         val f = file(ctx, pkg)
         if (f.length() > 0L) BitmapFactory.decodeFile(f.absolutePath) else null
     }.getOrNull()
+
+    fun clear(ctx: Context, pkg: String) {
+        runCatching { file(ctx, pkg).delete() }
+    }
 
     private val initial = Runnable {
         val s = service
@@ -99,7 +105,7 @@ internal object ShotCapture {
         try {
             val f = file(svc, pkg)
             val tmp = File(f.parentFile, f.name + ".part")
-            FileOutputStream(tmp).use { scaled.compress(Bitmap.CompressFormat.JPEG, 82, it) }
+            FileOutputStream(tmp).use { scaled.compress(Bitmap.CompressFormat.JPEG, 92, it) }
             if (!tmp.renameTo(f)) {
                 f.delete()
                 tmp.renameTo(f)

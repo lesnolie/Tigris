@@ -4,17 +4,14 @@ import android.app.Activity
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
-import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
-import android.widget.HorizontalScrollView
-import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.TextView
 
 /**
@@ -38,7 +35,7 @@ internal object RecentApps {
             .putStringSet(KEY_DISMISSED, dismissed).apply()
     }
 
-    /** Remove only the switcher card. Ordinary launchers cannot end other apps' tasks. */
+    /** Remove the switcher card (the caller may also force-stop the app). */
     fun dismiss(ctx: Context, pkg: String) {
         val sp = ctx.getSharedPreferences(STORE, Context.MODE_PRIVATE)
         val saved = sp.getString(KEY, "").orEmpty().split('|').filter { it.isNotBlank() && it != pkg }
@@ -97,168 +94,241 @@ internal object RecentApps {
     }
 }
 
-/** Android-safe recent-app launcher: visually resembles a tvOS card switcher but
- * does not pretend to access privileged task snapshots or force-stop other apps. */
+/**
+ * iOS-style app switcher: large app-screenshot cards stacked over the desktop.
+ *
+ * A plain third-party launcher cannot read system task snapshots, so the wallpapers come
+ * from the user-enabled accessibility service (see [ShotCapture]). Removing a card also
+ * force-stops the app through Tigris's own local adb when authorized (see [AppCloser]).
+ */
 class AppSwitcherActivity : Activity() {
     private var interacted = false
     private var content: View? = null
     private var closing = false
     private var instant = false
 
+    private lateinit var container: FrameLayout
+    private lateinit var stack: FrameLayout
+    private lateinit var caption: TextView
+    private val cards = ArrayList<FrameLayout>()
+    private val labels = ArrayList<TextView>()
+    private var apps: List<AppEntry> = emptyList()
+    private var selected = 0
+    private var cardW = 0
+    private var cardH = 0
+    private var step = 0
+    private var iconSize = 0
+
     override fun onUserInteraction() {
         super.onUserInteraction()
         interacted = true
     }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Float over the desktop like iOS/tvOS: a translucent window + dim scrim, so the
-        // launcher stays visible behind the cards instead of being replaced by black.
+        // Translucent window so the desktop stays visible behind the stacked cards.
         window.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
         window.setBackgroundDrawable(
             android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
-        val dm = resources.displayMetrics
-        val cardW = (dm.widthPixels * 0.30f).toInt()
-        val cardH = (cardW * 9f / 16f).toInt()
-        val iconSize = (cardH * 0.46f).toInt()
 
-        val page = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(54), dp(40), dp(54), dp(44))
+        val dm = resources.displayMetrics
+        cardW = (dm.widthPixels * 0.80f).toInt()
+        cardH = (cardW * 9f / 16f).toInt()
+        step = (cardW * 0.16f).toInt()
+        iconSize = (cardH * 0.34f).toInt()
+
+        container = FrameLayout(this).apply {
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(0x99101824.toInt(), 0xCC000000.toInt()))
         }
-        page.addView(title(getString(R.string.tvos_recents_title), 30f))
-        page.addView(title(getString(R.string.tvos_recents_help), 15f).apply {
-            setTextColor(0xFFAEB9D1.toInt())
-        }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
-        val cards = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            clipChildren = false
-            setPadding(dp(24), 0, dp(24), 0)
+        stack = FrameLayout(this)
+        container.addView(stack, FrameLayout.LayoutParams(-1, -1))
+        // Only used for the empty-state message; the app name is drawn inside each card.
+        caption = TextView(this).apply {
+            setTextColor(Color.WHITE)
+            textSize = 24f
+            gravity = Gravity.CENTER
+            alpha = 0.92f
+            visibility = View.GONE
         }
-        val scroll = HorizontalScrollView(this).apply {
-            clipToPadding = false
-            clipChildren = false
-            isHorizontalScrollBarEnabled = false
-            addView(cards)
-        }
-        val empty = title(getString(R.string.tvos_recents_empty), 20f)
-        page.addView(scroll, LinearLayout.LayoutParams(-1, cardH + dp(84)).apply { topMargin = dp(30) })
-        page.addView(empty, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(30) })
-        setContentView(page)
-        content = page
-        // Enter from the centre like tvOS; no external XML window transition.
-        page.scaleX = 0.92f
-        page.scaleY = 0.92f
-        page.alpha = 0f
-        page.animate().scaleX(1f).scaleY(1f).alpha(1f)
+        container.addView(caption, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
+        setContentView(container)
+        content = container
+        container.scaleX = 0.94f
+        container.scaleY = 0.94f
+        container.alpha = 0f
+        container.animate().scaleX(1f).scaleY(1f).alpha(1f)
             .setDuration(220).setInterpolator(Motion.ease).start()
 
-        // The saved list appears immediately. Optional system usage history is read
-        // off the UI thread, and never reorders a list after the remote is used.
         val available = AppRepo(this).allApps()
-        var presented: List<String>? = null
-        var shown: List<AppEntry> = emptyList()
-        fun render(list: List<AppEntry>, focusIndex: Int? = null) {
-            shown = list
-            val packages = list.map { it.pkg }
-            if (packages == presented) return
-            presented = packages
-            cards.removeAllViews()
-            for (app in list) {
-                val drawable = runCatching { packageManager.getActivityIcon(app.component) }.getOrNull()
-                val shot = runCatching { ShotCapture.load(this, app.pkg) }.getOrNull()
-                val screen = FrameLayout(this).apply {
-                    background = cardBackground(cardBrandColor(drawable))
-                    clipToOutline = true
-                }
-                if (shot != null) {
-                    // Real foreground screenshot captured by the accessibility service.
-                    screen.addView(ImageView(this).apply {
-                        setImageBitmap(shot)
-                        scaleType = ImageView.ScaleType.CENTER_CROP
-                    }, FrameLayout.LayoutParams(-1, -1))
-                } else {
-                    screen.addView(ImageView(this).apply {
-                        setImageDrawable(drawable)
-                        scaleType = ImageView.ScaleType.FIT_CENTER
-                    }, FrameLayout.LayoutParams(iconSize, iconSize, Gravity.CENTER))
-                }
-                val card = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    gravity = Gravity.CENTER_HORIZONTAL
-                    isFocusable = true
-                    isClickable = true
-                    clipChildren = false
-                    clipToPadding = false
-                    scaleX = 0.9f
-                    scaleY = 0.9f
-                    alpha = 0.62f
-                    addView(screen, LinearLayout.LayoutParams(cardW, cardH))
-                    addView(title(app.label, 18f).apply {
-                        gravity = Gravity.CENTER
-                        maxLines = 1
-                        ellipsize = android.text.TextUtils.TruncateAt.END
-                    }, LinearLayout.LayoutParams(cardW, -2).apply { topMargin = dp(14) })
-                }
-                card.setOnFocusChangeListener { v, on ->
-                    v.animate().cancel()
-                    v.animate().scaleX(if (on) 1f else 0.9f)
-                        .scaleY(if (on) 1f else 0.9f)
-                        .alpha(if (on) 1f else 0.62f)
-                        .setDuration(200).setInterpolator(Motion.ease).start()
-                    screen.elevation = dp(if (on) 22 else 5).toFloat()
-                    (screen.background as? GradientDrawable)?.setStroke(
-                        dp(if (on) 3 else 0), if (on) Color.WHITE else Color.TRANSPARENT)
-                    if (on) {
-                        val center = v.left + v.width / 2 - scroll.width / 2
-                        scroll.smoothScrollTo(center.coerceAtLeast(0), 0)
-                    }
-                }
-                // Up dismisses the visible card, not the Android process or task.
-                card.setOnKeyListener { _, keyCode, event ->
-                    if (keyCode != KeyEvent.KEYCODE_DPAD_UP) false
-                    else {
-                        if (event.action == KeyEvent.ACTION_UP) {
-                            val formerIndex = shown.indexOfFirst { it.pkg == app.pkg }
-                            if (formerIndex >= 0) {
-                                RecentApps.dismiss(this, app.pkg)
-                                val rest = shown.filter { it.pkg != app.pkg }
-                                render(rest, formerIndex.coerceAtMost((rest.size - 1).coerceAtLeast(0)))
-                                // Cleared every card: leave the user on the desktop.
-                                if (rest.isEmpty()) finishInstant()
-                            }
-                        }
-                        true
-                    }
-                }
-                card.setOnClickListener {
-                    AppRepo(this).launchIntent(app)?.let { intent ->
-                        RecentApps.record(this, app.pkg)
-                        // Grow out of this card, matching the launcher tile behaviour.
-                        val opts = android.app.ActivityOptions
-                            .makeScaleUpAnimation(card, 0, 0, card.width, card.height).toBundle()
-                        startActivity(intent, opts)
-                        HomeReturnHandoff.set(app.pkg)
-                        finishInstant()
-                    }
-                }
-                cards.addView(card, LinearLayout.LayoutParams(cardW, -2).apply { marginEnd = dp(30) })
-            }
-            scroll.visibility = if (list.isEmpty()) View.GONE else View.VISIBLE
-            empty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
-            if (focusIndex != null) cards.getChildAt(focusIndex)?.requestFocus()
-            else if (!interacted) cards.getChildAt(0)?.requestFocus()
-        }
-        render(RecentApps.saved(this, available))
+        apps = RecentApps.saved(this, available)
+        buildCards()
         Thread({
             val latest = RecentApps.recent(this, available)
             runOnUiThread {
-                if (!isFinishing && !isDestroyed && !interacted) render(latest)
+                if (!isFinishing && !isDestroyed && !interacted) {
+                    apps = latest
+                    buildCards()
+                }
             }
         }, "tigris-recent-events").start()
+    }
+
+    /** Rebuild the stacked cards from [apps]; selected index is preserved when possible. */
+    private fun buildCards() {
+        stack.removeAllViews()
+        cards.clear()
+        labels.clear()
+        for (app in apps) {
+            val drawable = runCatching { packageManager.getActivityIcon(app.component) }.getOrNull()
+            val shot = runCatching { ShotCapture.load(this, app.pkg) }.getOrNull()
+            val card = FrameLayout(this).apply {
+                background = cardBackground(cardBrandColor(drawable))
+                clipToOutline = true
+                isFocusable = false
+                isClickable = false
+            }
+            if (shot != null) {
+                card.addView(ImageView(this).apply {
+                    setImageBitmap(shot)
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                }, FrameLayout.LayoutParams(-1, -1))
+            } else {
+                card.addView(ImageView(this).apply {
+                    setImageDrawable(drawable)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                }, FrameLayout.LayoutParams(iconSize, iconSize, Gravity.CENTER))
+            }
+            val name = TextView(this).apply {
+                text = app.label
+                setTextColor(Color.WHITE)
+                textSize = 22f
+                gravity = Gravity.CENTER
+                setShadowLayer(6f, 0f, 2f, Color.BLACK)
+                visibility = View.INVISIBLE
+            }
+            card.addView(name, FrameLayout.LayoutParams(-1, -2,
+                Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply { bottomMargin = dp(16) })
+            labels.add(name)
+            stack.addView(card, FrameLayout.LayoutParams(cardW, cardH, Gravity.CENTER))
+            cards.add(card)
+        }
+        if (apps.isEmpty()) {
+            caption.text = getString(R.string.tvos_recents_empty)
+            caption.visibility = View.VISIBLE
+        } else {
+            caption.visibility = View.GONE
+            if (selected !in apps.indices) selected = 0
+        }
+        applyPositions(animate = false)
+    }
+
+    /** Cascade the cards: the selected one is centred and on top, neighbours fan out behind. */
+    private fun applyPositions(animate: Boolean) {
+        for (i in cards.indices) {
+            val card = cards[i]
+            val delta = i - selected
+            val ad = kotlin.math.abs(delta)
+            val visible = ad <= 3
+            val targetX = (delta * step).toFloat()
+            val targetScale = if (delta == 0) 1f else kotlin.math.max(0.66f, 1f - ad * 0.11f)
+            val targetY = if (delta == 0) 0f else (ad * dp(7)).toFloat()
+            val targetAlpha = when {
+                !visible -> 0f
+                delta == 0 -> 1f
+                else -> kotlin.math.max(0.30f, 0.92f - ad * 0.18f)
+            }
+            card.visibility = if (visible) View.VISIBLE else View.INVISIBLE
+            card.translationZ = (if (visible) 50 - ad else 0).toFloat()
+            if (animate) {
+                card.animate().cancel()
+                card.animate().translationX(targetX).translationY(targetY)
+                    .scaleX(targetScale).scaleY(targetScale).alpha(targetAlpha)
+                    .setDuration(220).setInterpolator(Motion.ease).start()
+            } else {
+                card.translationX = targetX
+                card.translationY = targetY
+                card.scaleX = targetScale
+                card.scaleY = targetScale
+                card.alpha = targetAlpha
+            }
+        }
+        if (apps.isEmpty()) {
+            caption.text = getString(R.string.tvos_recents_empty)
+            caption.visibility = View.VISIBLE
+        } else {
+            caption.visibility = View.GONE
+        }
+        for (i in labels.indices) labels[i].visibility = if (i == selected) View.VISIBLE else View.INVISIBLE
+    }
+
+    private fun moveSelection(delta: Int) {
+        if (apps.isEmpty()) return
+        val next = (selected + delta).coerceIn(0, apps.size - 1)
+        if (next == selected) return
+        selected = next
+        applyPositions(animate = true)
+    }
+
+    private fun launchSelected() {
+        val app = apps.getOrNull(selected) ?: return
+        AppRepo(this).launchIntent(app)?.let { intent ->
+            RecentApps.record(this, app.pkg)
+            val src = cards.getOrNull(selected) ?: container
+            val opts = android.app.ActivityOptions
+                .makeScaleUpAnimation(src, 0, 0, src.width, src.height).toBundle()
+            startActivity(intent, opts)
+            HomeReturnHandoff.set(app.pkg)
+            finishInstant()
+        }
+    }
+
+    /** Up: animate the focused card away, then really close the app in the background. */
+    private fun removeSelected() {
+        val idx = selected
+        val app = apps.getOrNull(idx) ?: return
+        val card = cards.getOrNull(idx) ?: return
+        card.animate().cancel()
+        card.animate().translationY(-dp(180).toFloat()).alpha(0f)
+            .scaleX(0.85f).scaleY(0.85f)
+            .setDuration(200).setInterpolator(Motion.ease)
+            .withEndAction {
+                AppCloser.close(this, app.pkg)
+                RecentApps.dismiss(this, app.pkg)
+                ShotCapture.clear(this, app.pkg)
+                apps = apps.filter { it.pkg != app.pkg }
+                selected = selected.coerceIn(0, (apps.size - 1).coerceAtLeast(0))
+                buildCards()
+                if (apps.isEmpty()) finishInstant()
+            }.start()
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (apps.isNotEmpty()) {
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    if (event.action == KeyEvent.ACTION_DOWN) moveSelection(-1)
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    if (event.action == KeyEvent.ACTION_DOWN) moveSelection(1)
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    if (event.action == KeyEvent.ACTION_UP && event.repeatCount == 0) removeSelected()
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                    if (event.action == KeyEvent.ACTION_UP) launchSelected()
+                    return true
+                }
+                KeyEvent.KEYCODE_BACK -> {
+                    if (event.action == KeyEvent.ACTION_UP) finish()
+                    return true
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     /** Average a (mostly opaque) icon into a dark, brand-tinted card surface. */
@@ -290,7 +360,7 @@ class AppSwitcherActivity : Activity() {
         val light = blend(base, Color.WHITE, 0.18f)
         val dark = blend(base, Color.BLACK, 0.42f)
         return GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(light, dark)).apply {
-            cornerRadius = dp(18).toFloat()
+            cornerRadius = dp(6).toFloat()
         }
     }
 
@@ -311,15 +381,27 @@ class AppSwitcherActivity : Activity() {
         closing = true
         val v = content
         if (v == null) { finishNow(); return }
-        v.animate().scaleX(0.92f).scaleY(0.92f).alpha(0f)
-            .setDuration(160).setInterpolator(Motion.ease)
+        v.animate().scaleX(0.94f).scaleY(0.94f).alpha(0f)
+            .setDuration(150).setInterpolator(Motion.ease)
             .withEndAction { finishNow() }.start()
     }
+}
 
-    private fun title(value: String, size: Float) = TextView(this).apply {
-        text = value
-        textSize = size
-        setTextColor(Color.WHITE)
-        typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+/**
+ * Best-effort real close of another app: kill its background processes, then force-stop it
+ * through Tigris's own local adb (the same shell path the memory cleaner uses). Force-stop
+ * removal is only possible when the user authorized local debugging; otherwise the kill is
+ * still performed.
+ */
+internal object AppCloser {
+    fun close(ctx: Context, pkg: String) {
+        if (pkg.isEmpty() || pkg == ctx.packageName) return
+        runCatching {
+            val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            am.killBackgroundProcesses(pkg)
+        }
+        Thread({
+            runCatching { LocalAdb.shell(ctx.applicationContext, "am force-stop $pkg", 3000) }
+        }, "tigris-close-app").start()
     }
 }
