@@ -47,14 +47,6 @@
     <string name="tvos_setting_keyboard">Keyboard and input</string>
     <string name="tvos_setting_date">Date and time</string>
     <string name="tvos_controls">Controls</string>
-    <string name="tvos_pin_manage_title">Restrict Apps in Tigris</string>
-    <string name="tvos_pin_setup_title">Set a local launcher PIN</string>
-    <string name="tvos_pin_choose">Choose 4–8 digit PIN</string>
-    <string name="tvos_pin_repeat">Repeat PIN</string>
-    <string name="tvos_pin_enter">Enter Tigris PIN</string>
-    <string name="tvos_pin_invalid">PINs must match and contain 4–8 digits</string>
-    <string name="tvos_pin_wrong">Incorrect PIN or temporarily locked after repeated attempts</string>
-    <string name="tvos_pin_launcher_only">Applies only to launching apps from Tigris. Other launchers and system intents may bypass it; this is not a system parental control.</string>
     <string name="tvos_dynamic_text_title">Larger Text</string>
     <string name="tvos_dynamic_text_help">Resize Tigris interface text; does not affect other TV apps.</string>
     <string name="tvos_double_home_title">Double Home for Recent Apps</string>

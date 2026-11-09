@@ -106,12 +106,10 @@ class AppSwitcherActivity : Activity() {
                 (v.background as? GradientDrawable)?.setStroke(dp(if (on) 2 else 0), if (on) Color.WHITE else Color.TRANSPARENT)
             }
             tile.setOnClickListener {
-                LocalAppRestrictions.guardLaunch(this, app.pkg) {
-                    AppRepo(this).launchIntent(app)?.let { intent ->
-                        RecentApps.record(this, app.pkg)
-                        startActivity(intent)
-                        finish()
-                    }
+                AppRepo(this).launchIntent(app)?.let { intent ->
+                    RecentApps.record(this, app.pkg)
+                    startActivity(intent)
+                    finish()
                 }
             }
             cards.addView(tile, LinearLayout.LayoutParams(dp(205), dp(222)).apply { marginEnd = dp(24) })
