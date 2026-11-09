@@ -100,6 +100,59 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private var tileStyleSeen = ""
     private var textScaleSeen = 1f
     private var previousHomeIntentAt = 0L
+
+    // Only launches made by this Activity may animate a subsequent return.
+    // No attempt is made to animate or inspect another application's window.
+    private var outboundLaunch: HomeReturnPolicy.Launch? = null
+    private var returnCueView: View? = null
+
+    private fun noteExternalLaunch(pkg: String) {
+        if (pkg != packageName) {
+            outboundLaunch = HomeReturnPolicy.Launch(pkg, SystemClock.uptimeMillis())
+        }
+    }
+
+    private fun cancelReturnCue() {
+        returnCueView?.let { view ->
+            view.animate().cancel()
+            view.alpha = 1f
+            view.translationY = 0f
+        }
+        returnCueView = null
+    }
+
+    /** A tiny hardware-composited card settle, never a simulated third-party task snapshot. */
+    private fun revealReturnFocus() {
+        val launch = outboundLaunch ?: return
+        if (!resumed || !hasWindowFocus() || isFinishing || isDestroyed) return
+        val interactive = getSystemService(android.os.PowerManager::class.java)?.isInteractive == true
+        val blocked = intro != null || welcome != null || wakeIntro ||
+            sheets.isNotEmpty() || control.isOpen || moving >= 0
+        if (!HomeReturnPolicy.canReveal(launch, SystemClock.uptimeMillis(),
+                interactive, blocked, HomeGuardService.recentlyBroughtHome)) {
+            outboundLaunch = null
+            return
+        }
+        val pos = adapter.apps.indexOfFirst { it.pkg == launch.pkg }
+        // If an app was removed or a settings change rebuilt the grid, do not animate
+        // an unrelated card or force the RecyclerView to scroll just for decoration.
+        val tile = if (pos >= 0) grid.findViewHolderForAdapterPosition(pos)?.itemView else null
+        outboundLaunch = null
+        if (tile == null) return
+        if (!tile.hasFocus()) tile.requestFocus()
+        cancelReturnCue()
+        val lowEnd = Device.isLowEnd(this)
+        returnCueView = tile
+        tile.animate().cancel()
+        tile.translationY = dp(HomeReturnPolicy.liftDp(lowEnd)).toFloat()
+        tile.alpha = 0.92f
+        tile.animate().translationY(0f).alpha(1f)
+            .setDuration(HomeReturnPolicy.settleDurationMs(lowEnd))
+            .setInterpolator(Motion.ease)
+            .withEndAction {
+                if (returnCueView === tile) returnCueView = null
+            }.start()
+    }
     private lateinit var repo: AppRepo
     private lateinit var prefs: Prefs
     private lateinit var control: ControlCenter
@@ -481,6 +534,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         wallpaperPlaying = false
         syncOwnPlayback()
         videoWallpaper.destroy()
+        cancelReturnCue()
+        outboundLaunch = null
         unregisterReceiver(pkgReceiver)
         main.removeCallbacksAndMessages(null)
         control.destroy()
@@ -1138,6 +1193,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                     val intent = shelfDeepLink(app) ?: repo.launchIntent(app)
                     if (intent != null) try {
                         startActivity(intent)
+                        noteExternalLaunch(app.pkg)
                         RecentApps.record(this, app.pkg)
                         rememberOpened(app.pkg)
                     } catch (_: Exception) {
@@ -1395,6 +1451,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val opts = ActivityOptions.makeScaleUpAnimation(cell.card, 0, 0, cell.card.width, cell.card.height)
         try {
             startActivity(intent, opts.toBundle())
+            noteExternalLaunch(app.pkg)
             RecentApps.record(this, app.pkg)
             rememberOpened(app.pkg)
         } catch (e: Exception) {
@@ -1692,8 +1749,11 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         HomeForeground.windowFocus(hasFocus, now)
         if (!resumed) return
         if (!hasFocus) cancelIdle()
-        else if (HomeForeground.isDreamBounce(now)) armIdle(resetDeadline = false)
-        else armIdle(resetDeadline = true)
+        else {
+            if (HomeForeground.isDreamBounce(now)) armIdle(resetDeadline = false)
+            else armIdle(resetDeadline = true)
+            grid.post { revealReturnFocus() }
+        }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -1744,14 +1804,27 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         }
         if (welcome != null) return
         if (intent.getBooleanExtra(Intro.EXTRA_PREVIEW, false)) { playIntro(preview = true); return }
-        if (intent.getBooleanExtra(EXTRA_WAKE, false)) return // consume only the pending wake, never re-arm
+        if (intent.getBooleanExtra(EXTRA_WAKE, false)) {
+            outboundLaunch = null
+            return // consume only the pending wake
+        }, never re-arm
         // Home pressed while already home: close everything and go back to the top.
         sheets.toList().forEach { it.dismiss() }
         control.close()
         if (moving >= 0) endMove()
-        // The guard brought the screen back (an app exited to the stock launcher): stay where we were.
-        if (intent.getBooleanExtra(EXTRA_GUARD, false)) return
+        // The guard brought the screen back: do not animate a vendor HOME bounce.
+        if (intent.getBooleanExtra(EXTRA_GUARD, false)) {
+            outboundLaunch = null
+            return
+        }
         val now = SystemClock.uptimeMillis()
+        if (HomeReturnPolicy.canPreserveFocus(outboundLaunch, now,
+                homeAlreadyVisible = resumed, guardReturn = false, wakeReturn = false)) {
+            // A HOME press from an app should not snap the Dock to position zero.
+            // onResume/onWindowFocusChanged will restore and settle the launched card.
+            return
+        }
+        outboundLaunch = null
         val doubleHome = prefs.doubleHomeSwitcher &&
             DoubleHomePolicy.second(previousHomeIntentAt, now, allowed = !Guard.isXiaomi())
         previousHomeIntentAt = if (doubleHome) 0L else now
@@ -1813,16 +1886,21 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         HomeForeground.resume(now)
         if (HomeForeground.isDreamBounce(now)) armIdle(resetDeadline = false)
         else armIdle(resetDeadline = true)
-        applyBackground()
+        // The minute ticker already applies the wallpaper. A second call here
+        // would schedule redundant photo/video preparation during app return.
         updateNetworkIcon()
         main.removeCallbacks(ticker)
         ticker.run()
         control.refresh()
         if (shelfShown && !control.isOpen) resumeShelfRotation()
+        if (outboundLaunch != null) grid.post { revealReturnFocus() }
     }
 
     override fun onPause() {
         logPower("pause")
+        val interactive = getSystemService(android.os.PowerManager::class.java)?.isInteractive == true
+        outboundLaunch = HomeReturnPolicy.markPaused(outboundLaunch, interactive)
+        cancelReturnCue()
         HomeGuardService.onHomePaused()
         resumed = false
         prefs.unobserve(wallpaperChanges)
