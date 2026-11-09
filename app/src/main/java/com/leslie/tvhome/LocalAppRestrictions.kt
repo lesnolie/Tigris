@@ -22,6 +22,12 @@ import javax.crypto.spec.PBEKeySpec
  * Enforced at every Tigris launch entrypoint; other launchers/system intents can bypass it.
  * No plaintext PIN, no exportable receiver, bounded attempts with a local lockout.
  */
+internal object LocalRestrictionPolicy {
+    fun validPin(code: String): Boolean = code.matches(Regex("[0-9]{4,8}"))
+    fun temporarilyLock(failures: Int): Boolean = failures >= 5
+}
+
+/** Local launcher guard, not OS-wide device-owner enforcement. */
 internal object LocalAppRestrictions {
     private const val STORE = "tigris_local_restrictions"
     private const val ITERATIONS = 120_000
@@ -38,7 +44,7 @@ internal object LocalAppRestrictions {
     }
 
     fun setPin(ctx: Context, code: String): Boolean {
-        if (!code.matches(Regex("[0-9]{4,8}"))) return false
+        if (!LocalRestrictionPolicy.validPin(code)) return false
         val salt = ByteArray(24).also { SecureRandom().nextBytes(it) }
         val hash = derive(code, salt)
         sp(ctx).edit()
@@ -67,8 +73,8 @@ internal object LocalAppRestrictions {
         if (match) settings.edit().putInt("attempts", 0).putLong("locked_until", 0L).apply()
         else {
             val failures = settings.getInt("attempts", 0) + 1
-            settings.edit().putInt("attempts", if (failures >= 5) 0 else failures)
-                .putLong("locked_until", if (failures >= 5) System.currentTimeMillis() + 60_000 else 0L).apply()
+            settings.edit().putInt("attempts", if (LocalRestrictionPolicy.temporarilyLock(failures)) 0 else failures)
+                .putLong("locked_until", if (LocalRestrictionPolicy.temporarilyLock(failures)) System.currentTimeMillis() + 60_000 else 0L).apply()
         }
         return match
     }
