@@ -73,4 +73,11 @@
     <string name="tvos_media_previous">上一首</string>
     <string name="tvos_media_play_pause">播放或暂停</string>
     <string name="tvos_media_next">下一首</string>
+    <string name="tvos_airplay_title">AirPlay 接收</string>
+    <string name="tvos_airplay_ready">已安装可选 AirPlay 接收端。打开后可接收兼容的 iPhone、iPad 或 Mac 镜像。</string>
+    <string name="tvos_airplay_install">请从官方 GitHub Release 安装独立开源接收端。手机扫描二维码后，自行在电视安装 APK。</string>
+    <string name="tvos_airplay_open">打开已安装接收端</string>
+    <string name="tvos_airplay_upstream">打开原项目</string>
+    <string name="tvos_airplay_no_browser">电视无可用浏览器，请用手机扫描二维码。</string>
+    <string name="tvos_airplay_limitations">采用独立 GPLv3 接收应用，不内置于 Tigris。需要局域网发现；DRM、苹果专有服务及点对点 AirPlay 可能不可用。</string>
 </resources>

@@ -461,6 +461,9 @@ class SettingsActivity : Activity() {
         row(getString(R.string.tvos_device_settings_title), getString(R.string.tvos_device_settings_info), { "" }, chevron = true) {
             startActivity(Intent(this, TvOSDeviceSettingsActivity::class.java))
         }
+        row(getString(R.string.tvos_airplay_title), getString(R.string.tvos_airplay_limitations), { "" }, chevron = true) {
+            startActivity(Intent(this, AirPlaySetupActivity::class.java))
+        }
         row(getString(R.string.tvos_pin_manage_title), getString(R.string.tvos_pin_launcher_only), { "" }, chevron = true) {
             startActivity(Intent(this, LocalAppRestrictionActivity::class.java))
         }

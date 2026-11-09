@@ -73,4 +73,11 @@
     <string name="tvos_media_previous">Previous</string>
     <string name="tvos_media_play_pause">Play or pause</string>
     <string name="tvos_media_next">Next</string>
+    <string name="tvos_airplay_title">AirPlay Receiver</string>
+    <string name="tvos_airplay_ready">An optional AirPlay receiver is installed. Open it to receive compatible iPhone, iPad or Mac mirroring.</string>
+    <string name="tvos_airplay_install">Install the separate open-source receiver from its official GitHub release. Scan this code on your phone; install the APK on the TV yourself.</string>
+    <string name="tvos_airplay_open">Open installed receiver</string>
+    <string name="tvos_airplay_upstream">Open original project</string>
+    <string name="tvos_airplay_no_browser">No browser available; scan the QR code on your phone.</string>
+    <string name="tvos_airplay_limitations">Separate GPLv3 receiver app, not built into Tigris. Local-network discovery required; DRM, proprietary Apple services and peer-to-peer AirPlay may not work.</string>
 </resources>
