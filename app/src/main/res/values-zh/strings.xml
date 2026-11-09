@@ -20,9 +20,9 @@
     <string name="install_home_guide_open">查看安装指南</string>
     <string name="app_name_guard">Tigris · 兼容守护版</string>
     <string name="tile_style_title">App 图标外观</string>
-    <string name="tile_style_detail">品牌横幅自动适配或使用旧版浅灰底板；变更后返回桌面即生效</string>
-    <string name="tile_style_brand">自动品牌卡片</string>
-    <string name="tile_style_classic">经典浅灰卡片</string>
+    <string name="tile_style_detail">有品牌图标的直接用原图；没有品牌图标的统一白底。返回桌面后生效</string>
+    <string name="tile_style_brand">品牌图标（推荐）</string>
+    <string name="tile_style_classic">透明底图标</string>
     <string name="tile_aspect_title">图标卡片比例</string>
     <string name="tile_aspect_detail">预览 Apple tvOS 5:3 或 Android TV 16:9 的真实布局</string>
     <string name="tile_source_choose">图标来源</string>
@@ -33,7 +33,9 @@
     <string name="tvos_recents_title">应用切换器</string>
     <string name="tvos_switcher_auto_help">已启用的无障碍服务能打开系统原生切换器时优先使用，否则使用 Tigris 卡片；不会自动开启权限。</string>
     <string name="tvos_recents_help">左右选择应用，确定打开；向上移除这张卡片（不会关闭应用）。</string>
-    <string name="tvos_recents_empty">还没有最近使用的应用。请先从 Tigris 打开应用。</string>
+    <string name="tvos_recents_empty">还没有最近使用的应用。请先打开一个应用；也可按菜单键尝试系统切换器。</string>
+    <string name="tvos_preview_unavailable">暂无画面预览\n按确定打开应用；按菜单键尝试系统切换器</string>
+    <string name="tvos_native_recents_unavailable">系统切换器暂不可用，请用左右键选择应用并按确定打开。</string>
     <string name="tvos_now_playing">正在播放</string>
     <string name="tvos_now_playing_unavailable">未授权媒体访问或当前没有播放</string>
     <string name="tvos_device_settings_title">电视系统设置</string>

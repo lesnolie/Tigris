@@ -37,6 +37,5 @@ internal object BrandTilePolicy {
     }
 
     /** Geometry is decided independently of wallpaper, avoiding per-frame sampling. */
-    fun renderedHeight(width: Int, aspect: String): Int =
-        if (aspect == Prefs.TILE_TVOS) width * 3 / 5 else width * 9 / 16
+    fun renderedHeight(width: Int): Int = width * 9 / 16
 }

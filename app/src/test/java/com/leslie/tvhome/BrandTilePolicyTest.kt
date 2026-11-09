@@ -29,8 +29,7 @@ class BrandTilePolicyTest {
         assertFalse(BrandTilePolicy.validForeground(0, 0, false))
     }
     @Test fun geometryAndBrandColorAreBounded() {
-        assertEquals(240, BrandTilePolicy.renderedHeight(400, Prefs.TILE_TVOS))
-        assertEquals(225, BrandTilePolicy.renderedHeight(400, Prefs.TILE_WIDE))
+        assertEquals(225, BrandTilePolicy.renderedHeight(400))
         val white = BrandTilePolicy.brandColor(0xFFFFFFFF.toInt())
         assertEquals(0xFF, white ushr 24)
         assertTrue((white ushr 16 and 255) >= 200)   // white stays white

@@ -571,11 +571,11 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val side = (sw * 0.06875f).toInt()
         val gap = (sw * 0.0292f).toInt()           // 56 px
         tileW = DockLayout.tileWidth(sw, side, gap, cols)
-        tileH = if (prefs.appTileAspect == Prefs.TILE_TVOS) tileW * 3 / 5 else tileW * 9 / 16
+        tileH = tileW * 9 / 16
         rowPitch = (sh * 0.2463f).toInt()          // 266 px
         // The dock sits at the bottom; only the top edge of the next row peeks out below it.
         val defaultTileWidth = DockLayout.tileWidth(sw, side, gap, DockLayout.DEFAULT_COLUMNS)
-        val defaultTileHeight = if (prefs.appTileAspect == Prefs.TILE_TVOS) defaultTileWidth * 3 / 5 else defaultTileWidth * 9 / 16
+        val defaultTileHeight = defaultTileWidth * 9 / 16
         firstRowY = DockLayout.dockTop((sh * 0.744f).toInt(), defaultTileHeight, tileH) + dp(10)
         expandedRowY = (sh * 0.36f).toInt()
 
@@ -1864,7 +1864,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         IdleTimerTakeover.noteHomeResumed()
         IdleTimerTakeover.sync(this)
         // Rebuild only after Settings changes column count; order/folders remain in Prefs.
-        val expectedH = if (prefs.appTileAspect == Prefs.TILE_TVOS) tileW * 3 / 5 else tileW * 9 / 16
+        val expectedH = tileW * 9 / 16
         if (cols != prefs.dockColumns || tileH != expectedH ||
             kotlin.math.abs(textScaleSeen - prefs.textScale) > 0.001f) { recreate(); return }
         if (tileStyleSeen != prefs.appTileStyle) {

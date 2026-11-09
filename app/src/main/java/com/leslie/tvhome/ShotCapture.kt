@@ -45,8 +45,16 @@ internal object ShotCapture {
 
     fun has(ctx: Context, pkg: String): Boolean = runCatching { file(ctx, pkg).length() > 0L }.getOrDefault(false)
 
+    /** Packages with a stored frame, newest first; lets the switcher show every captured app. */
+    fun recentPackages(ctx: Context, packages: Collection<String>): List<String> =
+        packages.mapNotNull { pkg ->
+            val f = file(ctx, pkg)
+            if (f.length() > 0L) pkg to f.lastModified() else null
+        }.sortedByDescending { it.second }.map { it.first }
+
     fun load(ctx: Context, pkg: String): Bitmap? = runCatching {
         val f = file(ctx, pkg)
+        // Dark frames are valid app content too; only decoding decides validity.
         if (f.length() > 0L) BitmapFactory.decodeFile(f.absolutePath) else null
     }.getOrNull()
 

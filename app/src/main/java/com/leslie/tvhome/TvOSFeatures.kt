@@ -45,6 +45,9 @@ internal object RecentApps {
             .putStringSet(KEY_DISMISSED, dismissed).apply()
     }
 
+    /** A stored screenshot proves the app was reopened; such a card must not stay dismissed. */
+    private fun dismissedNow(ctx: Context, available: List<AppEntry>): Set<String> =
+        dismissed(ctx) - ShotCapture.recentPackages(ctx, available.map { it.pkg }).toSet()
     private fun dismissed(ctx: Context): Set<String> =
         ctx.getSharedPreferences(STORE, Context.MODE_PRIVATE)
             .getStringSet(KEY_DISMISSED, emptySet()).orEmpty().toSet()
@@ -61,11 +64,21 @@ internal object RecentApps {
     }
 
     /** Fast, permission-free first paint. Only apps previously opened from Tigris are shown. */
-    fun saved(ctx: Context, available: List<AppEntry>): List<AppEntry> =
-        resolve(available, emptyList(), stored(ctx), dismissed(ctx))
+    fun saved(ctx: Context, available: List<AppEntry>, extra: List<String> = emptyList()): List<AppEntry> = resolve(available, extra, stored(ctx), dismissedNow(ctx, available))
 
+    /**
+     * Full system task order through the same loopback ADB authorization already used to close
+     * apps. UsageStats is the fallback when adbd is unavailable.
+     */
+    fun systemRecents(ctx: Context, available: List<AppEntry>, extra: List<String> = emptyList()): List<AppEntry> {
+        if (!Prefs(ctx).adbAuthorized) return emptyList()
+        val dump = LocalAdb.shell(ctx, "dumpsys activity recents") ?: return emptyList()
+        val observed = Regex("A=(?:\\d+:)?([A-Za-z0-9._]+)")
+            .findAll(dump).map { it.groupValues[1] }.toList()
+        return resolve(available, (observed + extra).distinct(), stored(ctx), dismissedNow(ctx, available))
+    }
     /** Potentially slow system event scan. This must only be called from a worker thread. */
-    fun recent(ctx: Context, available: List<AppEntry>): List<AppEntry> {
+    fun recent(ctx: Context, available: List<AppEntry>, extra: List<String> = emptyList()): List<AppEntry> {
         val availablePackages = available.filter { it.folder == null && it.input == null }
             .map { it.pkg }.toSet()
         val lastSeen = HashMap<String, Long>()
@@ -90,7 +103,7 @@ internal object RecentApps {
         val observed = lastSeen.entries
             .sortedWith(compareByDescending<Map.Entry<String, Long>> { it.value }.thenBy { it.key })
             .map { it.key }
-        return resolve(available, observed, stored(ctx), dismissed(ctx))
+        return resolve(available, (observed + extra).distinct(), stored(ctx), dismissedNow(ctx, available))
     }
 }
 
@@ -110,6 +123,7 @@ class AppSwitcherActivity : Activity() {
     private lateinit var container: FrameLayout
     private lateinit var stack: FrameLayout
     private lateinit var caption: TextView
+    private lateinit var position: TextView
     private val cards = ArrayList<FrameLayout>()
     private val labels = ArrayList<TextView>()
     private var apps: List<AppEntry> = emptyList()
@@ -117,7 +131,6 @@ class AppSwitcherActivity : Activity() {
     private var cardW = 0
     private var cardH = 0
     private var step = 0
-    private var iconSize = 0
 
     override fun onUserInteraction() {
         super.onUserInteraction()
@@ -132,10 +145,9 @@ class AppSwitcherActivity : Activity() {
             android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
 
         val dm = resources.displayMetrics
-        cardW = (dm.widthPixels * 0.80f).toInt()
+        cardW = (dm.widthPixels * 0.64f).toInt()
         cardH = (cardW * 9f / 16f).toInt()
-        step = (cardW * 0.16f).toInt()
-        iconSize = (cardH * 0.34f).toInt()
+        step = (cardW * 0.26f).toInt()
 
         container = FrameLayout(this).apply {
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
@@ -152,6 +164,15 @@ class AppSwitcherActivity : Activity() {
             visibility = View.GONE
         }
         container.addView(caption, FrameLayout.LayoutParams(-1, -2, Gravity.CENTER))
+        position = TextView(this).apply {
+            setTextColor(Color.WHITE)
+            textSize = 16f
+            alpha = 0.72f
+            gravity = Gravity.CENTER
+            setShadowLayer(4f, 0f, 1f, Color.BLACK)
+        }
+        container.addView(position, FrameLayout.LayoutParams(-1, -2,
+            Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(18) })
         setContentView(container)
         content = container
         container.scaleX = 0.94f
@@ -160,30 +181,35 @@ class AppSwitcherActivity : Activity() {
         container.animate().scaleX(1f).scaleY(1f).alpha(1f)
             .setDuration(220).setInterpolator(Motion.ease).start()
 
-        val available = AppRepo(this).allApps()
-        apps = RecentApps.saved(this, available)
+        val repo = AppRepo(this)
+        val available = repo.allApps()
+        val shots = ShotCapture.recentPackages(this, available.map { it.pkg })
+        apps = RecentApps.saved(this, available, shots)
         buildCards()
         Thread({
-            val latest = RecentApps.recent(this, available)
+            val latestShots = ShotCapture.recentPackages(this, available.map { it.pkg })
+            val latest = RecentApps.systemRecents(this, available, latestShots).ifEmpty {
+                RecentApps.recent(this, available, latestShots)
+            }
             runOnUiThread {
                 if (!isFinishing && !isDestroyed && !interacted) {
                     apps = latest
+                    selected = 0
                     buildCards()
                 }
             }
         }, "tigris-recent-events").start()
     }
 
-    /** Rebuild the stacked cards from [apps]; selected index is preserved when possible. */
+    /** Screenshot availability never determines which recent tasks can be opened. */
     private fun buildCards() {
         stack.removeAllViews()
         cards.clear()
         labels.clear()
         for (app in apps) {
-            val drawable = runCatching { packageManager.getActivityIcon(app.component) }.getOrNull()
             val shot = runCatching { ShotCapture.load(this, app.pkg) }.getOrNull()
             val card = FrameLayout(this).apply {
-                background = cardBackground(cardBrandColor(drawable))
+                background = cardBackground()
                 clipToOutline = true
                 isFocusable = false
                 isClickable = false
@@ -194,11 +220,26 @@ class AppSwitcherActivity : Activity() {
                     scaleType = ImageView.ScaleType.CENTER_CROP
                 }, FrameLayout.LayoutParams(-1, -1))
             } else {
-                card.addView(ImageView(this).apply {
-                    setImageDrawable(drawable)
-                    scaleType = ImageView.ScaleType.FIT_CENTER
-                }, FrameLayout.LayoutParams(iconSize, iconSize, Gravity.CENTER))
+                // Keep the task usable without substituting a giant app icon for its screen.
+                card.addView(TextView(this).apply {
+                    text = getString(R.string.tvos_preview_unavailable)
+                    setTextColor(Color.WHITE)
+                    textSize = 18f
+                    gravity = Gravity.CENTER
+                    setPadding(dp(24), dp(24), dp(24), dp(24))
+                }, FrameLayout.LayoutParams(-1, -1))
             }
+            card.addView(View(this).apply {
+                background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
+                    intArrayOf(Color.TRANSPARENT, 0xE6000000.toInt()))
+            }, FrameLayout.LayoutParams(-1, cardH / 3, Gravity.BOTTOM))
+            card.addView(View(this).apply {
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(10).toFloat()
+                    setColor(Color.TRANSPARENT)
+                    setStroke(dp(1), 0x26FFFFFF)
+                }
+            }, FrameLayout.LayoutParams(-1, -1))
             val name = TextView(this).apply {
                 text = app.label
                 setTextColor(Color.WHITE)
@@ -231,12 +272,12 @@ class AppSwitcherActivity : Activity() {
             val ad = kotlin.math.abs(delta)
             val visible = ad <= 3
             val targetX = (delta * step).toFloat()
-            val targetScale = if (delta == 0) 1f else kotlin.math.max(0.66f, 1f - ad * 0.11f)
-            val targetY = if (delta == 0) 0f else (ad * dp(7)).toFloat()
+            val targetScale = if (delta == 0) 1f else kotlin.math.max(0.70f, 1f - ad * 0.09f)
+            val targetY = if (delta == 0) 0f else (ad * dp(14)).toFloat()
             val targetAlpha = when {
                 !visible -> 0f
                 delta == 0 -> 1f
-                else -> kotlin.math.max(0.30f, 0.92f - ad * 0.18f)
+                else -> kotlin.math.max(0.42f, 0.84f - ad * 0.16f)
             }
             card.visibility = if (visible) View.VISIBLE else View.INVISIBLE
             card.translationZ = (if (visible) 50 - ad else 0).toFloat()
@@ -244,7 +285,7 @@ class AppSwitcherActivity : Activity() {
                 card.animate().cancel()
                 card.animate().translationX(targetX).translationY(targetY)
                     .scaleX(targetScale).scaleY(targetScale).alpha(targetAlpha)
-                    .setDuration(220).setInterpolator(Motion.ease).start()
+                    .setDuration(260).setInterpolator(Motion.spring).start()
             } else {
                 card.translationX = targetX
                 card.translationY = targetY
@@ -260,6 +301,8 @@ class AppSwitcherActivity : Activity() {
             caption.visibility = View.GONE
         }
         for (i in labels.indices) labels[i].visibility = if (i == selected) View.VISIBLE else View.INVISIBLE
+        position.text = if (apps.isEmpty()) "" else (selected + 1).toString() + " / " + apps.size
+        position.visibility = if (apps.isEmpty()) View.GONE else View.VISIBLE
     }
 
     private fun moveSelection(delta: Int) {
@@ -289,9 +332,9 @@ class AppSwitcherActivity : Activity() {
         val app = apps.getOrNull(idx) ?: return
         val card = cards.getOrNull(idx) ?: return
         card.animate().cancel()
-        card.animate().translationY(-dp(180).toFloat()).alpha(0f)
-            .scaleX(0.85f).scaleY(0.85f)
-            .setDuration(200).setInterpolator(Motion.ease)
+        card.animate().translationY(-dp(220).toFloat()).alpha(0f)
+            .scaleX(0.8f).scaleY(0.8f)
+            .setDuration(260).setInterpolator(Motion.ease)
             .withEndAction {
                 AppCloser.close(this, app.pkg)
                 RecentApps.dismiss(this, app.pkg)
@@ -304,6 +347,15 @@ class AppSwitcherActivity : Activity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_MENU) {
+            if (event.action == KeyEvent.ACTION_UP &&
+                !HomeGuardService.tryOpenNativeRecents()) {
+                android.widget.Toast.makeText(this, R.string.tvos_native_recents_unavailable,
+                    android.widget.Toast.LENGTH_LONG).show()
+            }
+            // Keep our cards available: some firmware acknowledges Recents but renders nothing.
+            return true
+        }
         if (apps.isNotEmpty()) {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_DPAD_LEFT -> {
@@ -331,43 +383,11 @@ class AppSwitcherActivity : Activity() {
         return super.dispatchKeyEvent(event)
     }
 
-    /** Average a (mostly opaque) icon into a dark, brand-tinted card surface. */
-    private fun cardBrandColor(d: android.graphics.drawable.Drawable?): Int {
-        if (d == null) return BrandTilePolicy.brandColor(0xFF3A4A66.toInt())
-        return try {
-            val s = 24
-            val bmp = android.graphics.Bitmap.createBitmap(s, s, android.graphics.Bitmap.Config.ARGB_8888)
-            d.setBounds(0, 0, s, s)
-            d.draw(android.graphics.Canvas(bmp))
-            var r = 0
-            var g = 0
-            var b = 0
-            var n = 0
-            for (y in 0 until s) for (x in 0 until s) {
-                val c = bmp.getPixel(x, y)
-                if (Color.alpha(c) < 40) continue
-                r += Color.red(c); g += Color.green(c); b += Color.blue(c); n++
-            }
-            bmp.recycle()
-            if (n == 0) BrandTilePolicy.brandColor(0xFF3A4A66.toInt())
-            else BrandTilePolicy.brandColor(Color.rgb(r / n, g / n, b / n))
-        } catch (_: Exception) {
-            BrandTilePolicy.brandColor(0xFF3A4A66.toInt())
+    private fun cardBackground(): GradientDrawable =
+        GradientDrawable(GradientDrawable.Orientation.TL_BR,
+            intArrayOf(0xFF2E343D.toInt(), 0xFF14171D.toInt())).apply {
+            cornerRadius = dp(10).toFloat()
         }
-    }
-
-    private fun cardBackground(base: Int): GradientDrawable {
-        val light = blend(base, Color.WHITE, 0.18f)
-        val dark = blend(base, Color.BLACK, 0.42f)
-        return GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(light, dark)).apply {
-            cornerRadius = dp(6).toFloat()
-        }
-    }
-
-    private fun blend(a: Int, b: Int, f: Float) = Color.rgb(
-        (Color.red(a) * (1f - f) + Color.red(b) * f).toInt(),
-        (Color.green(a) * (1f - f) + Color.green(b) * f).toInt(),
-        (Color.blue(a) * (1f - f) + Color.blue(b) * f).toInt())
 
     private fun finishNow() { super.finish() }
 

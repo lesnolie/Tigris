@@ -228,26 +228,11 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
     private val mediaModule: GlassButton
     private lateinit var mediaPrevious: GlassButton
     private lateinit var mediaNext: GlassButton
-    private lateinit var recentModule: GlassButton
     // Each Control Center page stays within the TV safe area; no unbounded vertical stack.
     private val generalPage = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
     private val mediaPage = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
     private val toolsPage = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
-    private lateinit var controlsTab: GlassButton
-    private lateinit var mediaTab: GlassButton
-    private lateinit var toolsTab: GlassButton
-    private var selectedTab = 0
 
-    private fun selectTab(index: Int, moveFocus: Boolean = true) {
-        selectedTab = if (index == 1 && mediaTab.visibility != View.VISIBLE) 0 else index.coerceIn(0, 2)
-        generalPage.visibility = if (selectedTab == 0) View.VISIBLE else View.GONE
-        mediaPage.visibility = if (selectedTab == 1) View.VISIBLE else View.GONE
-        toolsPage.visibility = if (selectedTab == 2) View.VISIBLE else View.GONE
-        if (moveFocus && isOpen) {
-            (when (selectedTab) { 1 -> mediaModule; 2 -> recentModule; else -> memButton }).requestFocus()
-        }
-        if (isOpen) host.post { refreshGlass() }
-    }
     private var inputs: List<Input> = emptyList()
     private var volumeTarget = "speaker"
     private val status = ctx.text(11f, Color.argb(190, 255, 255, 255))
@@ -285,22 +270,10 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         private set
 
     init {
-        // tvOS-style contextual tabs; Now Playing appears only for an authorized active session.
-        val tabRow = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; clipChildren = false }
-        controlsTab = GlassButton(ctx.getString(R.string.tvos_controls), R.drawable.ic_gear, Shape.CAPSULE) { selectTab(0) }
-        mediaTab = GlassButton(ctx.getString(R.string.tvos_now_playing), R.drawable.ic_volume, Shape.CAPSULE) { selectTab(1) }
-        toolsTab = GlassButton(ctx.getString(R.string.tvos_tools), R.drawable.ic_apps, Shape.CAPSULE) { selectTab(2) }
-        listOf(controlsTab, mediaTab, toolsTab).forEachIndexed { index, button ->
-            tabRow.addView(button, LinearLayout.LayoutParams(0, cell, 1f).apply {
-                if (index > 0) leftMargin = ctx.dp(5)
-            })
-        }
-        panel.addView(tabRow, LinearLayout.LayoutParams(-1, cell))
-        panel.addView(generalPage, LinearLayout.LayoutParams(-1, -2).apply { topMargin = gap })
+        // Single control panel: controls (and media when active). No launcher shortcut rows.
+        panel.addView(generalPage, LinearLayout.LayoutParams(-1, -2))
         panel.addView(mediaPage, LinearLayout.LayoutParams(-1, -2).apply { topMargin = gap })
-        panel.addView(toolsPage, LinearLayout.LayoutParams(-1, -2).apply { topMargin = gap })
         mediaPage.visibility = View.GONE
-        toolsPage.visibility = View.GONE
 
         // tvOS layout: a square power tile beside two capsules, then a row of round buttons.
         val top = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; clipChildren = false }
@@ -347,19 +320,6 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         inputModule = GlassButton(I18n.text(R.string.i18n_controlcenter_014), R.drawable.ic_input, Shape.CAPSULE) { pickInput() }
         generalPage.addView(inputModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
 
-        // Keep launcher utilities accessible even with no active MediaSession.
-        recentModule = GlassButton(ctx.getString(R.string.tvos_recents_title),
-            R.drawable.ic_apps, Shape.CAPSULE) {
-            close()
-            AppSwitcherRouter.open(ctx)
-        }
-        toolsPage.addView(recentModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
-
-        toolsPage.addView(GlassButton(ctx.getString(R.string.tvos_device_settings_title),
-            R.drawable.ic_gear, Shape.CAPSULE) {
-            close()
-            ctx.startActivity(Intent(ctx, TvOSDeviceSettingsActivity::class.java))
-        }, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
         mediaModule = GlassButton(ctx.getString(R.string.tvos_now_playing), R.drawable.ic_volume, Shape.CAPSULE) {
             // MediaSession actions only when Android explicitly grants notification-listener access.
             io.execute {
@@ -1236,7 +1196,6 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         scrim.animate().alpha(1f).setDuration(220).start()
         panel.animate().alpha(1f).translationX(0f).scaleX(1f).scaleY(1f).setDuration(320)
             .setInterpolator(Motion.ease).setUpdateListener { if (glassStyle) invalidateSurfaces() }.start()
-        selectTab(0, moveFocus = false)
         memButton.requestFocus()
         host.removeCallbacks(ticker)
         host.post(ticker)
@@ -1322,10 +1281,9 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
                 v?.target?.takeIf { it.isNotEmpty() }?.let { volumeTarget = it }
                 volume.set(v)
                 inputs = list
-                mediaTab.visibility = if (track != null) View.VISIBLE else View.GONE
+                mediaPage.visibility = if (track != null) View.VISIBLE else View.GONE
                 mediaPrevious.visibility = if (track?.previous == true) View.VISIBLE else View.INVISIBLE
                 mediaNext.visibility = if (track?.next == true) View.VISIBLE else View.INVISIBLE
-                if (track == null && selectedTab == 1) selectTab(0)
                 mediaModule.title.text = track?.title ?: ctx.getString(R.string.tvos_now_playing)
                 mediaModule.sub.text = if (track != null) {
                     listOf(track.artist, if (track.playing) "▶" else "Ⅱ").filter { it.isNotBlank() }.joinToString(" · ")

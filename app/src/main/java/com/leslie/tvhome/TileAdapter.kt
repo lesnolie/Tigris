@@ -6,7 +6,6 @@ import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
 import android.view.KeyEvent
-import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -15,19 +14,12 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import java.util.concurrent.Executors
 
-/** One app on the grid: a rounded 16:9 frost-grey tile with the name under it when focused. */
+/** One app on the grid: a square icon with the name under it when focused. */
 class TileCell(ctx: Context, val tileW: Int, val tileH: Int) : FrameLayout(ctx) {
     val card = FrameLayout(ctx)
     val image = ImageView(ctx).apply {
         scaleType = ImageView.ScaleType.CENTER_CROP
     }
-    /** Real adaptive foreground, if the source APK exposes a separately usable layer. */
-    val foregroundLayer = ImageView(ctx).apply {
-        scaleType = ImageView.ScaleType.FIT_XY
-        isClickable = false
-    }
-    /** GPU-composited movable light, drawn over the original app art. */
-    private val specular = TvOSSpecular(ctx)
     val label: TextView = ctx.text(15f, bold = true).apply {
         gravity = Gravity.CENTER
         maxLines = 1
@@ -36,29 +28,12 @@ class TileCell(ctx: Context, val tileW: Int, val tileH: Int) : FrameLayout(ctx) 
         setShadowLayer(dp(6).toFloat(), 0f, dp(1).toFloat(), Color.argb(140, 0, 0, 0))
     }
     private var jiggle: ObjectAnimator? = null
-    /** Soft shadow under the card at rest, deeper while it is lifted. */
+    /** Soft shadow under the icon; deeper while it is lifted. */
     private val shadow = ImageView(ctx).apply {
         setImageBitmap(shadowFor(ctx, tileW, tileH))
         alpha = TileSkin.SHADOW_REST_ALPHA
     }
     private val shadowPad = dp(SHADOW_PAD)
-    /** A light-blue halo that appears only on the focused tile. */
-    private val glow = ImageView(ctx).apply {
-        scaleType = ImageView.ScaleType.FIT_XY
-        setImageBitmap(glowFor(ctx, tileW, tileH))
-        alpha = 0f
-    }
-    private val glowPad = dp(TileSkin.GLOW_PAD_DP)
-    /** The hairline every tile has, and the brighter ring used for focus. */
-    private val border = View(ctx).apply {
-        background = ring(ctx, TileSkin.BORDER_DP, TileSkin.BORDER)
-    }
-    private val focusRing = View(ctx).apply {
-        background = ring(ctx, TileSkin.FOCUS_RING_DP, TileSkin.FOCUS_RING)
-        alpha = 0f
-    }
-    private val focusRenderer = TvOSFocusRenderer(card, foregroundLayer, specular, shadow,
-        border, focusRing, glow, label, shadowPad)
 
     init {
         clipChildren = false
@@ -69,32 +44,37 @@ class TileCell(ctx: Context, val tileW: Int, val tileH: Int) : FrameLayout(ctx) 
         addView(shadow, LayoutParams(tileW + shadowPad * 2, tileH + shadowPad * 2))
         shadow.translationX = -shadowPad.toFloat()
         shadow.translationY = (-shadowPad + dp(4)).toFloat()
-        addView(glow, LayoutParams(tileW + glowPad * 2, tileH + glowPad * 2))
-        glow.translationX = -glowPad.toFloat()
-        glow.translationY = -glowPad.toFloat()
         card.addView(image, LayoutParams(tileW, tileH))
-        card.addView(foregroundLayer, LayoutParams(tileW, tileH))
         card.clipRounded(dp(TileSkin.RADIUS_DP).toFloat())
         addView(card, LayoutParams(tileW, tileH))
-        addView(focusRing, LayoutParams(tileW, tileH))
-        // The name hangs below the tile without taking layout space, so rows keep an exact pitch.
+        // Focus is only a scale-up: no outline, ring, glow or white frame.
+        // The name hangs below the icon without taking layout space, so rows keep an exact pitch.
         addView(label, LayoutParams(tileW + dp(30), LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
         label.translationY = tileH + dp(17).toFloat()
     }
 
-    /**
-     * Hardware-accelerated focus animation; its current pose is the starting point of every
-     * interrupted D-pad movement. A missing adaptive foreground uses whole-card 3D only.
-     */
     fun setFocusedLook(f: Boolean, fromDx: Int, fromDy: Int, showLabel: Boolean = true, tvos: Boolean = true) {
         translationZ = if (f) 1f else 0f
-        focusRenderer.focus(f, fromDx, fromDy, showLabel, tvos)
+        val target = if (f) TileSkin.FOCUS_SCALE else 1f
+        card.tweenScale(target, if (f) 230 else 170,
+            if (f) Motion.spring else Motion.ease,
+            z = if (f) dp(4).toFloat() else 0f) {
+            shadow.scaleX = card.scaleX
+            shadow.scaleY = card.scaleX
+        }
+        shadow.animate()
+            .alpha(if (f) TileSkin.SHADOW_FOCUS_ALPHA else TileSkin.SHADOW_REST_ALPHA)
+            .translationY((-shadowPad + dp(if (f) 16 else 4)).toFloat())
+            .setDuration(if (f) 230 else 170)
+            .start()
+        label.animate()
+            .alpha(if (f && showLabel) 1f else 0f)
+            .setDuration(if (f) 180 else 120)
+            .start()
     }
 
     fun setArtwork(art: AppTileArt?) {
         image.setImageBitmap(art?.background)
-        foregroundLayer.setImageBitmap(art?.foreground)
-        foregroundLayer.visibility = if (art?.foreground != null) View.VISIBLE else View.GONE
     }
 
     fun setJiggle(on: Boolean) {
@@ -110,46 +90,16 @@ class TileCell(ctx: Context, val tileW: Int, val tileH: Int) : FrameLayout(ctx) 
     }
 
     companion object {
-        const val SHADOW_PAD = 30
-        const val FOCUS_SCALE = 1.06f
-        // 5/6-column Dock tiles have different sizes; one global bitmap silently stretches the
+        const val SHADOW_PAD = 26
+
+        // 5/6-column layouts have different tile sizes; one global bitmap silently stretches the
         // old shadow after switching layout. Cache by size.
         private val shadows = mutableMapOf<Pair<Int, Int>, android.graphics.Bitmap>()
-        private val glows = mutableMapOf<Pair<Int, Int>, android.graphics.Bitmap>()
 
         @Synchronized
         fun shadowFor(ctx: Context, w: Int, h: Int): android.graphics.Bitmap =
             shadows.getOrPut(w to h) {
                 LiquidGlass.shadow(w, h, ctx.dp(TileSkin.RADIUS_DP).toFloat(), ctx.dp(SHADOW_PAD))
-            }
-
-        @Synchronized
-        fun glowFor(ctx: Context, w: Int, h: Int): android.graphics.Bitmap =
-            glows.getOrPut(w to h) {
-                val pad = ctx.dp(TileSkin.GLOW_PAD_DP)
-                val b = android.graphics.Bitmap.createBitmap(
-                    w + pad * 2, h + pad * 2, android.graphics.Bitmap.Config.ARGB_8888)
-                val c = android.graphics.Canvas(b)
-                val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    color = TileSkin.FOCUS_GLOW
-                    style = android.graphics.Paint.Style.STROKE
-                    strokeWidth = ctx.dp(TileSkin.GLOW_DP).toFloat()
-                    maskFilter = android.graphics.BlurMaskFilter(
-                        ctx.dp(TileSkin.GLOW_BLUR_DP).toFloat(),
-                        android.graphics.BlurMaskFilter.Blur.NORMAL)
-                }
-                val r = ctx.dp(TileSkin.RADIUS_DP).toFloat()
-                c.drawRoundRect(android.graphics.RectF(
-                    pad + 1f, pad + 1f, pad + w - 1f, pad + h - 1f), r, r, p)
-                b
-            }
-
-        private fun ring(ctx: Context, widthDp: Float, color: Int) =
-            android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                cornerRadius = ctx.dp(TileSkin.RADIUS_DP).toFloat()
-                setStroke(ctx.dp(widthDp), color)
-                setColor(Color.TRANSPARENT)
             }
     }
 }
@@ -179,10 +129,10 @@ class TileAdapter(
     /** Tiles in the dock (the first row) hide their name, which would sit on the glass edge. */
     var dockCount = 0
 
-    /** Tilt-in on focus ([Prefs.focusTvos]); otherwise only the zoom and shadow. */
+    /** Kept for the settings call site; focus is always a plain scale now. */
     var tvosFocus = true
 
-    /** Direction of the last D-pad move, used for the tilt-in. */
+    /** Direction of the last D-pad move; kept for the interface shared with the grid. */
     var lastDx = 0
     var lastDy = 0
 
