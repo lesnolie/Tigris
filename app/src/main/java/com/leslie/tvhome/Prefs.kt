@@ -31,6 +31,17 @@ class Prefs(ctx: Context) {
         get() = sp.getBoolean("show_avatar", true)
         set(v) = sp.edit().putBoolean("show_avatar", v).apply()
 
+    /** tvOS-inspired Dynamic Text within Tigris (not a global Android text override). */
+    var textScale: Float
+        get() = sp.getFloat("tigris_text_scale", 1f).coerceIn(0.9f, 1.3f)
+        set(v) = sp.edit().putFloat("tigris_text_scale", v.coerceIn(0.9f, 1.3f)).apply()
+
+    fun nextTextScale() {
+        val options = listOf(0.9f, 1f, 1.15f, 1.3f)
+        val index = options.indexOfFirst { kotlin.math.abs(textScale - it) < 0.01f }
+        textScale = options[(index + 1) % options.size]
+    }
+
     /**
      * Three local launcher profiles with independent app order, hidden apps and recents preference.
      * These are NOT Android system accounts, Apple IDs, or media-provider login sessions.

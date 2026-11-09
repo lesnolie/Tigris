@@ -66,4 +66,6 @@
     <string name="tvos_pin_invalid">两次 PIN 必须相同，且为 4–8 位数字</string>
     <string name="tvos_pin_wrong">PIN 错误，或连续失败后暂时锁定</string>
     <string name="tvos_pin_launcher_only">只限制从 Tigris 打开应用。其他桌面及系统入口可能绕过，不属于系统级家长控制。</string>
+    <string name="tvos_dynamic_text_title">文字大小</string>
+    <string name="tvos_dynamic_text_help">调整 Tigris 界面的文字大小，不会影响其他电视应用。</string>
 </resources>

@@ -96,6 +96,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private lateinit var adapter: TileAdapter
     private var tileStyleSeen = ""
     private var profileSeen = -1
+    private var textScaleSeen = 1f
     private lateinit var repo: AppRepo
     private lateinit var prefs: Prefs
     private lateinit var control: ControlCenter
@@ -334,6 +335,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         repo = AppRepo(this)
         tileStyleSeen = prefs.appTileStyle
         profileSeen = prefs.activeProfile
+        textScaleSeen = prefs.textScale
         buildViews()
         control = ControlCenter(this, root)
         // Covers the screen before its first frame, so the home screen is never seen ahead of it.
@@ -1654,7 +1656,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         IdleTimerTakeover.sync(this)
         // Rebuild only after Settings changes column count; order/folders remain in Prefs.
         val expectedH = if (prefs.appTileAspect == Prefs.TILE_TVOS) tileW * 3 / 5 else tileW * 9 / 16
-        if (cols != prefs.dockColumns || tileH != expectedH) { recreate(); return }
+        if (cols != prefs.dockColumns || tileH != expectedH ||
+            kotlin.math.abs(textScaleSeen - prefs.textScale) > 0.001f) { recreate(); return }
         if (tileStyleSeen != prefs.appTileStyle || profileSeen != prefs.activeProfile) {
             tileStyleSeen = prefs.appTileStyle
             profileSeen = prefs.activeProfile
