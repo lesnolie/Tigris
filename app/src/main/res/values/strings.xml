@@ -31,7 +31,7 @@
     <string name="tile_source_icon">Native icon only</string>
     <string name="tile_source_classic">Classic frost-grey</string>
     <string name="tvos_recents_title">App Switcher</string>
-    <string name="tvos_switcher_auto_help">Prefer Android's native switcher when the existing accessibility service can open it; otherwise use Tigris cards.</string>
+    <string name="tvos_switcher_auto_help">Prefer the native Android switcher when the enabled accessibility service can open it; otherwise use Tigris cards.</string>
     <string name="tvos_recents_help">Left/right: choose an app. OK: open. Up: remove this card (does not close the app).</string>
     <string name="tvos_recents_empty">No recent apps yet. Open an app from Tigris first.</string>
     <string name="tvos_now_playing">Now Playing</string>
