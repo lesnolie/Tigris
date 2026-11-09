@@ -129,7 +129,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val blocked = intro != null || welcome != null || wakeIntro ||
             sheets.isNotEmpty() || control.isOpen || moving >= 0
         if (!HomeReturnPolicy.canReveal(launch, SystemClock.uptimeMillis(),
-                interactive, blocked, HomeGuardService.recentlyBroughtHome)) {
+                interactive, blocked, false)) {
             outboundLaunch = null
             return
         }
@@ -1816,8 +1816,15 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         sheets.toList().forEach { it.dismiss() }
         control.close()
         if (moving >= 0) endMove()
-        // The guard brought the screen back: do not animate a vendor HOME bounce.
+        // Guard-routed returns: a user Home press from a Tigris-launched app must still
+        // restore the launched tile; a stock-launcher bounce has no outbound launch.
         if (intent.getBooleanExtra(EXTRA_GUARD, false)) {
+            val nowGuard = SystemClock.uptimeMillis()
+            if (HomeReturnPolicy.canPreserveFocus(outboundLaunch, nowGuard,
+                    homeAlreadyVisible = resumed, guardReturn = false, wakeReturn = false)) {
+                previousHomeIntentAt = nowGuard
+                return
+            }
             outboundLaunch = null
             return
         }
