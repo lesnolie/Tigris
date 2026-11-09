@@ -394,7 +394,7 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         }
         mediaPage.addView(mediaModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
         mediaPage.addView(GlassButton(ctx.getString(R.string.tvos_airplay_title),
-            R.drawable.ic_tv, Shape.CAPSULE) {
+            R.drawable.ic_input, Shape.CAPSULE) {
             close()
             ctx.startActivity(Intent(ctx, AirPlaySetupActivity::class.java))
         }, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
