@@ -95,7 +95,6 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private lateinit var grid: RecyclerView
     private lateinit var adapter: TileAdapter
     private var tileStyleSeen = ""
-    private var profileSeen = -1
     private var textScaleSeen = 1f
     private var previousHomeIntentAt = 0L
     private lateinit var repo: AppRepo
@@ -335,7 +334,6 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         cols = prefs.dockColumns
         repo = AppRepo(this)
         tileStyleSeen = prefs.appTileStyle
-        profileSeen = prefs.activeProfile
         textScaleSeen = prefs.textScale
         buildViews()
         control = ControlCenter(this, root)
@@ -1576,17 +1574,6 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         focusAt(focusedPos)
     }
 
-    /** Local preferences only. No Android account switch or global background app killing. */
-    fun switchProfile(profile: Int) {
-        val to = profile.coerceIn(0, 2)
-        if (prefs.activeProfile == to) return
-        prefs.activeProfile = to
-        profileSeen = to
-        repo.invalidate()
-        focusedPos = 0
-        reload(forceFocus = true)
-    }
-
     override fun onUserInteraction() {
         super.onUserInteraction()
         armIdle(resetDeadline = true)
@@ -1682,9 +1669,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val expectedH = if (prefs.appTileAspect == Prefs.TILE_TVOS) tileW * 3 / 5 else tileW * 9 / 16
         if (cols != prefs.dockColumns || tileH != expectedH ||
             kotlin.math.abs(textScaleSeen - prefs.textScale) > 0.001f) { recreate(); return }
-        if (tileStyleSeen != prefs.appTileStyle || profileSeen != prefs.activeProfile) {
+        if (tileStyleSeen != prefs.appTileStyle) {
             tileStyleSeen = prefs.appTileStyle
-            profileSeen = prefs.activeProfile
             repo.invalidate()
             focusedPos = 0
             reload(forceFocus = true)

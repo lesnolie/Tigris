@@ -448,21 +448,11 @@ class SettingsActivity : Activity() {
             startActivity(Intent(this, WallpaperActivity::class.java).putExtra("upload_avatar", true))
         }
         row(I18n.text(R.string.i18n_settingsactivity_029), I18n.text(R.string.i18n_settingsactivity_030), { onOff(prefs.showAvatar) }, checked = { prefs.showAvatar }) { prefs.showAvatar = !prefs.showAvatar }
-        row(getString(R.string.tvos_profiles), getString(R.string.tvos_local_profile_help),
-            { getString(R.string.tvos_profile_number, prefs.activeProfile + 1) }) {
-            prefs.activeProfile = (prefs.activeProfile + 1) % 3
-        }
-        row(getString(R.string.tvos_search_title), getString(R.string.tvos_search_hint), { "" }, chevron = true) {
-            startActivity(Intent(this, TvOSSearchActivity::class.java))
-        }
         row(getString(R.string.tvos_recents_title), getString(R.string.tvos_recents_help), { "" }, chevron = true) {
             startActivity(Intent(this, AppSwitcherActivity::class.java))
         }
         row(getString(R.string.tvos_device_settings_title), getString(R.string.tvos_device_settings_info), { "" }, chevron = true) {
             startActivity(Intent(this, TvOSDeviceSettingsActivity::class.java))
-        }
-        row(getString(R.string.tvos_airplay_title), getString(R.string.tvos_airplay_limitations), { "" }, chevron = true) {
-            startActivity(Intent(this, AirPlaySetupActivity::class.java))
         }
         row(getString(R.string.tvos_pin_manage_title), getString(R.string.tvos_pin_launcher_only), { "" }, chevron = true) {
             startActivity(Intent(this, LocalAppRestrictionActivity::class.java))
