@@ -70,4 +70,7 @@
     <string name="tvos_dynamic_text_help">Resize Tigris interface text; does not affect other TV apps.</string>
     <string name="tvos_double_home_title">Double Home for Recent Apps</string>
     <string name="tvos_double_home_help">Optional: on TVs that deliver repeated Home events to Tigris, double Home opens local recent-app cards. May be unavailable on some firmware; off by default.</string>
+    <string name="tvos_media_previous">Previous</string>
+    <string name="tvos_media_play_pause">Play or pause</string>
+    <string name="tvos_media_next">Next</string>
 </resources>

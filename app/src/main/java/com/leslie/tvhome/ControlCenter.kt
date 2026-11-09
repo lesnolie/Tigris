@@ -226,6 +226,8 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
     private val inputModule: GlassButton
     private val networkModule: GlassButton
     private val mediaModule: GlassButton
+    private lateinit var mediaPrevious: GlassButton
+    private lateinit var mediaNext: GlassButton
     private val profileModule: GlassButton
     // Each Control Center page stays within the TV safe area; no unbounded vertical stack.
     private val generalPage = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
@@ -256,6 +258,18 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         override fun run() {
             followVolume()
             host.postDelayed(this, 2_000)
+        }
+    }
+
+    private fun sendTransport(action: String) {
+        io.execute {
+            val success = if (action == "toggle") NowPlaying.toggle(ctx)
+                          else NowPlaying.transport(ctx, action)
+            host.post {
+                if (!success) android.widget.Toast.makeText(ctx,
+                    R.string.tvos_now_playing_unavailable, android.widget.Toast.LENGTH_SHORT).show()
+                refresh()
+            }
         }
     }
 
@@ -379,6 +393,20 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
             }
         }
         mediaPage.addView(mediaModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
+        val transport = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_HORIZONTAL
+        }
+        mediaPrevious = GlassButton(ctx.getString(R.string.tvos_media_previous),
+            R.drawable.ic_skip_previous, Shape.ROUND) { sendTransport("previous") }
+        val mediaPlayPause = GlassButton(ctx.getString(R.string.tvos_media_play_pause),
+            R.drawable.ic_play_arrow, Shape.ROUND) { sendTransport("toggle") }
+        mediaNext = GlassButton(ctx.getString(R.string.tvos_media_next),
+            R.drawable.ic_skip_next, Shape.ROUND) { sendTransport("next") }
+        listOf(mediaPrevious, mediaPlayPause, mediaNext).forEach { button ->
+            transport.addView(button, LinearLayout.LayoutParams(cell, cell).apply { marginEnd = gap })
+        }
+        mediaPage.addView(transport, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
         panel.addView(status, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ctx.dp(10) })
         // The host clips the panel to its bounds; the padding is room for focused controls to grow into.
         val room = ctx.dp(16)
@@ -1316,6 +1344,8 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
                 volume.set(v)
                 inputs = list
                 mediaTab.visibility = if (track != null) View.VISIBLE else View.GONE
+                mediaPrevious.visibility = if (track?.previous == true) View.VISIBLE else View.INVISIBLE
+                mediaNext.visibility = if (track?.next == true) View.VISIBLE else View.INVISIBLE
                 if (track == null && selectedTab == 1) selectTab(0)
                 profileModule.sub.text = ctx.getString(R.string.tvos_profile_number, prefs.activeProfile + 1)
                 profileModule.sub.visibility = View.VISIBLE
