@@ -30,4 +30,15 @@
     <string name="tile_source_banner">优先电视横幅</string>
     <string name="tile_source_icon">仅使用原生图标</string>
     <string name="tile_source_classic">旧版浅灰样式</string>
+    <string name="tvos_recents_title">最近使用的应用</string>
+    <string name="tvos_recents_help">选择卡片进入应用。第三方桌面无法直接读取 tvOS 式系统任务预览。</string>
+    <string name="tvos_recents_empty">还没有最近使用的应用。请先从 Tigris 打开应用。</string>
+    <string name="tvos_search_title">搜索应用</string>
+    <string name="tvos_search_hint">搜索已安装应用…</string>
+    <string name="tvos_search_voice">语音</string>
+    <string name="tvos_search_empty">没有匹配的已安装应用</string>
+    <string name="tvos_search_voice_unavailable">这台电视不支持当前语音搜索功能</string>
+    <string name="tvos_now_playing">正在播放</string>
+    <string name="tvos_now_playing_unavailable">未授权媒体访问或当前没有播放</string>
+    <string name="tvos_profiles">用户配置</string>
 </resources>

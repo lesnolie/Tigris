@@ -1274,6 +1274,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val opts = ActivityOptions.makeScaleUpAnimation(cell.card, 0, 0, cell.card.width, cell.card.height)
         try {
             startActivity(intent, opts.toBundle())
+            RecentApps.record(this, app.pkg)
             rememberOpened(app.pkg)
         } catch (e: Exception) {
             Toast.makeText(this, I18n.text(R.string.i18n_homeactivity_005, app.label), Toast.LENGTH_SHORT).show()
@@ -1562,6 +1563,14 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         // Any key skips the intro to its closing zoom; nothing behind it reacts meanwhile.
         intro?.let { if (event.action == KeyEvent.ACTION_UP) it.skip(); return true }
         val code = event.keyCode
+        // APP_SWITCH is only handled when delivered to this Activity. Android often owns
+        // Home/TV key globally; we do not intercept global system buttons.
+        if (code == KeyEvent.KEYCODE_APP_SWITCH) {
+            if (event.action == KeyEvent.ACTION_UP) {
+                startActivity(Intent(this, AppSwitcherActivity::class.java))
+            }
+            return true
+        }
         if (event.action == KeyEvent.ACTION_DOWN && code == KeyEvent.KEYCODE_DPAD_RIGHT &&
             sheets.isEmpty() && control.isOpen && avatar.isShown && control.atRightEdge()) {
             control.close()

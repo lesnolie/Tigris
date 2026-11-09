@@ -30,4 +30,15 @@
     <string name="tile_source_banner">Prefer TV banner</string>
     <string name="tile_source_icon">Native icon only</string>
     <string name="tile_source_classic">Classic frost-grey</string>
+    <string name="tvos_recents_title">Recent Apps</string>
+    <string name="tvos_recents_help">Open an app card to return. Android does not expose tvOS task previews to third-party launchers.</string>
+    <string name="tvos_recents_empty">No recent apps yet. Open an app from Tigris first.</string>
+    <string name="tvos_search_title">Search Apps</string>
+    <string name="tvos_search_hint">Search installed applications…</string>
+    <string name="tvos_search_voice">Voice</string>
+    <string name="tvos_search_empty">No matching installed applications</string>
+    <string name="tvos_search_voice_unavailable">Voice search is unavailable on this TV</string>
+    <string name="tvos_now_playing">Now Playing</string>
+    <string name="tvos_now_playing_unavailable">Media access not authorized or no active session</string>
+    <string name="tvos_profiles">Profiles</string>
 </resources>
