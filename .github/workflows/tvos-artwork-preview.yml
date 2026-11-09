@@ -28,9 +28,9 @@ jobs:
         run: |
           set -euo pipefail
           test "$GITHUB_REF_NAME" = "preview/tvos-artwork-focus-v2.0.27"
-          grep -Fq 'versionCode = 36' app/build.gradle.kts
-          grep -Fq 'versionName = "2.0.27-pre3"' app/build.gradle.kts
-          test -f docs/releases/v2.0.27-preview.3.md
+          grep -Fq 'versionCode = 37' app/build.gradle.kts
+          grep -Fq 'versionName = "2.0.27-pre4"' app/build.gradle.kts
+          test -f docs/releases/v2.0.27-preview.4.md
       - name: Restore stable signing identity
         env:
           KEYSTORE_BASE64: ${{ secrets.TIGRIS_KEYSTORE_BASE64 }}
@@ -57,22 +57,22 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          cp app/build/outputs/apk/standard/release/app-standard-release.apk dist/Tigris-v2.0.27-preview.3.apk
-          cp app/build/outputs/apk/guard/release/app-guard-release.apk dist/Tigris-guard-v2.0.27-preview.3.apk
+          cp app/build/outputs/apk/standard/release/app-standard-release.apk dist/Tigris-v2.0.27-preview.4.apk
+          cp app/build/outputs/apk/guard/release/app-guard-release.apk dist/Tigris-guard-v2.0.27-preview.4.apk
           for apk in dist/*.apk; do
             "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" | head -1 | \
-              grep -F "name='com.leslie.tvhome'" | grep -F "versionCode='36'" | grep -F "versionName='2.0.27-pre3'"
+              grep -F "name='com.leslie.tvhome'" | grep -F "versionCode='37'" | grep -F "versionName='2.0.27-pre4'"
             "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk" | \
               grep -F '7d2b6be8a86ce8981e368dde4920869b90c8206137934a6d1fc89a2d1d1b6114'
           done
           OLD_STANDARD=$(python3 tools/download-release.py standard)
           OLD_GUARD=$(python3 tools/download-release.py guard)
-          python3 tools/verify-apk-upgrade.py "$OLD_STANDARD" dist/Tigris-v2.0.27-preview.3.apk \
-            --tools "$ANDROID_HOME/build-tools/36.0.0" --version 2.0.27-pre3 --flavor standard
-          python3 tools/verify-apk-upgrade.py "$OLD_GUARD" dist/Tigris-guard-v2.0.27-preview.3.apk \
-            --tools "$ANDROID_HOME/build-tools/36.0.0" --version 2.0.27-pre3 --flavor guard
-          (cd dist && sha256sum Tigris-v2.0.27-preview.3.apk \
-            Tigris-guard-v2.0.27-preview.3.apk > SHA256SUMS-v2.0.27-preview.3.txt)
+          python3 tools/verify-apk-upgrade.py "$OLD_STANDARD" dist/Tigris-v2.0.27-preview.4.apk \
+            --tools "$ANDROID_HOME/build-tools/36.0.0" --version 2.0.27-pre4 --flavor standard
+          python3 tools/verify-apk-upgrade.py "$OLD_GUARD" dist/Tigris-guard-v2.0.27-preview.4.apk \
+            --tools "$ANDROID_HOME/build-tools/36.0.0" --version 2.0.27-pre4 --flavor guard
+          (cd dist && sha256sum Tigris-v2.0.27-preview.4.apk \
+            Tigris-guard-v2.0.27-preview.4.apk > SHA256SUMS-v2.0.27-preview.4.txt)
       - name: Archive signed APKs and test evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -90,15 +90,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG=v2.0.27-preview.3
+          TAG=v2.0.27-preview.4
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
             echo "Preview tag already exists; refusing to overwrite it" >&2
             exit 1
           fi
           gh release create "$TAG" dist/*.apk dist/SHA256SUMS-"$TAG".txt \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "Tigris v2.0.27 Preview 3 — tvOS Features + App Artwork + Focus" \
-            --notes-file docs/releases/v2.0.27-preview.3.md --prerelease --latest=false
+            --title "Tigris v2.0.27 Preview 4 — tvOS Features + App Artwork + Focus" \
+            --notes-file docs/releases/v2.0.27-preview.4.md --prerelease --latest=false
       - name: Remove signing key
         if: always()
         run: rm -f "$RUNNER_TEMP/tigris.keystore"
