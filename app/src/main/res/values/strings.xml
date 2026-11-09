@@ -57,4 +57,5 @@
     <string name="tvos_phone_keyboard_instructions">Phone keyboard: scan QR while Search is open.</string>
     <string name="tvos_phone_keyboard_url">Phone keyboard (LAN only): %1$s</string>
     <string name="tvos_phone_keyboard_offline">Phone keyboard unavailable (LAN or port).</string>
+    <string name="tvos_controls">Controls</string>
 </resources>

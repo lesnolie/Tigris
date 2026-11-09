@@ -57,4 +57,5 @@
     <string name="tvos_phone_keyboard_instructions">手机键盘：保持搜索页面打开，扫描二维码。</string>
     <string name="tvos_phone_keyboard_url">手机键盘（仅局域网）：%1$s</string>
     <string name="tvos_phone_keyboard_offline">手机键盘不可用（局域网或端口问题）。</string>
+    <string name="tvos_controls">控制</string>
 </resources>
