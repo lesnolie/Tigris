@@ -351,7 +351,7 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         recentModule = GlassButton(ctx.getString(R.string.tvos_recents_title),
             R.drawable.ic_apps, Shape.CAPSULE) {
             close()
-            ctx.startActivity(Intent(ctx, AppSwitcherActivity::class.java))
+            AppSwitcherRouter.open(ctx)
         }
         toolsPage.addView(recentModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
 

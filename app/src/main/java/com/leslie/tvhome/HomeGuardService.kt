@@ -252,10 +252,7 @@ class HomeGuardService : AccessibilityService() {
                 DoubleHomePolicy.second(lastFilteredHomeAt, now, allowed = !Guard.isXiaomi() && !screenOff)
             lastFilteredHomeAt = if (doubleHome) 0L else now
             if (doubleHome) {
-                val opened = runCatching {
-                    startActivity(Intent(this, AppSwitcherActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                }.isSuccess
+                val opened = AppSwitcherRouter.open(this)
                 if (!opened) takeUserHome("Home switcher fallback")
             } else {
                 Log.i(TAG, "Home key taken before the system saw it")
@@ -555,6 +552,24 @@ class HomeGuardService : AccessibilityService() {
         @Volatile private var deafAfterHome = false
 
         val isRunning: Boolean get() = instance != null
+
+        /**
+         * Calls Android's native task overview only through Tigris's existing, enabled
+         * accessibility service. The return value is the system's acknowledgement,
+         * not an assertion that a vendor rendered a visible task switcher.
+         */
+        fun tryOpenNativeRecents(): Boolean {
+            val service = instance ?: return false
+            val advertised = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                runCatching {
+                    service.getSystemActions().any { it.id == AccessibilityService.GLOBAL_ACTION_RECENTS }
+                }.getOrDefault(false)
+            } else false
+            if (!NativeRecentsPolicy.canAttempt(true, Build.VERSION.SDK_INT, advertised)) return false
+            return runCatching {
+                service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS)
+            }.getOrDefault(false)
+        }
         val recentlyBroughtHome: Boolean get() = instance?.let {
             it.broughtBackAt > 0 && SystemClock.uptimeMillis() - it.broughtBackAt in 0..5000L
         } == true

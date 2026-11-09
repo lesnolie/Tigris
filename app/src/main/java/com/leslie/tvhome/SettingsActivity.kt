@@ -448,8 +448,8 @@ class SettingsActivity : Activity() {
             startActivity(Intent(this, WallpaperActivity::class.java).putExtra("upload_avatar", true))
         }
         row(I18n.text(R.string.i18n_settingsactivity_029), I18n.text(R.string.i18n_settingsactivity_030), { onOff(prefs.showAvatar) }, checked = { prefs.showAvatar }) { prefs.showAvatar = !prefs.showAvatar }
-        row(getString(R.string.tvos_recents_title), getString(R.string.tvos_recents_help), { "" }, chevron = true) {
-            startActivity(Intent(this, AppSwitcherActivity::class.java))
+        row(getString(R.string.tvos_recents_title), getString(R.string.tvos_switcher_auto_help), { "" }, chevron = true) {
+            AppSwitcherRouter.open(this)
         }
         row(getString(R.string.tvos_device_settings_title), getString(R.string.tvos_device_settings_info), { "" }, chevron = true) {
             startActivity(Intent(this, TvOSDeviceSettingsActivity::class.java))

@@ -1592,7 +1592,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         // Home/TV key globally; we do not intercept global system buttons.
         if (code == KeyEvent.KEYCODE_APP_SWITCH) {
             if (event.action == KeyEvent.ACTION_UP) {
-                startActivity(Intent(this, AppSwitcherActivity::class.java))
+                AppSwitcherRouter.open(this)
             }
             return true
         }
@@ -1637,7 +1637,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             DoubleHomePolicy.second(previousHomeIntentAt, now, allowed = !Guard.isXiaomi())
         previousHomeIntentAt = if (doubleHome) 0L else now
         if (doubleHome) {
-            startActivity(Intent(this, AppSwitcherActivity::class.java))
+            AppSwitcherRouter.open(this)
             return
         }
         focusedPos = 0
