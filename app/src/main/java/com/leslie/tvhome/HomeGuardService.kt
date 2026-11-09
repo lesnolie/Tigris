@@ -56,6 +56,7 @@ class HomeGuardService : AccessibilityService() {
     private var windowsSeen = 0L
     private var windowsAtHome = 0L
     private var homePressedAt = Long.MIN_VALUE / 2
+    private var lastFilteredHomeAt = 0L
     private var foregroundTakenAt = Long.MIN_VALUE / 2
 
     private val takeOver = Runnable { takeOverIfSettled(takeOverReason) }
@@ -246,8 +247,20 @@ class HomeGuardService : AccessibilityService() {
         if (!Guard.guardOn(this)) return false
         if (!HomeKeyCodes.isHome(event.keyCode, Guard.isXiaomi())) return false
         if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) {
-            Log.i(TAG, "Home key taken before the system saw it")
-            takeUserHome("Home key")
+            val now = SystemClock.uptimeMillis()
+            val doubleHome = Prefs(this).doubleHomeSwitcher &&
+                DoubleHomePolicy.second(lastFilteredHomeAt, now, allowed = !Guard.isXiaomi() && !screenOff)
+            lastFilteredHomeAt = if (doubleHome) 0L else now
+            if (doubleHome) {
+                val opened = runCatching {
+                    startActivity(Intent(this, AppSwitcherActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }.isSuccess
+                if (!opened) takeUserHome("Home switcher fallback")
+            } else {
+                Log.i(TAG, "Home key taken before the system saw it")
+                takeUserHome("Home key")
+            }
         }
         return true
     }

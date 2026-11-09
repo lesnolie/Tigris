@@ -469,6 +469,10 @@ class SettingsActivity : Activity() {
             prefs.nextTextScale()
             recreate()
         }
+        row(getString(R.string.tvos_double_home_title), getString(R.string.tvos_double_home_help),
+            { onOff(prefs.doubleHomeSwitcher) }, checked = { prefs.doubleHomeSwitcher }) {
+            prefs.doubleHomeSwitcher = !prefs.doubleHomeSwitcher
+        }
         row(I18n.text(R.string.i18n_settingsactivity_031), I18n.text(R.string.i18n_settingsactivity_032) +
             I18n.text(R.string.i18n_settingsactivity_033), {
             auto(prefs.focusStyle, prefs.focusTvos(this), "tvOS", I18n.text(R.string.i18n_settingsactivity_034))

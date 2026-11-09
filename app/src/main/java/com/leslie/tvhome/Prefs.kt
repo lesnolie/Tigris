@@ -36,6 +36,11 @@ class Prefs(ctx: Context) {
         get() = sp.getFloat("tigris_text_scale", 1f).coerceIn(0.9f, 1.3f)
         set(v) = sp.edit().putFloat("tigris_text_scale", v.coerceIn(0.9f, 1.3f)).apply()
 
+    /** Only recognized HOME keys delivered by Android are eligible; disabled by default. */
+    var doubleHomeSwitcher: Boolean
+        get() = sp.getBoolean("double_home_switcher", false)
+        set(v) = sp.edit().putBoolean("double_home_switcher", v).apply()
+
     fun nextTextScale() {
         val options = listOf(0.9f, 1f, 1.15f, 1.3f)
         val index = options.indexOfFirst { kotlin.math.abs(textScale - it) < 0.01f }

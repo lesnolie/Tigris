@@ -97,6 +97,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private var tileStyleSeen = ""
     private var profileSeen = -1
     private var textScaleSeen = 1f
+    private var previousHomeIntentAt = 0L
     private lateinit var repo: AppRepo
     private lateinit var prefs: Prefs
     private lateinit var control: ControlCenter
@@ -1638,6 +1639,14 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         if (moving >= 0) endMove()
         // The guard brought the screen back (an app exited to the stock launcher): stay where we were.
         if (intent.getBooleanExtra(EXTRA_GUARD, false)) return
+        val now = SystemClock.uptimeMillis()
+        val doubleHome = prefs.doubleHomeSwitcher &&
+            DoubleHomePolicy.second(previousHomeIntentAt, now, allowed = !Guard.isXiaomi())
+        previousHomeIntentAt = if (doubleHome) 0L else now
+        if (doubleHome) {
+            startActivity(Intent(this, AppSwitcherActivity::class.java))
+            return
+        }
         focusedPos = 0
         // Scroll by our own offset: smoothScrollToPosition aligns to the padding and leaves the grid off its resting place.
         grid.smoothScrollBy(0, -scrollY, Motion.ease, 360)

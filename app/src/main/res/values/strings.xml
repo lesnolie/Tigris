@@ -68,4 +68,6 @@
     <string name="tvos_pin_launcher_only">Applies only to launching apps from Tigris. Other launchers and system intents may bypass it; this is not a system parental control.</string>
     <string name="tvos_dynamic_text_title">Larger Text</string>
     <string name="tvos_dynamic_text_help">Resize Tigris interface text; does not affect other TV apps.</string>
+    <string name="tvos_double_home_title">Double Home for Recent Apps</string>
+    <string name="tvos_double_home_help">Optional: on TVs that deliver repeated Home events to Tigris, double Home opens local recent-app cards. May be unavailable on some firmware; off by default.</string>
 </resources>
