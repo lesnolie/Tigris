@@ -266,6 +266,11 @@ class HomeGuardService : AccessibilityService() {
         sawEvent = true
         deafAfterHome = false
         windowsSeen++
+        // Capture a thumbnail for the app switcher regardless of guard state (the
+        // accessibility service is what the user enabled for this capability).
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            event.packageName?.toString()?.let { ShotCapture.onForeground(this, it) }
+        }
         if (!Guard.guardOn(this) || event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
         val cls = event.className?.toString() ?: return

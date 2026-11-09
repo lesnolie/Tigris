@@ -111,6 +111,11 @@ class AppSwitcherActivity : Activity() {
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Float over the desktop like iOS/tvOS: a translucent window + dim scrim, so the
+        // launcher stays visible behind the cards instead of being replaced by black.
+        window.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
+        window.setBackgroundDrawable(
+            android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
         val dm = resources.displayMetrics
         val cardW = (dm.widthPixels * 0.30f).toInt()
         val cardH = (cardW * 9f / 16f).toInt()
@@ -121,7 +126,7 @@ class AppSwitcherActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(54), dp(40), dp(54), dp(44))
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(0xFF141A26.toInt(), 0xFF0B0E15.toInt()))
+                intArrayOf(0x99101824.toInt(), 0xCC000000.toInt()))
         }
         page.addView(title(getString(R.string.tvos_recents_title), 30f))
         page.addView(title(getString(R.string.tvos_recents_help), 15f).apply {
@@ -164,14 +169,23 @@ class AppSwitcherActivity : Activity() {
             cards.removeAllViews()
             for (app in list) {
                 val drawable = runCatching { packageManager.getActivityIcon(app.component) }.getOrNull()
+                val shot = runCatching { ShotCapture.load(this, app.pkg) }.getOrNull()
                 val screen = FrameLayout(this).apply {
                     background = cardBackground(cardBrandColor(drawable))
                     clipToOutline = true
                 }
-                screen.addView(ImageView(this).apply {
-                    setImageDrawable(drawable)
-                    scaleType = ImageView.ScaleType.FIT_CENTER
-                }, FrameLayout.LayoutParams(iconSize, iconSize, Gravity.CENTER))
+                if (shot != null) {
+                    // Real foreground screenshot captured by the accessibility service.
+                    screen.addView(ImageView(this).apply {
+                        setImageBitmap(shot)
+                        scaleType = ImageView.ScaleType.CENTER_CROP
+                    }, FrameLayout.LayoutParams(-1, -1))
+                } else {
+                    screen.addView(ImageView(this).apply {
+                        setImageDrawable(drawable)
+                        scaleType = ImageView.ScaleType.FIT_CENTER
+                    }, FrameLayout.LayoutParams(iconSize, iconSize, Gravity.CENTER))
+                }
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.VERTICAL
                     gravity = Gravity.CENTER_HORIZONTAL
@@ -211,8 +225,10 @@ class AppSwitcherActivity : Activity() {
                             val formerIndex = shown.indexOfFirst { it.pkg == app.pkg }
                             if (formerIndex >= 0) {
                                 RecentApps.dismiss(this, app.pkg)
-                                render(shown.filter { it.pkg != app.pkg },
-                                    formerIndex.coerceAtMost(shown.size - 2).coerceAtLeast(0))
+                                val rest = shown.filter { it.pkg != app.pkg }
+                                render(rest, formerIndex.coerceAtMost((rest.size - 1).coerceAtLeast(0)))
+                                // Cleared every card: leave the user on the desktop.
+                                if (rest.isEmpty()) finishInstant()
                             }
                         }
                         true

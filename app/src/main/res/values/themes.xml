@@ -10,4 +10,13 @@
         <item name="android:defaultFocusHighlightEnabled">false</item>
         <item name="android:windowDisablePreview">false</item>
     </style>
+
+    <!-- Floating app switcher: translucent window so the desktop stays visible behind. -->
+    <style name="AppSwitcherTheme" parent="Theme.TVHome">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
 </resources>
