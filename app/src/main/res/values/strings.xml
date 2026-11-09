@@ -33,16 +33,8 @@
     <string name="tvos_recents_title">Recent Apps</string>
     <string name="tvos_recents_help">Open an app card to return. Android does not expose tvOS task previews to third-party launchers.</string>
     <string name="tvos_recents_empty">No recent apps yet. Open an app from Tigris first.</string>
-    <string name="tvos_search_title">Search Apps</string>
-    <string name="tvos_search_hint">Search installed applications…</string>
-    <string name="tvos_search_voice">Voice</string>
-    <string name="tvos_search_empty">No matching installed applications</string>
-    <string name="tvos_search_voice_unavailable">Voice search is unavailable on this TV</string>
     <string name="tvos_now_playing">Now Playing</string>
     <string name="tvos_now_playing_unavailable">Media access not authorized or no active session</string>
-    <string name="tvos_profiles">Profiles</string>
-    <string name="tvos_local_profile_help">Separate local launcher order, hidden apps and recent-first setting. Not an Android or Apple ID account.</string>
-    <string name="tvos_profile_number">Profile %1$d</string>
     <string name="tvos_device_settings_title">TV System Settings</string>
     <string name="tvos_device_settings_info">Opens the TV original system settings; support depends on firmware and permissions.</string>
     <string name="tvos_device_settings_unavailable">Unavailable on this TV</string>
@@ -54,9 +46,6 @@
     <string name="tvos_setting_accessibility">Accessibility</string>
     <string name="tvos_setting_keyboard">Keyboard and input</string>
     <string name="tvos_setting_date">Date and time</string>
-    <string name="tvos_phone_keyboard_instructions">Phone keyboard: scan QR while Search is open.</string>
-    <string name="tvos_phone_keyboard_url">Phone keyboard (LAN only): %1$s</string>
-    <string name="tvos_phone_keyboard_offline">Phone keyboard unavailable (LAN or port).</string>
     <string name="tvos_controls">Controls</string>
     <string name="tvos_pin_manage_title">Restrict Apps in Tigris</string>
     <string name="tvos_pin_setup_title">Set a local launcher PIN</string>
@@ -73,11 +62,5 @@
     <string name="tvos_media_previous">Previous</string>
     <string name="tvos_media_play_pause">Play or pause</string>
     <string name="tvos_media_next">Next</string>
-    <string name="tvos_airplay_title">AirPlay Receiver</string>
-    <string name="tvos_airplay_ready">An optional AirPlay receiver is installed. Open it to receive compatible iPhone, iPad or Mac mirroring.</string>
-    <string name="tvos_airplay_install">Install the separate open-source receiver from its official GitHub release. Scan this code on your phone; install the APK on the TV yourself.</string>
-    <string name="tvos_airplay_open">Open installed receiver</string>
-    <string name="tvos_airplay_upstream">Open original project</string>
-    <string name="tvos_airplay_no_browser">No browser available; scan the QR code on your phone.</string>
-    <string name="tvos_airplay_limitations">Separate GPLv3 receiver app, not built into Tigris. Local-network discovery required; DRM, proprietary Apple services and peer-to-peer AirPlay may not work.</string>
+    <string name="tvos_tools">Tools</string>
 </resources>

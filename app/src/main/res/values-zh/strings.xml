@@ -33,16 +33,8 @@
     <string name="tvos_recents_title">最近使用的应用</string>
     <string name="tvos_recents_help">选择卡片进入应用。第三方桌面无法直接读取 tvOS 式系统任务预览。</string>
     <string name="tvos_recents_empty">还没有最近使用的应用。请先从 Tigris 打开应用。</string>
-    <string name="tvos_search_title">搜索应用</string>
-    <string name="tvos_search_hint">搜索已安装应用…</string>
-    <string name="tvos_search_voice">语音</string>
-    <string name="tvos_search_empty">没有匹配的已安装应用</string>
-    <string name="tvos_search_voice_unavailable">这台电视不支持当前语音搜索功能</string>
     <string name="tvos_now_playing">正在播放</string>
     <string name="tvos_now_playing_unavailable">未授权媒体访问或当前没有播放</string>
-    <string name="tvos_profiles">用户配置</string>
-    <string name="tvos_local_profile_help">仅隔离本地桌面应用顺序、隐藏应用与最近优先设置，不代表 Android 或 Apple ID 账号。</string>
-    <string name="tvos_profile_number">用户配置 %1$d</string>
     <string name="tvos_device_settings_title">电视系统设置</string>
     <string name="tvos_device_settings_info">打开电视原生系统设置，可用选项取决于固件及权限。</string>
     <string name="tvos_device_settings_unavailable">这台电视无法打开此设置</string>
@@ -54,9 +46,6 @@
     <string name="tvos_setting_accessibility">辅助功能</string>
     <string name="tvos_setting_keyboard">键盘与输入法</string>
     <string name="tvos_setting_date">日期与时间</string>
-    <string name="tvos_phone_keyboard_instructions">手机键盘：保持搜索页面打开，扫描二维码。</string>
-    <string name="tvos_phone_keyboard_url">手机键盘（仅局域网）：%1$s</string>
-    <string name="tvos_phone_keyboard_offline">手机键盘不可用（局域网或端口问题）。</string>
     <string name="tvos_controls">控制</string>
     <string name="tvos_pin_manage_title">限制 Tigris 内的应用</string>
     <string name="tvos_pin_setup_title">设置本地桌面 PIN</string>
@@ -73,11 +62,5 @@
     <string name="tvos_media_previous">上一首</string>
     <string name="tvos_media_play_pause">播放或暂停</string>
     <string name="tvos_media_next">下一首</string>
-    <string name="tvos_airplay_title">AirPlay 接收</string>
-    <string name="tvos_airplay_ready">已安装可选 AirPlay 接收端。打开后可接收兼容的 iPhone、iPad 或 Mac 镜像。</string>
-    <string name="tvos_airplay_install">请从官方 GitHub Release 安装独立开源接收端。手机扫描二维码后，自行在电视安装 APK。</string>
-    <string name="tvos_airplay_open">打开已安装接收端</string>
-    <string name="tvos_airplay_upstream">打开原项目</string>
-    <string name="tvos_airplay_no_browser">电视无可用浏览器，请用手机扫描二维码。</string>
-    <string name="tvos_airplay_limitations">采用独立 GPLv3 接收应用，不内置于 Tigris。需要局域网发现；DRM、苹果专有服务及点对点 AirPlay 可能不可用。</string>
+    <string name="tvos_tools">快捷操作</string>
 </resources>

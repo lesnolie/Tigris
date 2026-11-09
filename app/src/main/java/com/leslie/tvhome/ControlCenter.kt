@@ -228,23 +228,23 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
     private val mediaModule: GlassButton
     private lateinit var mediaPrevious: GlassButton
     private lateinit var mediaNext: GlassButton
-    private val profileModule: GlassButton
+    private lateinit var recentModule: GlassButton
     // Each Control Center page stays within the TV safe area; no unbounded vertical stack.
     private val generalPage = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
     private val mediaPage = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
-    private val profilePage = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
+    private val toolsPage = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
     private lateinit var controlsTab: GlassButton
     private lateinit var mediaTab: GlassButton
-    private lateinit var profileTab: GlassButton
+    private lateinit var toolsTab: GlassButton
     private var selectedTab = 0
 
     private fun selectTab(index: Int, moveFocus: Boolean = true) {
         selectedTab = if (index == 1 && mediaTab.visibility != View.VISIBLE) 0 else index.coerceIn(0, 2)
         generalPage.visibility = if (selectedTab == 0) View.VISIBLE else View.GONE
         mediaPage.visibility = if (selectedTab == 1) View.VISIBLE else View.GONE
-        profilePage.visibility = if (selectedTab == 2) View.VISIBLE else View.GONE
+        toolsPage.visibility = if (selectedTab == 2) View.VISIBLE else View.GONE
         if (moveFocus && isOpen) {
-            (when (selectedTab) { 1 -> mediaModule; 2 -> profileModule; else -> memButton }).requestFocus()
+            (when (selectedTab) { 1 -> mediaModule; 2 -> recentModule; else -> memButton }).requestFocus()
         }
         if (isOpen) host.post { refreshGlass() }
     }
@@ -289,8 +289,8 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         val tabRow = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; clipChildren = false }
         controlsTab = GlassButton(ctx.getString(R.string.tvos_controls), R.drawable.ic_gear, Shape.CAPSULE) { selectTab(0) }
         mediaTab = GlassButton(ctx.getString(R.string.tvos_now_playing), R.drawable.ic_volume, Shape.CAPSULE) { selectTab(1) }
-        profileTab = GlassButton(ctx.getString(R.string.tvos_profiles), R.drawable.ic_user, Shape.CAPSULE) { selectTab(2) }
-        listOf(controlsTab, mediaTab, profileTab).forEachIndexed { index, button ->
+        toolsTab = GlassButton(ctx.getString(R.string.tvos_tools), R.drawable.ic_apps, Shape.CAPSULE) { selectTab(2) }
+        listOf(controlsTab, mediaTab, toolsTab).forEachIndexed { index, button ->
             tabRow.addView(button, LinearLayout.LayoutParams(0, cell, 1f).apply {
                 if (index > 0) leftMargin = ctx.dp(5)
             })
@@ -298,9 +298,9 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         panel.addView(tabRow, LinearLayout.LayoutParams(-1, cell))
         panel.addView(generalPage, LinearLayout.LayoutParams(-1, -2).apply { topMargin = gap })
         panel.addView(mediaPage, LinearLayout.LayoutParams(-1, -2).apply { topMargin = gap })
-        panel.addView(profilePage, LinearLayout.LayoutParams(-1, -2).apply { topMargin = gap })
+        panel.addView(toolsPage, LinearLayout.LayoutParams(-1, -2).apply { topMargin = gap })
         mediaPage.visibility = View.GONE
-        profilePage.visibility = View.GONE
+        toolsPage.visibility = View.GONE
 
         // tvOS layout: a square power tile beside two capsules, then a row of round buttons.
         val top = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; clipChildren = false }
@@ -347,36 +347,15 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         inputModule = GlassButton(I18n.text(R.string.i18n_controlcenter_014), R.drawable.ic_input, Shape.CAPSULE) { pickInput() }
         generalPage.addView(inputModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
 
-        // Apple TV-inspired quick actions. No global Home-key interception or system tasks.
-        val tools = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            clipChildren = false
-        }
-        val recentButton = GlassButton(ctx.getString(R.string.tvos_recents_title), R.drawable.ic_apps, Shape.CAPSULE) {
+        // Keep launcher utilities accessible even with no active MediaSession.
+        recentModule = GlassButton(ctx.getString(R.string.tvos_recents_title),
+            R.drawable.ic_apps, Shape.CAPSULE) {
             close()
             ctx.startActivity(Intent(ctx, AppSwitcherActivity::class.java))
         }
-        tools.addView(recentButton, LinearLayout.LayoutParams(0, cell, 1f).apply { marginEnd = ctx.dp(6) })
-        val searchButton = GlassButton(ctx.getString(R.string.tvos_search_title), R.drawable.ic_search, Shape.CAPSULE) {
-            close()
-            ctx.startActivity(Intent(ctx, TvOSSearchActivity::class.java))
-        }
-        tools.addView(searchButton, LinearLayout.LayoutParams(0, cell, 1f))
-        mediaPage.addView(tools, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
+        toolsPage.addView(recentModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
 
-        profileModule = GlassButton(ctx.getString(R.string.tvos_profiles), R.drawable.ic_user, Shape.CAPSULE) {
-            val names = (1..3).map { ctx.getString(R.string.tvos_profile_number, it) }.toTypedArray()
-            android.app.AlertDialog.Builder(ctx)
-                .setTitle(R.string.tvos_profiles)
-                .setSingleChoiceItems(names, prefs.activeProfile) { dialog, selected ->
-                    dialog.dismiss()
-                    close()
-                    home.switchProfile(selected)
-                }.setNegativeButton(android.R.string.cancel, null).show()
-        }
-        profilePage.addView(profileModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
-
-        profilePage.addView(GlassButton(ctx.getString(R.string.tvos_device_settings_title),
+        toolsPage.addView(GlassButton(ctx.getString(R.string.tvos_device_settings_title),
             R.drawable.ic_gear, Shape.CAPSULE) {
             close()
             ctx.startActivity(Intent(ctx, TvOSDeviceSettingsActivity::class.java))
@@ -393,11 +372,6 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
             }
         }
         mediaPage.addView(mediaModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
-        mediaPage.addView(GlassButton(ctx.getString(R.string.tvos_airplay_title),
-            R.drawable.ic_input, Shape.CAPSULE) {
-            close()
-            ctx.startActivity(Intent(ctx, AirPlaySetupActivity::class.java))
-        }, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
         val transport = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_HORIZONTAL
@@ -1352,8 +1326,6 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
                 mediaPrevious.visibility = if (track?.previous == true) View.VISIBLE else View.INVISIBLE
                 mediaNext.visibility = if (track?.next == true) View.VISIBLE else View.INVISIBLE
                 if (track == null && selectedTab == 1) selectTab(0)
-                profileModule.sub.text = ctx.getString(R.string.tvos_profile_number, prefs.activeProfile + 1)
-                profileModule.sub.visibility = View.VISIBLE
                 mediaModule.title.text = track?.title ?: ctx.getString(R.string.tvos_now_playing)
                 mediaModule.sub.text = if (track != null) {
                     listOf(track.artist, if (track.playing) "▶" else "Ⅱ").filter { it.isNotBlank() }.joinToString(" · ")
