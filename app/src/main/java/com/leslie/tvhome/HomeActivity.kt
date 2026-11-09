@@ -95,6 +95,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private lateinit var grid: RecyclerView
     private lateinit var adapter: TileAdapter
     private var tileStyleSeen = ""
+    private var profileSeen = -1
     private lateinit var repo: AppRepo
     private lateinit var prefs: Prefs
     private lateinit var control: ControlCenter
@@ -332,6 +333,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         cols = prefs.dockColumns
         repo = AppRepo(this)
         tileStyleSeen = prefs.appTileStyle
+        profileSeen = prefs.activeProfile
         buildViews()
         control = ControlCenter(this, root)
         // Covers the screen before its first frame, so the home screen is never seen ahead of it.
@@ -1540,6 +1542,17 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         focusAt(focusedPos)
     }
 
+    /** Local preferences only. No Android account switch or global background app killing. */
+    fun switchProfile(profile: Int) {
+        val to = profile.coerceIn(0, 2)
+        if (prefs.activeProfile == to) return
+        prefs.activeProfile = to
+        profileSeen = to
+        repo.invalidate()
+        focusedPos = 0
+        reload(forceFocus = true)
+    }
+
     override fun onUserInteraction() {
         super.onUserInteraction()
         armIdle(resetDeadline = true)
@@ -1626,9 +1639,11 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         // Rebuild only after Settings changes column count; order/folders remain in Prefs.
         val expectedH = if (prefs.appTileAspect == Prefs.TILE_TVOS) tileW * 3 / 5 else tileW * 9 / 16
         if (cols != prefs.dockColumns || tileH != expectedH) { recreate(); return }
-        if (tileStyleSeen != prefs.appTileStyle) {
+        if (tileStyleSeen != prefs.appTileStyle || profileSeen != prefs.activeProfile) {
             tileStyleSeen = prefs.appTileStyle
+            profileSeen = prefs.activeProfile
             repo.invalidate()
+            focusedPos = 0
             reload(forceFocus = true)
         }
         val appearance = "${prefs.extremeGlass}:${prefs.glassTint(isNight())}:${prefs.solidGlass(this)}:${isNight()}"

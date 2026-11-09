@@ -225,6 +225,8 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
     private val volume: Slider
     private val inputModule: GlassButton
     private val networkModule: GlassButton
+    private val mediaModule: GlassButton
+    private val profileModule: GlassButton
     private var inputs: List<Input> = emptyList()
     private var volumeTarget = "speaker"
     private val status = ctx.text(11f, Color.argb(190, 255, 255, 255))
@@ -294,6 +296,48 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         panel.addView(volume, LinearLayout.LayoutParams(-1, ctx.dp(38)).apply { topMargin = gap })
         inputModule = GlassButton(I18n.text(R.string.i18n_controlcenter_014), R.drawable.ic_input, Shape.CAPSULE) { pickInput() }
         panel.addView(inputModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
+
+        // Apple TV-inspired quick actions. No global Home-key interception or system tasks.
+        val tools = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            clipChildren = false
+        }
+        val recentButton = GlassButton(ctx.getString(R.string.tvos_recents_title), R.drawable.ic_apps, Shape.CAPSULE) {
+            close()
+            ctx.startActivity(Intent(ctx, AppSwitcherActivity::class.java))
+        }
+        tools.addView(recentButton, LinearLayout.LayoutParams(0, cell, 1f).apply { marginEnd = ctx.dp(6) })
+        val searchButton = GlassButton(ctx.getString(R.string.tvos_search_title), R.drawable.ic_search, Shape.CAPSULE) {
+            close()
+            ctx.startActivity(Intent(ctx, TvOSSearchActivity::class.java))
+        }
+        tools.addView(searchButton, LinearLayout.LayoutParams(0, cell, 1f))
+        panel.addView(tools, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
+
+        profileModule = GlassButton(ctx.getString(R.string.tvos_profiles), R.drawable.ic_user, Shape.CAPSULE) {
+            val names = (1..3).map { ctx.getString(R.string.tvos_profile_number, it) }.toTypedArray()
+            android.app.AlertDialog.Builder(ctx)
+                .setTitle(R.string.tvos_profiles)
+                .setSingleChoiceItems(names, prefs.activeProfile) { dialog, selected ->
+                    dialog.dismiss()
+                    close()
+                    home.switchProfile(selected)
+                }.setNegativeButton(android.R.string.cancel, null).show()
+        }
+        panel.addView(profileModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
+
+        mediaModule = GlassButton(ctx.getString(R.string.tvos_now_playing), R.drawable.ic_volume, Shape.CAPSULE) {
+            // MediaSession actions only when Android explicitly grants notification-listener access.
+            io.execute {
+                val ok = NowPlaying.toggle(ctx)
+                host.post {
+                    if (!ok) android.widget.Toast.makeText(ctx, R.string.tvos_now_playing_unavailable,
+                        android.widget.Toast.LENGTH_SHORT).show()
+                    refresh()
+                }
+            }
+        }
+        panel.addView(mediaModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
         panel.addView(status, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ctx.dp(10) })
         // The host clips the panel to its bounds; the padding is room for focused controls to grow into.
         val room = ctx.dp(16)
@@ -1220,6 +1264,7 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
             val list = tv.inputs()
             val cur = tv.currentInput()
             val summary = tv.inputSummary(list)
+            val track = NowPlaying.current(ctx)
             host.post {
                 refreshing = false
                 if (destroyed) return@post
@@ -1228,6 +1273,13 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
                 v?.target?.takeIf { it.isNotEmpty() }?.let { volumeTarget = it }
                 volume.set(v)
                 inputs = list
+                profileModule.sub.text = ctx.getString(R.string.tvos_profile_number, prefs.activeProfile + 1)
+                profileModule.sub.visibility = View.VISIBLE
+                mediaModule.title.text = track?.title ?: ctx.getString(R.string.tvos_now_playing)
+                mediaModule.sub.text = if (track != null) {
+                    listOf(track.artist, if (track.playing) "▶" else "Ⅱ").filter { it.isNotBlank() }.joinToString(" · ")
+                } else ctx.getString(R.string.tvos_now_playing_unavailable)
+                mediaModule.sub.visibility = View.VISIBLE
                 inputModule.sub.visibility = View.VISIBLE
                 inputModule.sub.text = list.firstOrNull { it.uri == cur }?.name ?: summary
             }

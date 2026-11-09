@@ -448,6 +448,16 @@ class SettingsActivity : Activity() {
             startActivity(Intent(this, WallpaperActivity::class.java).putExtra("upload_avatar", true))
         }
         row(I18n.text(R.string.i18n_settingsactivity_029), I18n.text(R.string.i18n_settingsactivity_030), { onOff(prefs.showAvatar) }, checked = { prefs.showAvatar }) { prefs.showAvatar = !prefs.showAvatar }
+        row(getString(R.string.tvos_profiles), getString(R.string.tvos_local_profile_help),
+            { getString(R.string.tvos_profile_number, prefs.activeProfile + 1) }) {
+            prefs.activeProfile = (prefs.activeProfile + 1) % 3
+        }
+        row(getString(R.string.tvos_search_title), getString(R.string.tvos_search_hint), { "" }, chevron = true) {
+            startActivity(Intent(this, TvOSSearchActivity::class.java))
+        }
+        row(getString(R.string.tvos_recents_title), getString(R.string.tvos_recents_help), { "" }, chevron = true) {
+            startActivity(Intent(this, AppSwitcherActivity::class.java))
+        }
         row(I18n.text(R.string.i18n_settingsactivity_031), I18n.text(R.string.i18n_settingsactivity_032) +
             I18n.text(R.string.i18n_settingsactivity_033), {
             auto(prefs.focusStyle, prefs.focusTvos(this), "tvOS", I18n.text(R.string.i18n_settingsactivity_034))

@@ -31,9 +31,20 @@ class Prefs(ctx: Context) {
         get() = sp.getBoolean("show_avatar", true)
         set(v) = sp.edit().putBoolean("show_avatar", v).apply()
 
+    /**
+     * Three local launcher profiles with independent app order, hidden apps and recents preference.
+     * These are NOT Android system accounts, Apple IDs, or media-provider login sessions.
+     */
+    var activeProfile: Int
+        get() = sp.getInt("local_profile", 0).coerceIn(0, 2)
+        set(v) = sp.edit().putInt("local_profile", v.coerceIn(0, 2)).apply()
+
+    private fun profileKey(key: String): String =
+        if (activeProfile == 0) key else "${key}_profile_${activeProfile}"
+
     var order: List<String>
-        get() = sp.getString("order", "")!!.split(',').filter { it.isNotEmpty() }
-        set(v) = sp.edit().putString("order", v.joinToString(",")).apply()
+        get() = sp.getString(profileKey("order"), "")!!.split(',').filter { it.isNotEmpty() }
+        set(v) = sp.edit().putString(profileKey("order"), v.joinToString(",")).apply()
 
     /** tvOS first-row Dock count (5 by default, 6 only after an explicit choice). */
     var dockColumns: Int
@@ -42,12 +53,12 @@ class Prefs(ctx: Context) {
 
     /** New installs and upgrades start in fixed manual order; the user can opt in. */
     var recentFirst: Boolean
-        get() = sp.getBoolean("recent_first", false)
-        set(v) = sp.edit().putBoolean("recent_first", v).apply()
+        get() = sp.getBoolean(profileKey("recent_first"), false)
+        set(v) = sp.edit().putBoolean(profileKey("recent_first"), v).apply()
 
     var hidden: Set<String>
-        get() = sp.getStringSet("hidden", emptySet())!!.toSet()
-        set(v) = sp.edit().putStringSet("hidden", v).apply()
+        get() = sp.getStringSet(profileKey("hidden"), emptySet())!!.toSet()
+        set(v) = sp.edit().putStringSet(profileKey("hidden"), v).apply()
 
     /** Packages that memory cleanup never stops (casting receivers etc.). */
     var keep: Set<String>

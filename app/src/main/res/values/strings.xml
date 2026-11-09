@@ -41,4 +41,6 @@
     <string name="tvos_now_playing">Now Playing</string>
     <string name="tvos_now_playing_unavailable">Media access not authorized or no active session</string>
     <string name="tvos_profiles">Profiles</string>
+    <string name="tvos_local_profile_help">Separate local launcher order, hidden apps and recent-first setting. Not an Android or Apple ID account.</string>
+    <string name="tvos_profile_number">Profile %1$d</string>
 </resources>

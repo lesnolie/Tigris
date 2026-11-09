@@ -41,4 +41,6 @@
     <string name="tvos_now_playing">正在播放</string>
     <string name="tvos_now_playing_unavailable">未授权媒体访问或当前没有播放</string>
     <string name="tvos_profiles">用户配置</string>
+    <string name="tvos_local_profile_help">仅隔离本地桌面应用顺序、隐藏应用与最近优先设置，不代表 Android 或 Apple ID 账号。</string>
+    <string name="tvos_profile_number">用户配置 %1$d</string>
 </resources>
