@@ -214,7 +214,7 @@ class TvOSSearchActivity : Activity() {
         page.addView(phoneLine, LinearLayout.LayoutParams(-1, dp(110)).apply { topMargin = dp(8) })
         results = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         page.addView(ScrollView(this).apply {
-            fillViewport = true
+            isFillViewport = true
             addView(results)
         }, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = dp(18) })
         setContentView(page)
