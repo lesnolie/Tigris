@@ -1576,7 +1576,10 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                 try {
                     val intent = repo.launchIntent(app)
                     if (intent != null) {
-                        if (!HomeGuardService.isStockHome(app.pkg) || !HomeGuardService.openStockLauncher()) startActivity(intent)
+                        if (!HomeGuardService.isStockHome(app.pkg) || !HomeGuardService.openStockLauncher()) {
+                            startActivity(intent)
+                            noteExternalLaunch(app.pkg)
+                        }
                         RecentApps.record(this, app.pkg)
                         rememberOpened(folder.id)
                     }
@@ -1818,10 +1821,14 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             return
         }
         val now = SystemClock.uptimeMillis()
+        // A launch performed by the App Switcher cannot be observed here; adopt it once.
+        if (outboundLaunch == null) outboundLaunch = HomeReturnHandoff.take()
         if (HomeReturnPolicy.canPreserveFocus(outboundLaunch, now,
                 homeAlreadyVisible = resumed, guardReturn = false, wakeReturn = false)) {
             // A HOME press from an app should not snap the Dock to position zero.
-            // onResume/onWindowFocusChanged will restore and settle the launched card.
+            // Remember it so a quick second Home can still open the switcher; then let
+            // onResume/onWindowFocusChanged restore and settle the launched card.
+            previousHomeIntentAt = now
             return
         }
         outboundLaunch = null
@@ -1893,6 +1900,9 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         ticker.run()
         control.refresh()
         if (shelfShown && !control.isOpen) resumeShelfRotation()
+        // Adopt a launch made by the App Switcher when returning here without a HOME intent
+        // (e.g. the user pressed Back inside the launched app).
+        if (outboundLaunch == null) outboundLaunch = HomeReturnHandoff.take()
         if (outboundLaunch != null) grid.post { revealReturnFocus() }
     }
 

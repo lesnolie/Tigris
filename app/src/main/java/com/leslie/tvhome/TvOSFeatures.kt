@@ -199,6 +199,9 @@ class AppSwitcherActivity : Activity() {
                     AppRepo(this).launchIntent(app)?.let { intent ->
                         RecentApps.record(this, app.pkg)
                         startActivity(intent)
+                        // HomeActivity did not perform this launch; hand it the app so a
+                        // later return can keep the Dock position instead of snapping home.
+                        HomeReturnHandoff.set(app.pkg)
                         finish()
                     }
                 }
