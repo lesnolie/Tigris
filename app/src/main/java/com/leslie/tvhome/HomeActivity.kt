@@ -1448,6 +1448,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             return
         }
         val intent = shelfDeepLink(app) ?: repo.launchIntent(app) ?: return
+        // tvOS-style: the incoming app window grows out of the selected tile/icon.
         val opts = ActivityOptions.makeScaleUpAnimation(cell.card, 0, 0, cell.card.width, cell.card.height)
         try {
             startActivity(intent, opts.toBundle())
