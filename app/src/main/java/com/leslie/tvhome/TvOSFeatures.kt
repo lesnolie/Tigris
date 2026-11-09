@@ -116,10 +116,12 @@ class AppSwitcherActivity : Activity() {
                 (v.background as? GradientDrawable)?.setStroke(dp(if (on) 2 else 0), if (on) Color.WHITE else Color.TRANSPARENT)
             }
             tile.setOnClickListener {
-                AppRepo(this).launchIntent(app)?.let { intent ->
-                    RecentApps.record(this, app.pkg)
-                    startActivity(intent)
-                    finish()
+                LocalAppRestrictions.guardLaunch(this, app.pkg) {
+                    AppRepo(this).launchIntent(app)?.let { intent ->
+                        RecentApps.record(this, app.pkg)
+                        startActivity(intent)
+                        finish()
+                    }
                 }
             }
             cards.addView(tile, LinearLayout.LayoutParams(dp(205), dp(222)).apply { marginEnd = dp(24) })
@@ -296,10 +298,12 @@ class TvOSSearchActivity : Activity() {
                 }
             }
             row.setOnClickListener {
-                AppRepo(this).launchIntent(app)?.let {
-                    RecentApps.record(this, app.pkg)
-                    startActivity(it)
-                    finish()
+                LocalAppRestrictions.guardLaunch(this, app.pkg) {
+                    AppRepo(this).launchIntent(app)?.let {
+                        RecentApps.record(this, app.pkg)
+                        startActivity(it)
+                        finish()
+                    }
                 }
             }
             results.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(5) })

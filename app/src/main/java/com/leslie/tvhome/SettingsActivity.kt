@@ -461,6 +461,9 @@ class SettingsActivity : Activity() {
         row(getString(R.string.tvos_device_settings_title), getString(R.string.tvos_device_settings_info), { "" }, chevron = true) {
             startActivity(Intent(this, TvOSDeviceSettingsActivity::class.java))
         }
+        row(getString(R.string.tvos_pin_manage_title), getString(R.string.tvos_pin_launcher_only), { "" }, chevron = true) {
+            startActivity(Intent(this, LocalAppRestrictionActivity::class.java))
+        }
         row(I18n.text(R.string.i18n_settingsactivity_031), I18n.text(R.string.i18n_settingsactivity_032) +
             I18n.text(R.string.i18n_settingsactivity_033), {
             auto(prefs.focusStyle, prefs.focusTvos(this), "tvOS", I18n.text(R.string.i18n_settingsactivity_034))

@@ -47,6 +47,7 @@
         android:theme="@style/Theme.TVHome">
 
         <activity android:name=".AppSwitcherActivity" android:exported="false" android:screenOrientation="landscape" />
+        <activity android:name=".LocalAppRestrictionActivity" android:exported="false" android:screenOrientation="landscape" />
         <activity android:name=".TvOSDeviceSettingsActivity" android:exported="false" android:screenOrientation="landscape" />
         <activity android:name=".TvOSSearchActivity" android:exported="false" android:screenOrientation="landscape" />
         <activity android:name=".UpdateActivity" android:exported="false" android:screenOrientation="landscape" />

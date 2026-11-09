@@ -1267,6 +1267,10 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val app = adapter.apps.getOrNull(pos) ?: return
         app.folder?.let { openFolder(it); return }
         app.input?.let { i -> io.execute { tv.setInput(i) }; return }
+        LocalAppRestrictions.guardLaunch(this, app.pkg) { launchTileApp(app, pos, cell) }
+    }
+
+    private fun launchTileApp(app: AppEntry, pos: Int, cell: TileCell) {
         // The stock launcher (Xiaomi's PatchWall) can only be opened through the system Home action.
         if (HomeGuardService.isStockHome(app.pkg) && HomeGuardService.openStockLauncher()) {
             rememberOpened(app.pkg)
@@ -1309,6 +1313,13 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                 prefs.hidden = prefs.hidden + app.pkg
                 reload()
             }
+        if (!repo.isOwn(app.pkg)) s.button(getString(R.string.tvos_pin_manage_title)) {
+            LocalAppRestrictions.manage(this) {
+                LocalAppRestrictions.setBlocked(this, app.pkg,
+                    !LocalAppRestrictions.blocked(this, app.pkg))
+                reload(changed = app.pkg, forceFocus = true)
+            }
+        }
         if (repo.isOwn(app.pkg)) {
             showSheet(s.button(I18n.text(R.string.i18n_homeactivity_012)) {}, restoreFocusTo = pos)
             return
@@ -1382,11 +1393,16 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val dialog = android.app.AlertDialog.Builder(this).setTitle(folder.name)
             .setItems(apps.map { it.label }.toTypedArray()) { _, index ->
                 val app = apps[index]
-                try {
-                    val intent = repo.launchIntent(app) ?: return@setItems
-                    if (!HomeGuardService.isStockHome(app.pkg) || !HomeGuardService.openStockLauncher()) startActivity(intent)
-                    rememberOpened(folder.id)
-                } catch (_: Exception) { Toast.makeText(this, I18n.text(R.string.i18n_homeactivity_024, app.label), Toast.LENGTH_SHORT).show() }
+                LocalAppRestrictions.guardLaunch(this, app.pkg) {
+                    try {
+                        val intent = repo.launchIntent(app)
+                        if (intent != null) {
+                            if (!HomeGuardService.isStockHome(app.pkg) || !HomeGuardService.openStockLauncher()) startActivity(intent)
+                            RecentApps.record(this, app.pkg)
+                            rememberOpened(folder.id)
+                        }
+                    } catch (_: Exception) { Toast.makeText(this, I18n.text(R.string.i18n_homeactivity_024, app.label), Toast.LENGTH_SHORT).show() }
+                }
             }.setNeutralButton(I18n.text(R.string.i18n_homeactivity_025)) { _, _ -> manageFolder(folder, focusedPos) }
             .setNegativeButton(I18n.text(R.string.i18n_homeactivity_026), null).create()
         if (apps.isEmpty()) dialog.setMessage(I18n.text(R.string.i18n_homeactivity_027))

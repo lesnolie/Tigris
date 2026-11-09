@@ -58,4 +58,12 @@
     <string name="tvos_phone_keyboard_url">Phone keyboard (LAN only): %1$s</string>
     <string name="tvos_phone_keyboard_offline">Phone keyboard unavailable (LAN or port).</string>
     <string name="tvos_controls">Controls</string>
+    <string name="tvos_pin_manage_title">Restrict Apps in Tigris</string>
+    <string name="tvos_pin_setup_title">Set a local launcher PIN</string>
+    <string name="tvos_pin_choose">Choose 4–8 digit PIN</string>
+    <string name="tvos_pin_repeat">Repeat PIN</string>
+    <string name="tvos_pin_enter">Enter Tigris PIN</string>
+    <string name="tvos_pin_invalid">PINs must match and contain 4–8 digits</string>
+    <string name="tvos_pin_wrong">Incorrect PIN or temporarily locked after repeated attempts</string>
+    <string name="tvos_pin_launcher_only">Applies only to launching apps from Tigris. Other launchers and system intents may bypass it; this is not a system parental control.</string>
 </resources>

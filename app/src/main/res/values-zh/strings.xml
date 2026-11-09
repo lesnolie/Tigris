@@ -58,4 +58,12 @@
     <string name="tvos_phone_keyboard_url">手机键盘（仅局域网）：%1$s</string>
     <string name="tvos_phone_keyboard_offline">手机键盘不可用（局域网或端口问题）。</string>
     <string name="tvos_controls">控制</string>
+    <string name="tvos_pin_manage_title">限制 Tigris 内的应用</string>
+    <string name="tvos_pin_setup_title">设置本地桌面 PIN</string>
+    <string name="tvos_pin_choose">输入 4–8 位数字 PIN</string>
+    <string name="tvos_pin_repeat">再次输入 PIN</string>
+    <string name="tvos_pin_enter">输入 Tigris PIN</string>
+    <string name="tvos_pin_invalid">两次 PIN 必须相同，且为 4–8 位数字</string>
+    <string name="tvos_pin_wrong">PIN 错误，或连续失败后暂时锁定</string>
+    <string name="tvos_pin_launcher_only">只限制从 Tigris 打开应用。其他桌面及系统入口可能绕过，不属于系统级家长控制。</string>
 </resources>
