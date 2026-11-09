@@ -43,4 +43,18 @@
     <string name="tvos_profiles">用户配置</string>
     <string name="tvos_local_profile_help">仅隔离本地桌面应用顺序、隐藏应用与最近优先设置，不代表 Android 或 Apple ID 账号。</string>
     <string name="tvos_profile_number">用户配置 %1$d</string>
+    <string name="tvos_device_settings_title">电视系统设置</string>
+    <string name="tvos_device_settings_info">打开电视原生系统设置，可用选项取决于固件及权限。</string>
+    <string name="tvos_device_settings_unavailable">这台电视无法打开此设置</string>
+    <string name="tvos_setting_display">显示与分辨率</string>
+    <string name="tvos_setting_audio">声音与音频</string>
+    <string name="tvos_setting_network">Wi-Fi 与网络</string>
+    <string name="tvos_setting_bluetooth">蓝牙与控制器</string>
+    <string name="tvos_setting_apps">应用管理</string>
+    <string name="tvos_setting_accessibility">辅助功能</string>
+    <string name="tvos_setting_keyboard">键盘与输入法</string>
+    <string name="tvos_setting_date">日期与时间</string>
+    <string name="tvos_phone_keyboard_instructions">手机键盘：保持搜索页面打开，扫描二维码。</string>
+    <string name="tvos_phone_keyboard_url">手机键盘（仅局域网）：%1$s</string>
+    <string name="tvos_phone_keyboard_offline">手机键盘不可用（局域网或端口问题）。</string>
 </resources>

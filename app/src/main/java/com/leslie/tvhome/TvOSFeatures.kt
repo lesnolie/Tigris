@@ -153,6 +153,9 @@ class AppSwitcherActivity : Activity() {
 class TvOSSearchActivity : Activity() {
     private lateinit var results: LinearLayout
     private lateinit var query: EditText
+    private var phoneBridge: PhoneSearchInput? = null
+    private var phoneInfo: TextView? = null
+    private var phoneQR: ImageView? = null
     private val apps by lazy { AppRepo(this).allApps().filter { it.folder == null && it.input == null } }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -196,6 +199,19 @@ class TvOSSearchActivity : Activity() {
         }
         controls.addView(voice)
         page.addView(controls, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(24) })
+        val phoneLine = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        phoneInfo = TextView(this).apply {
+            text = getString(R.string.tvos_phone_keyboard_instructions)
+            textSize = 13f
+            setTextColor(0xFFAEB9D1.toInt())
+        }
+        phoneLine.addView(phoneInfo, LinearLayout.LayoutParams(0, -2, 1f))
+        phoneQR = ImageView(this).apply { visibility = View.GONE }
+        phoneLine.addView(phoneQR, LinearLayout.LayoutParams(dp(104), dp(104)))
+        page.addView(phoneLine, LinearLayout.LayoutParams(-1, dp(110)).apply { topMargin = dp(8) })
         results = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         page.addView(ScrollView(this).apply {
             fillViewport = true
@@ -209,6 +225,36 @@ class TvOSSearchActivity : Activity() {
         })
         render("")
         query.requestFocus()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (phoneBridge != null) return
+        val bridge = PhoneSearchInput { value ->
+            runOnUiThread { if (!isFinishing && ::query.isInitialized) query.setText(value) }
+        }
+        val link = bridge.localUrl(this)
+        if (link == null) {
+            phoneInfo?.text = getString(R.string.tvos_phone_keyboard_offline)
+            return
+        }
+        try {
+            bridge.start(2_000, true)
+            phoneBridge = bridge
+            phoneInfo?.text = getString(R.string.tvos_phone_keyboard_url, link)
+            phoneQR?.setImageBitmap(PhoneServer.qr(link, 4))
+            phoneQR?.visibility = View.VISIBLE
+        } catch (_: Exception) {
+            bridge.stop()
+            phoneInfo?.text = getString(R.string.tvos_phone_keyboard_offline)
+        }
+    }
+
+    override fun onPause() {
+        phoneBridge?.stop()
+        phoneBridge = null
+        phoneQR?.visibility = View.GONE
+        super.onPause()
     }
 
     private fun render(text: String) {

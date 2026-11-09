@@ -43,4 +43,18 @@
     <string name="tvos_profiles">Profiles</string>
     <string name="tvos_local_profile_help">Separate local launcher order, hidden apps and recent-first setting. Not an Android or Apple ID account.</string>
     <string name="tvos_profile_number">Profile %1$d</string>
+    <string name="tvos_device_settings_title">TV System Settings</string>
+    <string name="tvos_device_settings_info">Opens the TV original system settings; support depends on firmware and permissions.</string>
+    <string name="tvos_device_settings_unavailable">Unavailable on this TV</string>
+    <string name="tvos_setting_display">Display and resolution</string>
+    <string name="tvos_setting_audio">Sound and audio</string>
+    <string name="tvos_setting_network">Wi-Fi and network</string>
+    <string name="tvos_setting_bluetooth">Bluetooth and controllers</string>
+    <string name="tvos_setting_apps">Applications</string>
+    <string name="tvos_setting_accessibility">Accessibility</string>
+    <string name="tvos_setting_keyboard">Keyboard and input</string>
+    <string name="tvos_setting_date">Date and time</string>
+    <string name="tvos_phone_keyboard_instructions">Phone keyboard: scan QR while Search is open.</string>
+    <string name="tvos_phone_keyboard_url">Phone keyboard (LAN only): %1$s</string>
+    <string name="tvos_phone_keyboard_offline">Phone keyboard unavailable (LAN or port).</string>
 </resources>

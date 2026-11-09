@@ -326,6 +326,11 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         }
         panel.addView(profileModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
 
+        panel.addView(GlassButton(ctx.getString(R.string.tvos_device_settings_title),
+            R.drawable.ic_gear, Shape.CAPSULE) {
+            close()
+            ctx.startActivity(Intent(ctx, TvOSDeviceSettingsActivity::class.java))
+        }, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
         mediaModule = GlassButton(ctx.getString(R.string.tvos_now_playing), R.drawable.ic_volume, Shape.CAPSULE) {
             // MediaSession actions only when Android explicitly grants notification-listener access.
             io.execute {

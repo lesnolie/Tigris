@@ -458,6 +458,9 @@ class SettingsActivity : Activity() {
         row(getString(R.string.tvos_recents_title), getString(R.string.tvos_recents_help), { "" }, chevron = true) {
             startActivity(Intent(this, AppSwitcherActivity::class.java))
         }
+        row(getString(R.string.tvos_device_settings_title), getString(R.string.tvos_device_settings_info), { "" }, chevron = true) {
+            startActivity(Intent(this, TvOSDeviceSettingsActivity::class.java))
+        }
         row(I18n.text(R.string.i18n_settingsactivity_031), I18n.text(R.string.i18n_settingsactivity_032) +
             I18n.text(R.string.i18n_settingsactivity_033), {
             auto(prefs.focusStyle, prefs.focusTvos(this), "tvOS", I18n.text(R.string.i18n_settingsactivity_034))
