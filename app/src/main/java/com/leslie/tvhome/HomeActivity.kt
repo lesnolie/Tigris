@@ -591,8 +591,6 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         scene.addView(dock, FrameLayout.LayoutParams(dockRect.width(), dockRect.height()).apply {
             leftMargin = dockRect.left; topMargin = dockRect.top
         })
-        // No frosted dock bar: the brand-coloured tiles float directly on the wallpaper.
-        dock.visibility = View.GONE
         updateDockShadow(prefs.extremeGlass)
 
         // A persistent status row, also visible over Top Shelf and the expanded app grid.
@@ -1025,8 +1023,32 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         android.content.res.Configuration.UI_MODE_NIGHT_YES
 
     private fun updateDockShadow(on: Boolean) {
-        // Dock glass (and its depth shadow) are not shown; tiles float on the wallpaper.
-        dockShadow?.visibility = View.GONE
+        if (!on) {
+            dockShadow?.visibility = View.GONE
+            return
+        }
+        dockShadow?.let {
+            it.visibility = View.VISIBLE
+            return
+        }
+        val pad = dp(18)
+        val offset = dp(4)
+        val bitmap = LiquidGlass.shadow(
+            dockRect.width() / 2, dockRect.height() / 2, dockRadius / 2,
+            pad / 2, alpha = 110, hollow = true,
+        )
+        val shadow = ImageView(this).apply {
+            scaleType = ImageView.ScaleType.FIT_XY
+            setImageBitmap(bitmap)
+            translationY = dock.translationY
+        }
+        scene.addView(shadow, scene.indexOfChild(dock), FrameLayout.LayoutParams(
+            dockRect.width() + pad * 2, dockRect.height() + pad * 2,
+        ).apply {
+            leftMargin = dockRect.left - pad
+            topMargin = dockRect.top - pad + offset
+        })
+        dockShadow = shadow
     }
 
     // ------------------------------------------------------------------- shelf

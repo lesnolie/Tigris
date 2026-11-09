@@ -28,14 +28,12 @@ internal object BrandTilePolicy {
     fun validForeground(visible: Int, total: Int, touchesEverySide: Boolean): Boolean =
         total > 0 && visible.toFloat() / total in 0.04f..0.72f && !touchesEverySide
 
-    /** Avoid laser-bright backgrounds: blend extracted brand colors into a dark material. */
+    /** Keep the icon's real colour (white stays white); only lift near-black for contrast. */
     fun brandColor(rgb: Int): Int {
         fun ch(shift: Int) = (rgb ushr shift) and 0xFF
-        val r = ch(16); val g = ch(8); val b = ch(0)
-        return 0xFF000000.toInt() or
-            ((max(22, min(128, (r * 0.42f + 19).toInt()))) shl 16) or
-            ((max(22, min(128, (g * 0.42f + 19).toInt()))) shl 8) or
-            (max(22, min(128, (b * 0.42f + 19).toInt())))
+        var r = ch(16); var g = ch(8); var b = ch(0)
+        if (r < 20 && g < 20 && b < 20) { r = 40; g = 44; b = 52 }
+        return 0xFF000000.toInt() or (r shl 16) or (g shl 8) or b
     }
 
     /** Geometry is decided independently of wallpaper, avoiding per-frame sampling. */

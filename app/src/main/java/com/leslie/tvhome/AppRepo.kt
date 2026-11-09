@@ -211,10 +211,12 @@ class AppRepo(private val ctx: Context) {
                 } else runCatching { pm.getActivityIcon(app.component) }.getOrNull()
                 val mode = prefs.appTileSource(app.pkg)
                 val classic = prefs.appTileStyle == Prefs.TILE_CLASSIC || mode == Prefs.TILE_CLASSIC
-                // Home tiles use brand-colour rendering for a consistent look. TV banners are
-                // often pale/white and read as a "white base", so they are skipped here.
-                val banner: Drawable? = null
-                val goodBanner = false
+                val banner = if (classic || mode == Prefs.TILE_ICON) null else runCatching {
+                    pm.getActivityInfo(app.component, 0).loadBanner(pm)
+                        ?: pm.getApplicationInfo(app.component.packageName, 0).loadBanner(pm)
+                }.getOrNull()
+                val goodBanner = banner != null &&
+                    BrandTilePolicy.goodBanner(banner.intrinsicWidth, banner.intrinsicHeight)
                 val adaptive = drawable as? AdaptiveIconDrawable
                 val candidate = if (classic || goodBanner) null else adaptive?.let { validatedForeground(it.foreground) }
                 val choice = BrandTilePolicy.select(classic, mode, goodBanner, candidate != null, drawable != null)
@@ -290,26 +292,35 @@ class AppRepo(private val ctx: Context) {
         return bitmap
     }
 
-    /** Saturated regions beat near-white padding when recovering a brand identity. */
+    /** The icon's dominant opaque colour, kept faithful (a white icon yields white). */
     private fun brandColor(bitmap: Bitmap): Int {
-        var best = -1f
-        var picked = 0xFF627C9C.toInt()
-        for (y in 4 until bitmap.height step 9) for (x in 4 until bitmap.width step 9) {
-            val color = bitmap.getPixel(x, y)
-            if (Color.alpha(color) < 48) continue
-            val red = Color.red(color); val green = Color.green(color); val blue = Color.blue(color)
-            val mx = max(red, max(green, blue)); val mn = min(red, min(green, blue))
-            val range = mx - mn
-            // Reject almost-white/black pixels and prefer saturated colors.
-            val score = range.toFloat() - if (mx > 239 || mx < 40) 70f else 0f
-            if (score > best) { best = score; picked = color }
+        val counts = HashMap<Int, Int>()
+        var best = 0
+        var bestColor = 0xFF627C9C.toInt()
+        var sumR = 0L
+        var sumG = 0L
+        var sumB = 0L
+        var n = 0
+        for (y in 0 until bitmap.height step 3) for (x in 0 until bitmap.width step 3) {
+            val c = bitmap.getPixel(x, y)
+            if (Color.alpha(c) < 200) continue
+            val q = ((Color.red(c) shr 4) shl 8) or ((Color.green(c) shr 4) shl 4) or (Color.blue(c) shr 4)
+            val cnt = (counts[q] ?: 0) + 1
+            counts[q] = cnt
+            if (cnt > best) { best = cnt; bestColor = c }
+            sumR += Color.red(c); sumG += Color.green(c); sumB += Color.blue(c); n++
         }
-        return BrandTilePolicy.brandColor(picked)
+        if (n == 0) return BrandTilePolicy.brandColor(0xFF3A4A66.toInt())
+        // Blend the dominant bucket with the overall average so gradients look smooth.
+        val avg = Color.rgb((sumR / n).toInt(), (sumG / n).toInt(), (sumB / n).toInt())
+        return BrandTilePolicy.brandColor(blend(bestColor, avg, 0.5f))
     }
 
     private fun drawBrandSurface(c: Canvas, color: Int) {
-        val light = blend(color, Color.WHITE, 0.12f)
-        val dark = blend(color, Color.BLACK, 0.40f)
+        // Subtle gradient around the icon's own colour, so the card reads as that colour
+        // (white stays white) instead of a dark/silver material.
+        val light = blend(color, Color.WHITE, 0.06f)
+        val dark = blend(color, Color.BLACK, 0.12f)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             shader = LinearGradient(0f, 0f, TILE_W.toFloat(), heightPx.toFloat(),
                 light, dark, Shader.TileMode.CLAMP)
