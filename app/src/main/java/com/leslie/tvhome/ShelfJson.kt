@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.URI
+import java.security.MessageDigest
 
 /** Caps and checks for a user-supplied Top Shelf feed. Pure: no network and no Android APIs. */
 internal object ShelfLimits {
@@ -97,4 +98,34 @@ internal object ShelfJson {
         if (value !is String && value !is Number) return ""
         return value.toString().trim()
     }
+}
+
+/** Collision-resistant filenames for cache entries from arbitrary content providers. */
+internal object ShelfImageCacheKey {
+    private val digits = "0123456789abcdef".toCharArray()
+
+    fun name(url: String): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(url.toByteArray(Charsets.UTF_8))
+        val hex = CharArray(digest.size * 2)
+        for (i in digest.indices) {
+            val unsigned = digest[i].toInt() and 0xff
+            hex[2 * i] = digits[unsigned ushr 4]
+            hex[2 * i + 1] = digits[unsigned and 15]
+        }
+        return String(hex) + ".jpg"
+    }
+}
+
+/** Public HTTPS links are only passed to an activity resolving inside the focused app. */
+internal object ShelfDeepLink {
+    private val bvidPattern = Regex("BV[0-9A-Za-z]{10}")
+    private val roomPattern = Regex("[0-9]{1,12}")
+
+    fun bilibili(raw: String): String? =
+        raw.trim().takeIf { bvidPattern.matches(it) }
+            ?.let { "https://www.bilibili.com/video/$it" }
+
+    fun douyu(raw: String): String? =
+        raw.trim().takeIf { roomPattern.matches(it) && (it.toLongOrNull() ?: 0) > 0 }
+            ?.let { "https://www.douyu.com/$it" }
 }

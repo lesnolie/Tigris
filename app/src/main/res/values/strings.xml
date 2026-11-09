@@ -56,4 +56,6 @@
     <string name="tvos_media_play_pause">Play or pause</string>
     <string name="tvos_media_next">Next</string>
     <string name="tvos_tools">Tools</string>
+    <string name="tvos_shelf_browse_hint">↑ Browse featured items</string>
+    <string name="tvos_shelf_select_hint">← → Browse  ·  OK Open  ·  ↓ Return</string>
 </resources>

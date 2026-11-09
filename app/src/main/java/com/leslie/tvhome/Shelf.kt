@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import android.util.LruCache
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
@@ -32,6 +33,12 @@ object Shelf {
     private const val TTL = 15 * 60_000L
     /** Built-in responses are small; the cap only stops a runaway body. */
     private const val BUILTIN_JSON_BYTES = 2 * 1024 * 1024
+    private val pictureBudget = (Runtime.getRuntime().maxMemory() / 5L)
+        .coerceIn(12L * 1024 * 1024, 24L * 1024 * 1024).toInt()
+    /** Cache processed, darkened bitmaps; never recycle on eviction while a view may hold one. */
+    private val pictures = object : LruCache<String, Bitmap>(pictureBudget) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
+    }
 
     /** Package → which public feed it shares. Both Bilibili clients use `bilibili`. */
     internal val builtInPackages = mapOf(
@@ -97,26 +104,36 @@ object Shelf {
         return list
     }
 
-    /** Downloads (or reads from the disk cache) an item's picture. */
+    /** Decode and darken each image once per memory-cache residence; always call off the UI thread. */
     fun image(ctx: Context, url: String): Bitmap? {
         if (!ShelfLimits.isHttpUrl(url)) return null
+        synchronized(pictures) { pictures.get(url) }?.let { return it }
         val dir = File(ctx.cacheDir, "shelf").apply { mkdirs() }
-        val f = File(dir, Integer.toHexString(url.hashCode()) + ".jpg")
+        val f = File(dir, ShelfImageCacheKey.name(url))
         if (!f.exists()) try {
-            val tmp = File(dir, f.name + ".part")
-            tmp.writeBytes(get(url, ShelfLimits.MAX_IMAGE_BYTES))
-            tmp.renameTo(f)
-            // Keep the cache small: the newest 60 pictures.
-            dir.listFiles()?.sortedByDescending { it.lastModified() }?.drop(60)?.forEach { it.delete() }
+            // Unique temp names prevent parallel prefetches of the same image from racing.
+            val tmp = File.createTempFile("tigris-shelf-", ".part", dir)
+            try {
+                tmp.writeBytes(get(url, ShelfLimits.MAX_IMAGE_BYTES))
+                if (!f.exists() && !tmp.renameTo(f) && !f.exists()) return null
+            } finally { tmp.delete() }
+            dir.listFiles()?.filter { it.extension == "jpg" }
+                ?.sortedByDescending { it.lastModified() }
+                ?.drop(40)?.forEach { it.delete() }
         } catch (e: Exception) {
-            Log.w("Shelf", "image $url failed", e)
+            Log.w("Shelf", "image download failed", e)
             return null
         }
-        return decodeCapped(f.path)
-            ?.let(::trimBars)
-            ?.let(::darken)
-            // Start the GPU upload now, off the frame that first shows it.
-            ?.also { it.prepareToDraw() }
+        val ready = try {
+            decodeCapped(f.path)?.let(::trimBars)?.let(::darken)
+                ?.also { it.prepareToDraw() }
+        } catch (e: Exception) {
+            Log.w("Shelf", "image decode failed", e)
+            null
+        }
+        if (ready == null) f.delete()
+        else synchronized(pictures) { pictures.put(url, ready) }
+        return ready
     }
 
     private fun fetchCustom(url: String): List<Item>? {
@@ -188,6 +205,7 @@ object Shelf {
                 v.optString("title"),
                 I18n.text(R.string.i18n_shelf_003, v.getJSONObject("owner").optString("name"), count(v.getJSONObject("stat").optLong("view"))),
                 v.optString("pic").replace("http://", "https://") + "@1280w_720h_1c.jpg",
+                ShelfDeepLink.bilibili(v.optString("bvid")),
             )
         }
     }
@@ -204,6 +222,7 @@ object Shelf {
                     I18n.text(R.string.i18n_shelf_004, r.optString("nn"), r.optString("c2name"), count(r.optLong("ol"))),
                     // "/dy4" is the 1280×720 JPEG rendition of the AVIF cover.
                     r.optString("rs16").substringBeforeLast('/') + "/dy4",
+                    ShelfDeepLink.douyu(r.optString("rid")),
                 )
             }
     }

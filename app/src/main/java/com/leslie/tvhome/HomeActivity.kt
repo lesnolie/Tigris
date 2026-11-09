@@ -47,6 +47,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.Executors
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 /**
  * tvOS style home: a low glass dock and a compact status row in the top-right.
@@ -149,31 +152,26 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private lateinit var shelfSource: TextView
     private lateinit var shelfTitle: TextView
     private lateinit var shelfMeta: TextView
+    private lateinit var shelfHint: TextView
     private lateinit var shelfInfo: LinearLayout
     private lateinit var shelfDots: LinearLayout
-    private val net = Executors.newFixedThreadPool(2)
+    // A bounded queue prevents rapid D-pad presses from accumulating stale image work.
+    private val net = ThreadPoolExecutor(2, 2, 0L, TimeUnit.MILLISECONDS,
+        ArrayBlockingQueue<Runnable>(4), ThreadPoolExecutor.DiscardOldestPolicy())
     private var shelfPkg: String? = null
     private var pendingShelf: String? = null
     private var shelfItems: List<Shelf.Item> = emptyList()
     private var shelfIndex = 0
+    private var shelfPendingIndex = 0
+    private var shelfConsumeExitKeyUp = -1
     private var shelfShown = false
+    private var shelfBrowsing = false
+    private var shelfGeneration = 0L
+    private var shelfImageRequest = 0L
     private val shelfShow = Runnable { pendingShelf?.let { showShelf(it) } }
-    private val shelfAdvance = object : Runnable {
-        override fun run() {
-            if (!shelfShown || shelfItems.size < 2) return
-            val pkg = shelfPkg ?: return
-            val next = (shelfIndex + 1) % shelfItems.size
-            val item = shelfItems[next]
-            net.execute {
-                val b = Shelf.image(this@HomeActivity, item.image)
-                val glass = b?.let { shelfGlass(it) }
-                main.post {
-                    if (shelfPkg == pkg && shelfShown && !control.isOpen) {
-                        if (b != null && glass != null) showShelfItem(next, b, glass)
-                        main.postDelayed(this, SHELF_SECONDS * 1000L)
-                    }
-                }
-            }
+    private val shelfAdvance = Runnable {
+        if (shelfShown && !shelfBrowsing && shelfItems.size > 1 && !control.isOpen) {
+            requestShelfIndex(ShelfNavigation.step(shelfIndex, shelfItems.size, 1))
         }
     }
 
@@ -1012,11 +1010,15 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             setLineSpacing(0f, 1.08f)
         }.also(shadow)
         shelfMeta = text(17f, Color.argb(210, 255, 255, 255), weight = 500).apply { maxLines = 1 }.also(shadow)
+        shelfHint = text(14f, Color.argb(205, 255, 255, 255), weight = 500).apply {
+            visibility = View.GONE
+        }.also(shadow)
         shelfInfo = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(shelfSource)
             addView(shelfTitle, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
             addView(shelfMeta, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(10) })
+            addView(shelfHint, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(13) })
         }
         val above = sh - dockRect.top + dp(30)
         shelf.addView(shelfInfo, FrameLayout.LayoutParams((sw * 0.56f).toInt(), -2, Gravity.BOTTOM or Gravity.START).apply {
@@ -1031,15 +1033,23 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     private fun shelfCustom() = Shelf.Custom(prefs.shelfCustomPkg, prefs.shelfCustomUrl)
 
+    /** A delayed network response can never take over a newly focused Dock app. */
     private fun showShelf(pkg: String) {
         shelfPkg = pkg
+        val session = ++shelfGeneration
+        ++shelfImageRequest
+        val custom = shelfCustom()
         net.execute {
-            val items = Shelf.items(pkg, shelfCustom())
+            val items = Shelf.items(pkg, custom)
             val first = items.firstOrNull()?.let { Shelf.image(this, it.image) }
             val glass = first?.let { shelfGlass(it) }
             main.post {
-                if (shelfPkg != pkg || first == null || glass == null || control.isOpen) return@post
+                if (session != shelfGeneration || shelfPkg != pkg || !resumed ||
+                    isDestroyed || control.isOpen || first == null || glass == null) return@post
                 shelfItems = items
+                shelfIndex = 0
+                shelfPendingIndex = 0
+                shelfBrowsing = false
                 shelfSource.text = Shelf.sourceName(pkg)
                 shelfDots.removeAllViews()
                 repeat(items.size) {
@@ -1048,10 +1058,97 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                 }
                 showShelfItem(0, first, glass)
                 setShelfVisible(true)
-                main.removeCallbacks(shelfAdvance)
-                main.postDelayed(shelfAdvance, SHELF_SECONDS * 1000L)
+                updateShelfHint()
+                resumeShelfRotation()
             }
         }
+    }
+
+    /** Image preparation happens on the network pool; focus and user requests win over stale work. */
+    private fun requestShelfIndex(index: Int) {
+        val pkg = shelfPkg ?: return
+        if (!shelfShown || index !in shelfItems.indices) return
+        val session = shelfGeneration
+        val request = ++shelfImageRequest
+        val item = shelfItems[index]
+        shelfPendingIndex = index
+        main.removeCallbacks(shelfAdvance)
+        // Keep a retry timer even if a superseded request is dropped by the bounded queue.
+        if (!shelfBrowsing) main.postDelayed(shelfAdvance, (SHELF_SECONDS + 2) * 1000L)
+        net.execute {
+            val bitmap = Shelf.image(this, item.image)
+            val glass = bitmap?.let { shelfGlass(it) }
+            main.post {
+                if (!ShelfNavigation.accepts(session, shelfGeneration, request, shelfImageRequest,
+                        pkg, shelfPkg, shelfShown && resumed && !isDestroyed, control.isOpen)) return@post
+                if (bitmap != null && glass != null) showShelfItem(index, bitmap, glass)
+                else shelfPendingIndex = shelfIndex
+                if (!shelfBrowsing) resumeShelfRotation()
+            }
+        }
+    }
+
+    private fun updateShelfHint() {
+        shelfHint.visibility = if (shelfShown && shelfItems.size > 1) View.VISIBLE else View.GONE
+        shelfHint.text = getString(if (shelfBrowsing)
+            R.string.tvos_shelf_select_hint else R.string.tvos_shelf_browse_hint)
+    }
+
+    /** Up enters the featured-content strip; left/right browse; OK opens; down/back returns. */
+    private fun shelfKey(event: KeyEvent): Boolean {
+        val app = adapter.apps.getOrNull(focusedPos) ?: return false
+        if (!shelfShown || shelfItems.size < 2 || shelfPkg != app.pkg ||
+            focusedPos >= cols || !grid.hasFocus() || control.isOpen || moving >= 0 || sheets.isNotEmpty()) return false
+        val key = event.keyCode
+        if (!shelfBrowsing) {
+            if (key != KeyEvent.KEYCODE_DPAD_UP) return false
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                shelfBrowsing = true
+                shelfPendingIndex = shelfIndex
+                ++shelfImageRequest
+                main.removeCallbacks(shelfAdvance)
+                updateShelfHint()
+            }
+            return true
+        }
+        when (key) {
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    val delta = if (key == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                    // An incoming request supersedes its predecessor; rapid presses remain responsive.
+                    val next = ShelfNavigation.step(shelfPendingIndex, shelfItems.size, delta)
+                    if (next >= 0) requestShelfIndex(next)
+                }
+                return true
+            }
+            KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_BACK -> {
+                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    shelfBrowsing = false
+                    shelfPendingIndex = shelfIndex
+                    shelfConsumeExitKeyUp = key
+                    ++shelfImageRequest
+                    updateShelfHint()
+                    resumeShelfRotation()
+                }
+                return true
+            }
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                if (event.action == KeyEvent.ACTION_UP) {
+                    val intent = shelfDeepLink(app) ?: repo.launchIntent(app)
+                    if (intent != null) try {
+                        startActivity(intent)
+                        RecentApps.record(this, app.pkg)
+                        rememberOpened(app.pkg)
+                    } catch (_: Exception) {
+                        Toast.makeText(this,
+                            I18n.text(R.string.i18n_homeactivity_005, app.label), Toast.LENGTH_SHORT).show()
+                    }
+                }
+                return true
+            }
+        }
+        return false
     }
 
     /** A Top Shelf picture's dock glass, made with the picture on its loader thread. */
@@ -1074,8 +1171,18 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private fun showShelfItem(i: Int, b: Bitmap, glass: ShelfGlass) {
         val item = shelfItems.getOrNull(i) ?: return
         shelfIndex = i
+        shelfPendingIndex = i
         // The new picture fades in over the old one, settling from a slight zoom.
         val old = shelfFront
+        // Interrupted cross-fades must not accumulate off-screen ImageViews or bitmap references.
+        for (j in shelfPics.childCount - 1 downTo 0) {
+            val view = shelfPics.getChildAt(j)
+            if (view !== old) {
+                view.animate().cancel()
+                shelfPics.removeViewAt(j)
+            }
+        }
+        old?.animate()?.cancel()
         val pic = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageBitmap(b) }
         shelfPics.addView(pic, FrameLayout.LayoutParams(-1, -1))
         shelfFront = pic
@@ -1142,11 +1249,17 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     }
 
     private fun hideShelf() {
+        ++shelfGeneration
+        ++shelfImageRequest
+        shelfBrowsing = false
         main.removeCallbacks(shelfShow)
         main.removeCallbacks(shelfAdvance)
         pendingShelf = null
         shelfPkg = null
+        shelfItems = emptyList()
+        shelfPendingIndex = 0
         setShelfVisible(false)
+        shelfHint.visibility = View.GONE
     }
 
     fun pauseShelfRotation() {
@@ -1155,7 +1268,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     }
 
     fun resumeShelfRotation() {
-        if (shelfShown) {
+        if (shelfShown && !shelfBrowsing && shelfItems.size > 1) {
             main.removeCallbacks(shelfAdvance)
             main.postDelayed(shelfAdvance, SHELF_SECONDS * 1000L)
         }
@@ -1252,6 +1365,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     override fun onTileFocused(pos: Int, cell: TileCell) {
         focusedPos = pos
         val pkg = adapter.apps.getOrNull(pos)?.pkg
+        if (shelfBrowsing && pkg != shelfPkg) shelfBrowsing = false
         main.removeCallbacks(shelfShow)
         if (pos < cols && pkg != null && Shelf.has(pkg, shelfCustom()) && moving < 0) {
             if (pkg != shelfPkg || !shelfShown) {
@@ -1588,6 +1702,11 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         // Any key skips the intro to its closing zoom; nothing behind it reacts meanwhile.
         intro?.let { if (event.action == KeyEvent.ACTION_UP) it.skip(); return true }
         val code = event.keyCode
+        if (event.action == KeyEvent.ACTION_UP && code == shelfConsumeExitKeyUp) {
+            shelfConsumeExitKeyUp = -1
+            return true
+        }
+        if (shelfKey(event)) return true
         // APP_SWITCH is only handled when delivered to this Activity. Android often owns
         // Home/TV key globally; we do not intercept global system buttons.
         if (code == KeyEvent.KEYCODE_APP_SWITCH) {
@@ -1722,6 +1841,10 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         cancelIdle()
         main.removeCallbacks(ticker)
         main.removeCallbacks(shelfAdvance)
+        ++shelfImageRequest
+        shelfBrowsing = false
+        shelfPendingIndex = shelfIndex
+        if (::shelfHint.isInitialized) updateShelfHint()
         super.onPause()
     }
 
