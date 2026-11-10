@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Window changes only: the guard learns which app is in front, never what is on screen. -->
+<!-- Window changes only: the guard learns which app is in front, never what is on screen.
+     canTakeScreenshot lets the SAME service grab one frame of the foreground app so the
+     local app switcher can show a real thumbnail. Captures stay in app-private storage. -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagDefault"
     android:canRequestFilterKeyEvents="true"
     android:canRetrieveWindowContent="false"
+    android:canTakeScreenshot="true"
     android:notificationTimeout="0"
     android:description="@string/guard_description" />

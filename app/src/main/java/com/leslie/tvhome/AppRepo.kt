@@ -8,17 +8,22 @@ import android.content.pm.ResolveInfo
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.LinearGradient
-import android.graphics.Shader
+import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
+import android.graphics.Shader
 import android.graphics.drawable.Drawable
 import android.util.LruCache
 import com.leslie.tvhome.tv.Input
 import java.text.Collator
 import java.util.Locale
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
+
+/** The fully rendered horizontal tile of one app. */
+data class AppTileArt(val background: Bitmap)
 
 data class AppEntry(
     val pkg: String,
@@ -47,13 +52,14 @@ object InputTile {
     }
 }
 
-/** Enumerates launchable apps and renders their 16:9 tvOS-style tiles. */
+/** Enumerates launchable apps and renders one 16:9 banner tile per app. */
 class AppRepo(private val ctx: Context) {
     private val pm: PackageManager = ctx.packageManager
     private val prefs = Prefs(ctx)
-    private val tiles = object : LruCache<String, Bitmap>(24 * 1024 * 1024) {
-        override fun sizeOf(key: String, value: Bitmap) = value.byteCount
+    private val tiles = object : LruCache<String, AppTileArt>(24 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: AppTileArt) = value.background.byteCount
     }
+    private val heightPx: Int get() = BrandTilePolicy.renderedHeight(TILE_W)
 
     fun allApps(): List<AppEntry> {
         val byPkg = LinkedHashMap<String, AppEntry>()
@@ -146,123 +152,158 @@ class AppRepo(private val ctx: Context) {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
     }
 
-    fun cachedTile(pkg: String): Bitmap? = tiles.get(tileKey(pkg))
+    fun cachedTile(pkg: String): Bitmap? = tiles.get(tileKey(pkg))?.background
+    fun cachedArtwork(pkg: String): AppTileArt? = tiles.get(tileKey(pkg))
 
     /** The settings tile is keyed by its custom icon's date too, so a newly uploaded one shows up. */
-    private fun tileKey(pkg: String): String =
-        if (pkg == ctx.packageName) pkg + "@" + (SettingsActivity.customIcon(ctx)?.lastModified() ?: 0L) else pkg
+    private fun tileKey(pkg: String): String = listOf(
+        pkg,
+        prefs.appTileStyle,
+        if (pkg == ctx.packageName) SettingsActivity.customIcon(ctx)?.lastModified() ?: 0L else 0L
+    ).joinToString("@")
 
-    /** Builds the tile bitmap; call off the main thread. */
-    fun tile(app: AppEntry): Bitmap {
+    /** Builds once on a worker. Never decode or inspect drawable pixels during focus animation. */
+    fun tile(app: AppEntry): Bitmap = artwork(app).background
+
+    fun artwork(app: AppEntry): AppTileArt {
         val key = tileKey(app.pkg)
         tiles.get(key)?.let { return it }
-        val bmp = Bitmap.createBitmap(TILE_W, TILE_H, Bitmap.Config.ARGB_8888)
+        val bmp = Bitmap.createBitmap(TILE_W, heightPx, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
-        app.folder?.let { f ->
-            c.drawColor(Color.rgb(56, 62, 82))
-            val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
-            val members = allApps().associateBy { it.pkg }
-            f.members.filter { it !in prefs.hidden }.take(4).forEachIndexed { index, pkg ->
-                members[pkg]?.let { member ->
-                    val left = 84f + (index % 2) * 122f
-                    val top = 14f + (index / 2) * 76f
-                    c.drawBitmap(tile(member), null, RectF(left, top, left + 110f, top + 62f), paint)
-                }
-            }
-            paint.color = Color.WHITE; paint.textSize = 26f; paint.textAlign = Paint.Align.CENTER
-            c.drawText(android.text.TextUtils.ellipsize(f.name, android.text.TextPaint(paint), 360f,
-                android.text.TextUtils.TruncateAt.END).toString(), 200f, 207f, paint)
-            tiles.put(key, bmp); return bmp
+        when {
+            app.folder != null -> drawFolderTile(c, app.folder)
+            app.input != null -> drawInputTile(c, app.input)
+            else -> drawAppTile(c, app)
         }
-        app.input?.let { drawInputTile(c, it); tiles.put(key, bmp); return bmp }
+        val value = AppTileArt(bmp)
+        tiles.put(key, value)
+        return value
+    }
+
+    private fun drawAppTile(c: Canvas, app: AppEntry) {
+        val mode = prefs.appTileSource(app.pkg)
+        val classic = prefs.appTileStyle == Prefs.TILE_CLASSIC || mode == Prefs.TILE_CLASSIC
+        val forceIcon = mode == Prefs.TILE_ICON
+        if (app.component.className == WallpaperActivity::class.java.name) {
+            drawWallpaperIconTile(c)
+            return
+        }
         val ownIcon = if (app.component.className == SettingsActivity::class.java.name)
             SettingsActivity.customIcon(ctx)?.let { SettingsActivity.decodeIcon(it, TILE_W) }
         else null
-        if (app.component.className == WallpaperActivity::class.java.name && ownIcon == null) {
-            drawWallpaperIconTile(c)
-        } else if (ownIcon != null) {
-            drawIconBitmapTile(c, ownIcon)
-        } else {
-            val icon = if (app.component.className == SettingsActivity::class.java.name) {
-                // Settings has a 16:9 silver banner but no launcher icon of its own; the gear is
-                // the icon it uses on its own page, so the grid uses the same one.
-                ctx.getDrawable(R.drawable.ic_gear)!!.mutate().apply { setTint(TileSkin.SETTINGS_GEAR) }
-            } else try { pm.getActivityIcon(app.component) } catch (e: Exception) { pm.defaultActivityIcon }
-            drawIconTile(c, icon)
+        if (ownIcon != null) {
+            drawFallbackIcon(c, ownIcon, classic)
+            return
         }
-        tiles.put(key, bmp)
-        return bmp
-    }
-
-    /** Drops the cached tile of [pkg] (it was updated or removed), or of every app. */
-    fun invalidate(pkg: String? = null) { if (pkg == null) tiles.evictAll() else tiles.remove(tileKey(pkg)) }
-
-    /** The wallpaper screen has no square launcher icon; draw the same blue-violet tile it uses. */
-    private fun drawWallpaperIconTile(c: Canvas) {
-        val size = 256
-        val icon = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val ic = Canvas(icon)
-        val radius = size * 0.225f
-        ic.drawRoundRect(0f, 0f, size.toFloat(), size.toFloat(), radius, radius,
-            Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                shader = LinearGradient(0f, 0f, size.toFloat(), size.toFloat(),
-                    0xFF2F6FE0.toInt(), 0xFF7A3FD0.toInt(), Shader.TileMode.CLAMP)
-            })
-        val glyph = ctx.getDrawable(R.drawable.ic_photo)!!.mutate()
-        glyph.setTint(Color.WHITE)
-        val g = (size * 0.58f).roundToInt()
-        glyph.setBounds((size - g) / 2, (size - g) / 2, (size + g) / 2, (size + g) / 2)
-        glyph.draw(ic)
-        drawIconBitmapTile(c, icon)
+        val drawable = if (app.component.className == SettingsActivity::class.java.name) {
+            ctx.getDrawable(R.drawable.ic_gear)?.mutate()?.apply { setTint(TileSkin.SETTINGS_GEAR) }
+        } else runCatching { pm.getActivityIcon(app.component) }.getOrNull()
+        val banner = if (classic || forceIcon) null else runCatching {
+            pm.getActivityInfo(app.component, 0).loadBanner(pm)
+                ?: pm.getApplicationInfo(app.component.packageName, 0).loadBanner(pm)
+        }.getOrNull()
+        if (banner != null && BrandTilePolicy.goodBanner(banner.intrinsicWidth, banner.intrinsicHeight)) {
+            drawBannerTile(c, banner)
+            return
+        }
+        val icon = raster(drawable ?: pm.defaultActivityIcon, TILE_H)
+        drawFallbackIcon(c, icon, classic)
         icon.recycle()
     }
 
+    /** A real TV banner fills the whole card; no white plate is put behind it. */
+    private fun drawBannerTile(c: Canvas, banner: Drawable) {
+        val width = banner.intrinsicWidth.takeIf { it > 0 } ?: TILE_W
+        val height = banner.intrinsicHeight.takeIf { it > 0 } ?: TILE_H
+        val placement = AppTileArtwork.banner(width, height, TILE_W, TILE_H)
+        if (placement.mode == AppTileArtwork.Mode.CONTAIN) c.drawColor(Color.rgb(16, 19, 25))
+        banner.setBounds(placement.left, placement.top, placement.right, placement.bottom)
+        banner.draw(c)
+    }
+
     /**
-     * Every app tile shares one frost-grey surface; the icon itself is untouched. Rounded corners
-     * and the hairline border live in TileCell, over this bitmap, so the edge stays crisp at any
-     * resolution and against any wallpaper.
+     * No usable banner: one uniform white card with the app's own launcher icon, centred at a
+     * fixed size. Classic mode keeps the icon transparent and larger instead.
      */
-    private fun drawTileSurface(c: Canvas) {
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            shader = LinearGradient(0f, 0f, 0f, TILE_H.toFloat(),
-                TileSkin.TOP, TileSkin.BOTTOM, Shader.TileMode.CLAMP)
+    private fun drawFallbackIcon(c: Canvas, icon: Bitmap, classic: Boolean) {
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        if (classic) {
+            drawContained(c, icon, 0.82f, paint)
+            return
         }
-        c.drawRect(0f, 0f, TILE_W.toFloat(), TILE_H.toFloat(), paint)
+        c.drawColor(TileSkin.WHITE)
+        val b = glyphBounds(icon) ?: run { drawPlaceholder(c, ""); return }
+        val gw = (b[2] - b[0]).coerceAtLeast(1)
+        val gh = (b[3] - b[1]).coerceAtLeast(1)
+        val maxSide = TILE_H * 0.64f
+        val scale = min(maxSide / gw, maxSide / gh)
+        val dispW = gw * scale
+        val dispH = gh * scale
+        val cx = TILE_W / 2f
+        val cy = TILE_H / 2f
+        c.drawBitmap(icon, Rect(b[0], b[1], b[2], b[3]),
+            RectF(cx - dispW / 2f, cy - dispH / 2f, cx + dispW / 2f, cy + dispH / 2f), paint)
     }
 
-    /** Draw the icon at its original colours and proportions, centred with a calm margin. */
-    private fun drawIconTile(c: Canvas, icon: Drawable) {
-        val sourceSize = 256
-        val iw = icon.intrinsicWidth.takeIf { it > 0 } ?: sourceSize
-        val ih = icon.intrinsicHeight.takeIf { it > 0 } ?: sourceSize
-        val fit = minOf(sourceSize.toFloat() / iw, sourceSize.toFloat() / ih)
-        val w = (iw * fit).roundToInt().coerceAtLeast(1)
-        val h = (ih * fit).roundToInt().coerceAtLeast(1)
-        val source = Bitmap.createBitmap(sourceSize, sourceSize, Bitmap.Config.ARGB_8888)
-        val left = (sourceSize - w) / 2
-        val top = (sourceSize - h) / 2
-        icon.setBounds(left, top, left + w, top + h)
-        icon.draw(Canvas(source))
-        drawIconBitmapTile(c, source)
-        source.recycle()
+    private fun drawContained(c: Canvas, icon: Bitmap, fraction: Float, paint: Paint) {
+        val box = TILE_H * fraction
+        val fit = min(box / icon.width, box / icon.height)
+        val w = icon.width * fit
+        val h = icon.height * fit
+        c.drawBitmap(icon, null, RectF((TILE_W - w) / 2f, (TILE_H - h) / 2f,
+            (TILE_W + w) / 2f, (TILE_H + h) / 2f), paint)
     }
 
-    private fun drawIconBitmapTile(c: Canvas, source: Bitmap) {
-        drawTileSurface(c)
-        val side = AppTileArtwork.iconSize(TILE_H)
-        val fit = minOf(side.toFloat() / source.width, side.toFloat() / source.height)
-        val w = (source.width * fit).coerceAtLeast(1f)
-        val h = (source.height * fit).coerceAtLeast(1f)
-        c.drawBitmap(source, Rect(0, 0, source.width, source.height),
-            RectF((TILE_W - w) / 2f, (TILE_H - h) / 2f, (TILE_W + w) / 2f, (TILE_H + h) / 2f),
-            Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG))
+    /** Render native Drawable proportions intact into a square safe area, never stretching. */
+    private fun raster(d: Drawable, size: Int): Bitmap {
+        val output = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val iw = d.intrinsicWidth.takeIf { it > 0 } ?: size
+        val ih = d.intrinsicHeight.takeIf { it > 0 } ?: size
+        val scale = min(size.toFloat() / iw, size.toFloat() / ih)
+        val w = max(1, (iw * scale).roundToInt())
+        val h = max(1, (ih * scale).roundToInt())
+        d.setBounds((size - w) / 2, (size - h) / 2, (size + w) / 2, (size + h) / 2)
+        d.draw(Canvas(output))
+        return output
+    }
+
+    /** Bounding box of opaque pixels [l,t,r,b], or null when fully transparent. */
+    private fun glyphBounds(bmp: Bitmap): IntArray? {
+        var minX = bmp.width; var minY = bmp.height; var maxX = -1; var maxY = -1
+        for (y in 0 until bmp.height step 2) for (x in 0 until bmp.width step 2) {
+            if (Color.alpha(bmp.getPixel(x, y)) >= 180) {
+                if (x < minX) minX = x; if (y < minY) minY = y
+                if (x > maxX) maxX = x; if (y > maxY) maxY = y
+            }
+        }
+        if (maxX < 0) return null
+        return intArrayOf(minX, minY, maxX + 1, maxY + 1)
+    }
+
+    private fun drawFolderTile(c: Canvas, folder: AppFolder) {
+        c.drawColor(Color.rgb(56, 62, 82))
+        val members = allApps().associateBy { it.pkg }
+        val p = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        folder.members.filter { it !in prefs.hidden }.take(4).forEachIndexed { index, pkg ->
+            members[pkg]?.let { member ->
+                val pic = artwork(member)
+                val left = 84f + (index % 2) * 122f
+                val top = 14f + (index / 2) * 76f
+                c.drawBitmap(pic.background, null, RectF(left, top, left + 110f, top + 62f), p)
+            }
+        }
+        p.color = Color.WHITE
+        p.textSize = 26f
+        p.textAlign = Paint.Align.CENTER
+        c.drawText(android.text.TextUtils.ellipsize(folder.name, android.text.TextPaint(p), 360f,
+            android.text.TextUtils.TruncateAt.END).toString(), TILE_W / 2f, TILE_H - 18f, p)
     }
 
     /** An input tile: a dark glass card with the input glyph and its name, like tvOS's own inputs. */
     private fun drawInputTile(c: Canvas, i: Input) {
         val p = Paint(Paint.ANTI_ALIAS_FLAG)
-        p.shader = android.graphics.LinearGradient(0f, 0f, TILE_W.toFloat(), TILE_H.toFloat(),
-            Color.rgb(58, 64, 82), Color.rgb(22, 24, 32), android.graphics.Shader.TileMode.CLAMP)
+        p.shader = LinearGradient(0f, 0f, TILE_W.toFloat(), TILE_H.toFloat(),
+            Color.rgb(58, 64, 82), Color.rgb(22, 24, 32), Shader.TileMode.CLAMP)
         c.drawRect(0f, 0f, TILE_W.toFloat(), TILE_H.toFloat(), p)
         p.shader = null
         val glyph = ctx.getDrawable(R.drawable.ic_input)!!.mutate()
@@ -281,6 +322,42 @@ class AppRepo(private val ctx: Context) {
             p.textSize = 20f
             c.drawText(i.label, TILE_W / 2f, 192f, p)
         }
+    }
+
+    /** Drops the cached tile of [pkg] (it was updated or removed), or of every app. */
+    fun invalidate(pkg: String? = null) {
+        if (pkg == null) tiles.evictAll()
+        else {
+            // Package changes invalidate all artwork variants, including manual overrides.
+            tiles.snapshot().keys.filter { it.startsWith(pkg + "@") }.forEach { tiles.remove(it) }
+        }
+    }
+
+    /** The wallpaper screen has no square launcher icon; draw the same blue-violet card it uses. */
+    private fun drawWallpaperIconTile(c: Canvas) {
+        val radius = TILE_H * 0.225f
+        val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = LinearGradient(0f, 0f, TILE_W.toFloat(), TILE_H.toFloat(),
+                0xFF2F6FE0.toInt(), 0xFF7A3FD0.toInt(), Shader.TileMode.CLAMP)
+        }
+        c.drawRoundRect(0f, 0f, TILE_W.toFloat(), TILE_H.toFloat(), radius, radius, p)
+        val glyph = ctx.getDrawable(R.drawable.ic_photo)!!.mutate()
+        glyph.setTint(Color.WHITE)
+        val g = (TILE_H * 0.58f).roundToInt()
+        glyph.setBounds((TILE_W - g) / 2, (TILE_H - g) / 2, (TILE_W + g) / 2, (TILE_H + g) / 2)
+        glyph.draw(c)
+    }
+
+    private fun drawPlaceholder(c: Canvas, label: String) {
+        c.drawColor(TileSkin.WHITE)
+        val letter = label.trim().take(1).uppercase(Locale.getDefault()).ifEmpty { "?" }
+        val p = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(0x33, 0x33, 0x33)
+            textAlign = Paint.Align.CENTER
+            textSize = TILE_H * 0.42f
+            isFakeBoldText = true
+        }
+        c.drawText(letter, TILE_W / 2f, TILE_H / 2f - (p.ascent() + p.descent()) / 2f, p)
     }
 
     companion object {

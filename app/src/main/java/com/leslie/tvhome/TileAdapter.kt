@@ -6,7 +6,6 @@ import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
 import android.view.KeyEvent
-import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -15,12 +14,11 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import java.util.concurrent.Executors
 
-/** One app on the grid: a rounded 16:9 frost-grey tile with the name under it when focused. */
+/** One app on the grid: a square icon with the name under it when focused. */
 class TileCell(ctx: Context, val tileW: Int, val tileH: Int) : FrameLayout(ctx) {
     val card = FrameLayout(ctx)
     val image = ImageView(ctx).apply {
         scaleType = ImageView.ScaleType.CENTER_CROP
-        setBackgroundColor(TileSkin.FILL)
     }
     val label: TextView = ctx.text(15f, bold = true).apply {
         gravity = Gravity.CENTER
@@ -30,28 +28,12 @@ class TileCell(ctx: Context, val tileW: Int, val tileH: Int) : FrameLayout(ctx) 
         setShadowLayer(dp(6).toFloat(), 0f, dp(1).toFloat(), Color.argb(140, 0, 0, 0))
     }
     private var jiggle: ObjectAnimator? = null
-    /** Soft shadow under the card at rest, deeper while it is lifted. */
+    /** Soft shadow under the icon; deeper while it is lifted. */
     private val shadow = ImageView(ctx).apply {
         setImageBitmap(shadowFor(ctx, tileW, tileH))
         alpha = TileSkin.SHADOW_REST_ALPHA
     }
     private val shadowPad = dp(SHADOW_PAD)
-    /** A light-blue halo that appears only on the focused tile. */
-    private val glow = ImageView(ctx).apply {
-        scaleType = ImageView.ScaleType.FIT_XY
-        setImageBitmap(glowFor(ctx, tileW, tileH))
-        alpha = 0f
-    }
-    private val glowPad = dp(TileSkin.GLOW_PAD_DP)
-    /** The hairline every tile has, and the brighter ring used for focus. */
-    private val border = View(ctx).apply {
-        background = ring(ctx, TileSkin.BORDER_DP, TileSkin.BORDER)
-    }
-    private val focusRing = View(ctx).apply {
-        background = ring(ctx, TileSkin.FOCUS_RING_DP, TileSkin.FOCUS_RING)
-        alpha = 0f
-    }
-    private val focusTween = Tween()
 
     init {
         clipChildren = false
@@ -62,64 +44,37 @@ class TileCell(ctx: Context, val tileW: Int, val tileH: Int) : FrameLayout(ctx) 
         addView(shadow, LayoutParams(tileW + shadowPad * 2, tileH + shadowPad * 2))
         shadow.translationX = -shadowPad.toFloat()
         shadow.translationY = (-shadowPad + dp(4)).toFloat()
-        addView(glow, LayoutParams(tileW + glowPad * 2, tileH + glowPad * 2))
-        glow.translationX = -glowPad.toFloat()
-        glow.translationY = -glowPad.toFloat()
         card.addView(image, LayoutParams(tileW, tileH))
         card.clipRounded(dp(TileSkin.RADIUS_DP).toFloat())
         addView(card, LayoutParams(tileW, tileH))
-        addView(border, LayoutParams(tileW, tileH))
-        addView(focusRing, LayoutParams(tileW, tileH))
-        // The name hangs below the tile without taking layout space, so rows keep an exact pitch.
+        // Focus is only a scale-up: no outline, ring, glow or white frame.
+        // The name hangs below the icon without taking layout space, so rows keep an exact pitch.
         addView(label, LayoutParams(tileW + dp(30), LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.CENTER_HORIZONTAL))
         label.translationY = tileH + dp(17).toFloat()
     }
 
-    /**
-     * tvOS focus: the tile lifts towards the viewer, with a soft light-blue halo and a crisp ring.
-     * The hairline border fades out while the ring fades in, so the focused tile keeps the same
-     * frost-grey surface as every other tile.
-     */
     fun setFocusedLook(f: Boolean, fromDx: Int, fromDy: Int, showLabel: Boolean = true, tvos: Boolean = true) {
-        val s0 = card.scaleX
-        val s1 = if (f) FOCUS_SCALE else 1f
-        // Draw the lifted tile (and its shadow) above its neighbours.
         translationZ = if (f) 1f else 0f
-        card.cameraDistance = tileW * 14f
-        val tilt = f && tvos && (fromDx != 0 || fromDy != 0)
-        val rx0 = if (tilt) -fromDy * 6f else card.rotationX
-        val ry0 = if (tilt) fromDx * 6f else card.rotationY
-        val z1 = if (f) dp(4).toFloat() else 0f
-        val z0 = card.translationZ
-        val sh0 = shadow.alpha
-        val sh1 = if (f) TileSkin.SHADOW_FOCUS_ALPHA else TileSkin.SHADOW_REST_ALPHA
-        val shy0 = shadow.translationY
-        val shy1 = (-shadowPad + if (f) dp(14) else dp(4)).toFloat()
-        val l0 = label.alpha
-        val l1 = if (f && showLabel) 1f else 0f
-        val b0 = border.alpha
-        val b1 = if (f) 0f else 1f
-        val r0 = focusRing.alpha
-        val r1 = if (f) 1f else 0f
-        val g0 = glow.alpha
-        val g1 = if (f) TileSkin.GLOW_FOCUS_ALPHA else 0f
-        focusTween.start(if (f) 260 else 170, if (f) Motion.spring else Motion.ease) { p ->
-            val e = p.coerceAtMost(1f)
-            card.scaleX = lerp(s0, s1, p); card.scaleY = card.scaleX
-            card.rotationX = lerp(rx0, 0f, e)
-            card.rotationY = lerp(ry0, 0f, e)
-            card.translationZ = lerp(z0, z1, e)
-            shadow.alpha = lerp(sh0, sh1, e)
-            shadow.scaleX = card.scaleX; shadow.scaleY = card.scaleX
-            shadow.translationY = lerp(shy0, shy1, e)
-            border.alpha = lerp(b0, b1, e)
-            border.scaleX = card.scaleX; border.scaleY = card.scaleX
-            focusRing.alpha = lerp(r0, r1, e)
-            focusRing.scaleX = card.scaleX; focusRing.scaleY = card.scaleX
-            glow.alpha = lerp(g0, g1, e)
-            glow.scaleX = card.scaleX; glow.scaleY = card.scaleX
-            label.alpha = lerp(l0, l1, e)
+        val target = if (f) TileSkin.FOCUS_SCALE else 1f
+        card.tweenScale(target, if (f) 230 else 170,
+            if (f) Motion.spring else Motion.ease,
+            z = if (f) dp(4).toFloat() else 0f) {
+            shadow.scaleX = card.scaleX
+            shadow.scaleY = card.scaleX
         }
+        shadow.animate()
+            .alpha(if (f) TileSkin.SHADOW_FOCUS_ALPHA else TileSkin.SHADOW_REST_ALPHA)
+            .translationY((-shadowPad + dp(if (f) 16 else 4)).toFloat())
+            .setDuration(if (f) 230 else 170)
+            .start()
+        label.animate()
+            .alpha(if (f && showLabel) 1f else 0f)
+            .setDuration(if (f) 180 else 120)
+            .start()
+    }
+
+    fun setArtwork(art: AppTileArt?) {
+        image.setImageBitmap(art?.background)
     }
 
     fun setJiggle(on: Boolean) {
@@ -135,46 +90,16 @@ class TileCell(ctx: Context, val tileW: Int, val tileH: Int) : FrameLayout(ctx) 
     }
 
     companion object {
-        const val SHADOW_PAD = 30
-        const val FOCUS_SCALE = 1.06f
-        // 5/6-column Dock tiles have different sizes; one global bitmap silently stretches the
+        const val SHADOW_PAD = 26
+
+        // 5/6-column layouts have different tile sizes; one global bitmap silently stretches the
         // old shadow after switching layout. Cache by size.
         private val shadows = mutableMapOf<Pair<Int, Int>, android.graphics.Bitmap>()
-        private val glows = mutableMapOf<Pair<Int, Int>, android.graphics.Bitmap>()
 
         @Synchronized
         fun shadowFor(ctx: Context, w: Int, h: Int): android.graphics.Bitmap =
             shadows.getOrPut(w to h) {
                 LiquidGlass.shadow(w, h, ctx.dp(TileSkin.RADIUS_DP).toFloat(), ctx.dp(SHADOW_PAD))
-            }
-
-        @Synchronized
-        fun glowFor(ctx: Context, w: Int, h: Int): android.graphics.Bitmap =
-            glows.getOrPut(w to h) {
-                val pad = ctx.dp(TileSkin.GLOW_PAD_DP)
-                val b = android.graphics.Bitmap.createBitmap(
-                    w + pad * 2, h + pad * 2, android.graphics.Bitmap.Config.ARGB_8888)
-                val c = android.graphics.Canvas(b)
-                val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    color = TileSkin.FOCUS_GLOW
-                    style = android.graphics.Paint.Style.STROKE
-                    strokeWidth = ctx.dp(TileSkin.GLOW_DP).toFloat()
-                    maskFilter = android.graphics.BlurMaskFilter(
-                        ctx.dp(TileSkin.GLOW_BLUR_DP).toFloat(),
-                        android.graphics.BlurMaskFilter.Blur.NORMAL)
-                }
-                val r = ctx.dp(TileSkin.RADIUS_DP).toFloat()
-                c.drawRoundRect(android.graphics.RectF(
-                    pad + 1f, pad + 1f, pad + w - 1f, pad + h - 1f), r, r, p)
-                b
-            }
-
-        private fun ring(ctx: Context, widthDp: Float, color: Int) =
-            android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                cornerRadius = ctx.dp(TileSkin.RADIUS_DP).toFloat()
-                setStroke(ctx.dp(widthDp), color)
-                setColor(Color.TRANSPARENT)
             }
     }
 }
@@ -204,10 +129,10 @@ class TileAdapter(
     /** Tiles in the dock (the first row) hide their name, which would sit on the glass edge. */
     var dockCount = 0
 
-    /** Tilt-in on focus ([Prefs.focusTvos]); otherwise only the zoom and shadow. */
+    /** Kept for the settings call site; focus is always a plain scale now. */
     var tvosFocus = true
 
-    /** Direction of the last D-pad move, used for the tilt-in. */
+    /** Direction of the last D-pad move; kept for the interface shared with the grid. */
     var lastDx = 0
     var lastDy = 0
 
@@ -266,15 +191,15 @@ class TileAdapter(
         val same = cell.tag == app.pkg
         cell.tag = app.pkg
         cell.setJiggle(app.pkg == movingPkg)
-        val cached = repo.cachedTile(app.pkg)
+        val cached = repo.cachedArtwork(app.pkg)
         if (cached != null) {
-            cell.image.setImageBitmap(cached)
+            cell.setArtwork(cached)
         } else {
-            // Rebinding the same app keeps its old picture until the new one is ready.
-            if (!same) cell.image.setImageDrawable(null)
+            // Rebinding the same app keeps the old image until the replacement is ready.
+            if (!same) cell.setArtwork(null)
             loader.execute {
-                val bmp = repo.tile(app)
-                cell.post { if (cell.tag == app.pkg) cell.image.setImageBitmap(bmp) }
+                val artwork = runCatching { repo.artwork(app) }.getOrNull()
+                cell.post { if (cell.tag == app.pkg) cell.setArtwork(artwork) }
             }
         }
     }

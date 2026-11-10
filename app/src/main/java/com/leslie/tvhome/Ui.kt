@@ -150,7 +150,7 @@ object Fonts {
 
 fun Context.text(sizeSp: Float, color: Int = Color.WHITE, bold: Boolean = false, weight: Int = if (bold) 600 else 400): TextView =
     GlassTextView(this).apply {
-        textSize = sizeSp
+        textSize = sizeSp * Prefs(this@text).textScale
         setTextColor(color)
         typeface = Fonts.inter(this@text, weight)
         includeFontPadding = false

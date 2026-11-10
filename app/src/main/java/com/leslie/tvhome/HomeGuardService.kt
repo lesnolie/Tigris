@@ -56,6 +56,7 @@ class HomeGuardService : AccessibilityService() {
     private var windowsSeen = 0L
     private var windowsAtHome = 0L
     private var homePressedAt = Long.MIN_VALUE / 2
+    private var lastFilteredHomeAt = 0L
     private var foregroundTakenAt = Long.MIN_VALUE / 2
 
     private val takeOver = Runnable { takeOverIfSettled(takeOverReason) }
@@ -246,8 +247,17 @@ class HomeGuardService : AccessibilityService() {
         if (!Guard.guardOn(this)) return false
         if (!HomeKeyCodes.isHome(event.keyCode, Guard.isXiaomi())) return false
         if (event.action == KeyEvent.ACTION_UP && !event.isCanceled) {
-            Log.i(TAG, "Home key taken before the system saw it")
-            takeUserHome("Home key")
+            val now = SystemClock.uptimeMillis()
+            val doubleHome = Prefs(this).doubleHomeSwitcher &&
+                DoubleHomePolicy.second(lastFilteredHomeAt, now, allowed = !Guard.isXiaomi() && !screenOff)
+            lastFilteredHomeAt = if (doubleHome) 0L else now
+            if (doubleHome) {
+                val opened = AppSwitcherRouter.open(this)
+                if (!opened) takeUserHome("Home switcher fallback")
+            } else {
+                Log.i(TAG, "Home key taken before the system saw it")
+                takeUserHome("Home key")
+            }
         }
         return true
     }
@@ -256,6 +266,11 @@ class HomeGuardService : AccessibilityService() {
         sawEvent = true
         deafAfterHome = false
         windowsSeen++
+        // Capture a thumbnail for the app switcher regardless of guard state (the
+        // accessibility service is what the user enabled for this capability).
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            event.packageName?.toString()?.let { ShotCapture.onForeground(this, it) }
+        }
         if (!Guard.guardOn(this) || event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
         val cls = event.className?.toString() ?: return
@@ -542,6 +557,24 @@ class HomeGuardService : AccessibilityService() {
         @Volatile private var deafAfterHome = false
 
         val isRunning: Boolean get() = instance != null
+
+        /**
+         * Calls Android's native task overview only through Tigris's existing, enabled
+         * accessibility service. The return value is the system's acknowledgement,
+         * not an assertion that a vendor rendered a visible task switcher.
+         */
+        fun tryOpenNativeRecents(): Boolean {
+            val service = instance ?: return false
+            val advertised = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                runCatching {
+                    service.getSystemActions().any { it.id == AccessibilityService.GLOBAL_ACTION_RECENTS }
+                }.getOrDefault(false)
+            } else false
+            if (!NativeRecentsPolicy.canAttempt(true, Build.VERSION.SDK_INT, advertised)) return false
+            return runCatching {
+                service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_RECENTS)
+            }.getOrDefault(false)
+        }
         val recentlyBroughtHome: Boolean get() = instance?.let {
             it.broughtBackAt > 0 && SystemClock.uptimeMillis() - it.broughtBackAt in 0..5000L
         } == true

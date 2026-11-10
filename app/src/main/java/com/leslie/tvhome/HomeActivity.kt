@@ -47,6 +47,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.Executors
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 /**
  * tvOS style home: a low glass dock and a compact status row in the top-right.
@@ -94,6 +97,62 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private lateinit var ccButton: IconButton
     private lateinit var grid: RecyclerView
     private lateinit var adapter: TileAdapter
+    private var tileStyleSeen = ""
+    private var textScaleSeen = 1f
+    private var previousHomeIntentAt = 0L
+
+    // Only launches made by this Activity may animate a subsequent return.
+    // No attempt is made to animate or inspect another application's window.
+    private var outboundLaunch: HomeReturnPolicy.Launch? = null
+    private var returnCueView: View? = null
+
+    private fun noteExternalLaunch(pkg: String) {
+        if (pkg != packageName) {
+            outboundLaunch = HomeReturnPolicy.Launch(pkg, SystemClock.uptimeMillis())
+        }
+    }
+
+    private fun cancelReturnCue() {
+        returnCueView?.let { view ->
+            view.animate().cancel()
+            view.alpha = 1f
+            view.translationY = 0f
+        }
+        returnCueView = null
+    }
+
+    /** A tiny hardware-composited card settle, never a simulated third-party task snapshot. */
+    private fun revealReturnFocus() {
+        val launch = outboundLaunch ?: return
+        if (!resumed || !hasWindowFocus() || isFinishing || isDestroyed) return
+        val interactive = getSystemService(android.os.PowerManager::class.java)?.isInteractive == true
+        val blocked = intro != null || welcome != null || wakeIntro ||
+            sheets.isNotEmpty() || control.isOpen || moving >= 0
+        if (!HomeReturnPolicy.canReveal(launch, SystemClock.uptimeMillis(),
+                interactive, blocked, false)) {
+            outboundLaunch = null
+            return
+        }
+        val pos = adapter.apps.indexOfFirst { it.pkg == launch.pkg }
+        // If an app was removed or a settings change rebuilt the grid, do not animate
+        // an unrelated card or force the RecyclerView to scroll just for decoration.
+        val tile = if (pos >= 0) grid.findViewHolderForAdapterPosition(pos)?.itemView else null
+        outboundLaunch = null
+        if (tile == null) return
+        if (!tile.hasFocus()) tile.requestFocus()
+        cancelReturnCue()
+        val lowEnd = Device.isLowEnd(this)
+        returnCueView = tile
+        tile.animate().cancel()
+        tile.translationY = dp(HomeReturnPolicy.liftDp(lowEnd)).toFloat()
+        tile.alpha = 0.92f
+        tile.animate().translationY(0f).alpha(1f)
+            .setDuration(HomeReturnPolicy.settleDurationMs(lowEnd))
+            .setInterpolator(Motion.ease)
+            .withEndAction {
+                if (returnCueView === tile) returnCueView = null
+            }.start()
+    }
     private lateinit var repo: AppRepo
     private lateinit var prefs: Prefs
     private lateinit var control: ControlCenter
@@ -146,31 +205,26 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private lateinit var shelfSource: TextView
     private lateinit var shelfTitle: TextView
     private lateinit var shelfMeta: TextView
+    private lateinit var shelfHint: TextView
     private lateinit var shelfInfo: LinearLayout
     private lateinit var shelfDots: LinearLayout
-    private val net = Executors.newFixedThreadPool(2)
+    // A bounded queue prevents rapid D-pad presses from accumulating stale image work.
+    private val net = ThreadPoolExecutor(2, 2, 0L, TimeUnit.MILLISECONDS,
+        ArrayBlockingQueue<Runnable>(4), ThreadPoolExecutor.DiscardOldestPolicy())
     private var shelfPkg: String? = null
     private var pendingShelf: String? = null
     private var shelfItems: List<Shelf.Item> = emptyList()
     private var shelfIndex = 0
+    private var shelfPendingIndex = 0
+    private var shelfConsumeExitKeyUp = -1
     private var shelfShown = false
+    private var shelfBrowsing = false
+    private var shelfGeneration = 0L
+    private var shelfImageRequest = 0L
     private val shelfShow = Runnable { pendingShelf?.let { showShelf(it) } }
-    private val shelfAdvance = object : Runnable {
-        override fun run() {
-            if (!shelfShown || shelfItems.size < 2) return
-            val pkg = shelfPkg ?: return
-            val next = (shelfIndex + 1) % shelfItems.size
-            val item = shelfItems[next]
-            net.execute {
-                val b = Shelf.image(this@HomeActivity, item.image)
-                val glass = b?.let { shelfGlass(it) }
-                main.post {
-                    if (shelfPkg == pkg && shelfShown && !control.isOpen) {
-                        if (b != null && glass != null) showShelfItem(next, b, glass)
-                        main.postDelayed(this, SHELF_SECONDS * 1000L)
-                    }
-                }
-            }
+    private val shelfAdvance = Runnable {
+        if (shelfShown && !shelfBrowsing && shelfItems.size > 1 && !control.isOpen) {
+            requestShelfIndex(ShelfNavigation.step(shelfIndex, shelfItems.size, 1))
         }
     }
 
@@ -330,6 +384,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         glassExtreme = prefs.extremeGlass
         cols = prefs.dockColumns
         repo = AppRepo(this)
+        tileStyleSeen = prefs.appTileStyle
+        textScaleSeen = prefs.textScale
         buildViews()
         control = ControlCenter(this, root)
         // Covers the screen before its first frame, so the home screen is never seen ahead of it.
@@ -478,6 +534,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         wallpaperPlaying = false
         syncOwnPlayback()
         videoWallpaper.destroy()
+        cancelReturnCue()
+        outboundLaunch = null
         unregisterReceiver(pkgReceiver)
         main.removeCallbacksAndMessages(null)
         control.destroy()
@@ -516,7 +574,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         tileH = tileW * 9 / 16
         rowPitch = (sh * 0.2463f).toInt()          // 266 px
         // The dock sits at the bottom; only the top edge of the next row peeks out below it.
-        val defaultTileHeight = DockLayout.tileWidth(sw, side, gap, DockLayout.DEFAULT_COLUMNS) * 9 / 16
+        val defaultTileWidth = DockLayout.tileWidth(sw, side, gap, DockLayout.DEFAULT_COLUMNS)
+        val defaultTileHeight = defaultTileWidth * 9 / 16
         firstRowY = DockLayout.dockTop((sh * 0.744f).toInt(), defaultTileHeight, tileH) + dp(10)
         expandedRowY = (sh * 0.36f).toInt()
 
@@ -1006,11 +1065,15 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             setLineSpacing(0f, 1.08f)
         }.also(shadow)
         shelfMeta = text(17f, Color.argb(210, 255, 255, 255), weight = 500).apply { maxLines = 1 }.also(shadow)
+        shelfHint = text(14f, Color.argb(205, 255, 255, 255), weight = 500).apply {
+            visibility = View.GONE
+        }.also(shadow)
         shelfInfo = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             addView(shelfSource)
             addView(shelfTitle, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(10) })
             addView(shelfMeta, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(10) })
+            addView(shelfHint, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(13) })
         }
         val above = sh - dockRect.top + dp(30)
         shelf.addView(shelfInfo, FrameLayout.LayoutParams((sw * 0.56f).toInt(), -2, Gravity.BOTTOM or Gravity.START).apply {
@@ -1025,15 +1088,23 @@ class HomeActivity : Activity(), TileAdapter.Listener {
 
     private fun shelfCustom() = Shelf.Custom(prefs.shelfCustomPkg, prefs.shelfCustomUrl)
 
+    /** A delayed network response can never take over a newly focused Dock app. */
     private fun showShelf(pkg: String) {
         shelfPkg = pkg
+        val session = ++shelfGeneration
+        ++shelfImageRequest
+        val custom = shelfCustom()
         net.execute {
-            val items = Shelf.items(pkg, shelfCustom())
+            val items = Shelf.items(pkg, custom)
             val first = items.firstOrNull()?.let { Shelf.image(this, it.image) }
             val glass = first?.let { shelfGlass(it) }
             main.post {
-                if (shelfPkg != pkg || first == null || glass == null || control.isOpen) return@post
+                if (session != shelfGeneration || shelfPkg != pkg || !resumed ||
+                    isDestroyed || control.isOpen || first == null || glass == null) return@post
                 shelfItems = items
+                shelfIndex = 0
+                shelfPendingIndex = 0
+                shelfBrowsing = false
                 shelfSource.text = Shelf.sourceName(pkg)
                 shelfDots.removeAllViews()
                 repeat(items.size) {
@@ -1042,10 +1113,98 @@ class HomeActivity : Activity(), TileAdapter.Listener {
                 }
                 showShelfItem(0, first, glass)
                 setShelfVisible(true)
-                main.removeCallbacks(shelfAdvance)
-                main.postDelayed(shelfAdvance, SHELF_SECONDS * 1000L)
+                updateShelfHint()
+                resumeShelfRotation()
             }
         }
+    }
+
+    /** Image preparation happens on the network pool; focus and user requests win over stale work. */
+    private fun requestShelfIndex(index: Int) {
+        val pkg = shelfPkg ?: return
+        if (!shelfShown || index !in shelfItems.indices) return
+        val session = shelfGeneration
+        val request = ++shelfImageRequest
+        val item = shelfItems[index]
+        shelfPendingIndex = index
+        main.removeCallbacks(shelfAdvance)
+        // Keep a retry timer even if a superseded request is dropped by the bounded queue.
+        if (!shelfBrowsing) main.postDelayed(shelfAdvance, (SHELF_SECONDS + 2) * 1000L)
+        net.execute {
+            val bitmap = Shelf.image(this, item.image)
+            val glass = bitmap?.let { shelfGlass(it) }
+            main.post {
+                if (!ShelfNavigation.accepts(session, shelfGeneration, request, shelfImageRequest,
+                        pkg, shelfPkg, shelfShown && resumed && !isDestroyed, control.isOpen)) return@post
+                if (bitmap != null && glass != null) showShelfItem(index, bitmap, glass)
+                else shelfPendingIndex = shelfIndex
+                if (!shelfBrowsing) resumeShelfRotation()
+            }
+        }
+    }
+
+    private fun updateShelfHint() {
+        shelfHint.visibility = if (shelfShown && shelfItems.size > 1) View.VISIBLE else View.GONE
+        shelfHint.text = getString(if (shelfBrowsing)
+            R.string.tvos_shelf_select_hint else R.string.tvos_shelf_browse_hint)
+    }
+
+    /** Up enters the featured-content strip; left/right browse; OK opens; down/back returns. */
+    private fun shelfKey(event: KeyEvent): Boolean {
+        val app = adapter.apps.getOrNull(focusedPos) ?: return false
+        if (!shelfShown || shelfItems.size < 2 || shelfPkg != app.pkg ||
+            focusedPos >= cols || !grid.hasFocus() || control.isOpen || moving >= 0 || sheets.isNotEmpty()) return false
+        val key = event.keyCode
+        if (!shelfBrowsing) {
+            if (key != KeyEvent.KEYCODE_DPAD_UP) return false
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                shelfBrowsing = true
+                shelfPendingIndex = shelfIndex
+                ++shelfImageRequest
+                main.removeCallbacks(shelfAdvance)
+                updateShelfHint()
+            }
+            return true
+        }
+        when (key) {
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    val delta = if (key == KeyEvent.KEYCODE_DPAD_RIGHT) 1 else -1
+                    // An incoming request supersedes its predecessor; rapid presses remain responsive.
+                    val next = ShelfNavigation.step(shelfPendingIndex, shelfItems.size, delta)
+                    if (next >= 0) requestShelfIndex(next)
+                }
+                return true
+            }
+            KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_BACK -> {
+                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                    shelfBrowsing = false
+                    shelfPendingIndex = shelfIndex
+                    shelfConsumeExitKeyUp = key
+                    ++shelfImageRequest
+                    updateShelfHint()
+                    resumeShelfRotation()
+                }
+                return true
+            }
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                if (event.action == KeyEvent.ACTION_UP) {
+                    val intent = shelfDeepLink(app) ?: repo.launchIntent(app)
+                    if (intent != null) try {
+                        startActivity(intent)
+                        noteExternalLaunch(app.pkg)
+                        RecentApps.record(this, app.pkg)
+                        rememberOpened(app.pkg)
+                    } catch (_: Exception) {
+                        Toast.makeText(this,
+                            I18n.text(R.string.i18n_homeactivity_005, app.label), Toast.LENGTH_SHORT).show()
+                    }
+                }
+                return true
+            }
+        }
+        return false
     }
 
     /** A Top Shelf picture's dock glass, made with the picture on its loader thread. */
@@ -1068,8 +1227,18 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private fun showShelfItem(i: Int, b: Bitmap, glass: ShelfGlass) {
         val item = shelfItems.getOrNull(i) ?: return
         shelfIndex = i
+        shelfPendingIndex = i
         // The new picture fades in over the old one, settling from a slight zoom.
         val old = shelfFront
+        // Interrupted cross-fades must not accumulate off-screen ImageViews or bitmap references.
+        for (j in shelfPics.childCount - 1 downTo 0) {
+            val view = shelfPics.getChildAt(j)
+            if (view !== old) {
+                view.animate().cancel()
+                shelfPics.removeViewAt(j)
+            }
+        }
+        old?.animate()?.cancel()
         val pic = ImageView(this).apply { scaleType = ImageView.ScaleType.CENTER_CROP; setImageBitmap(b) }
         shelfPics.addView(pic, FrameLayout.LayoutParams(-1, -1))
         shelfFront = pic
@@ -1136,11 +1305,17 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     }
 
     private fun hideShelf() {
+        ++shelfGeneration
+        ++shelfImageRequest
+        shelfBrowsing = false
         main.removeCallbacks(shelfShow)
         main.removeCallbacks(shelfAdvance)
         pendingShelf = null
         shelfPkg = null
+        shelfItems = emptyList()
+        shelfPendingIndex = 0
         setShelfVisible(false)
+        shelfHint.visibility = View.GONE
     }
 
     fun pauseShelfRotation() {
@@ -1149,7 +1324,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     }
 
     fun resumeShelfRotation() {
-        if (shelfShown) {
+        if (shelfShown && !shelfBrowsing && shelfItems.size > 1) {
             main.removeCallbacks(shelfAdvance)
             main.postDelayed(shelfAdvance, SHELF_SECONDS * 1000L)
         }
@@ -1246,6 +1421,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     override fun onTileFocused(pos: Int, cell: TileCell) {
         focusedPos = pos
         val pkg = adapter.apps.getOrNull(pos)?.pkg
+        if (shelfBrowsing && pkg != shelfPkg) shelfBrowsing = false
         main.removeCallbacks(shelfShow)
         if (pos < cols && pkg != null && Shelf.has(pkg, shelfCustom()) && moving < 0) {
             if (pkg != shelfPkg || !shelfShown) {
@@ -1262,19 +1438,41 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val app = adapter.apps.getOrNull(pos) ?: return
         app.folder?.let { openFolder(it); return }
         app.input?.let { i -> io.execute { tv.setInput(i) }; return }
+        launchTileApp(app, pos, cell)
+    }
+
+    private fun launchTileApp(app: AppEntry, pos: Int, cell: TileCell) {
         // The stock launcher (Xiaomi's PatchWall) can only be opened through the system Home action.
         if (HomeGuardService.isStockHome(app.pkg) && HomeGuardService.openStockLauncher()) {
             rememberOpened(app.pkg)
             return
         }
-        val intent = repo.launchIntent(app) ?: return
+        val intent = shelfDeepLink(app) ?: repo.launchIntent(app) ?: return
+        // tvOS-style: the incoming app window grows out of the selected tile/icon.
         val opts = ActivityOptions.makeScaleUpAnimation(cell.card, 0, 0, cell.card.width, cell.card.height)
         try {
             startActivity(intent, opts.toBundle())
+            noteExternalLaunch(app.pkg)
+            RecentApps.record(this, app.pkg)
             rememberOpened(app.pkg)
         } catch (e: Exception) {
             Toast.makeText(this, I18n.text(R.string.i18n_homeactivity_005, app.label), Toast.LENGTH_SHORT).show()
         }
+    }
+
+    /**
+     * A user-supplied Top Shelf link may deep-link to the focused app, but only when
+     * that *same package* resolves an HTTPS view intent. Never hand an untrusted
+     * feed URL to a browser or an arbitrary third-party application.
+     */
+    private fun shelfDeepLink(app: AppEntry): Intent? {
+        if (!shelfShown || shelfPkg != app.pkg || shelfIndex < 0) return null
+        val link = shelfItems.getOrNull(shelfIndex)?.url ?: return null
+        if (!link.startsWith("https://", ignoreCase = true) || !ShelfLimits.isHttpUrl(link)) return null
+        val candidate = Intent(Intent.ACTION_VIEW, Uri.parse(link))
+            .addCategory(Intent.CATEGORY_BROWSABLE)
+            .setPackage(app.pkg)
+        return candidate.takeIf { packageManager.resolveActivity(it, 0) != null }
     }
 
     /** A disabled recent-first preference preserves manual order, including folders. */
@@ -1306,6 +1504,21 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         if (repo.isOwn(app.pkg)) {
             showSheet(s.button(I18n.text(R.string.i18n_homeactivity_012)) {}, restoreFocusTo = pos)
             return
+        }
+        s.button(getString(R.string.tile_source_choose)) {
+            val modes = arrayOf(Prefs.TILE_AUTO, Prefs.TILE_BANNER, Prefs.TILE_ICON, Prefs.TILE_CLASSIC)
+            val titles = arrayOf(R.string.tile_source_auto, R.string.tile_source_banner,
+                R.string.tile_source_icon, R.string.tile_source_classic).map { getString(it) }.toTypedArray()
+            android.app.AlertDialog.Builder(this)
+                .setTitle(getString(R.string.tile_source_choose) + " · " + app.label)
+                .setSingleChoiceItems(titles, modes.indexOf(prefs.appTileSource(app.pkg)).coerceAtLeast(0)) { dialog, index ->
+                    prefs.setAppTileSource(app.pkg, modes[index])
+                    repo.invalidate(app.pkg)
+                    reload(changed = app.pkg, forceFocus = true)
+                    dialog.dismiss()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
         }
         s.button(I18n.text(R.string.i18n_homeactivity_013)) {
                 startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${app.pkg}"))
@@ -1362,9 +1575,15 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             .setItems(apps.map { it.label }.toTypedArray()) { _, index ->
                 val app = apps[index]
                 try {
-                    val intent = repo.launchIntent(app) ?: return@setItems
-                    if (!HomeGuardService.isStockHome(app.pkg) || !HomeGuardService.openStockLauncher()) startActivity(intent)
-                    rememberOpened(folder.id)
+                    val intent = repo.launchIntent(app)
+                    if (intent != null) {
+                        if (!HomeGuardService.isStockHome(app.pkg) || !HomeGuardService.openStockLauncher()) {
+                            startActivity(intent)
+                            noteExternalLaunch(app.pkg)
+                        }
+                        RecentApps.record(this, app.pkg)
+                        rememberOpened(folder.id)
+                    }
                 } catch (_: Exception) { Toast.makeText(this, I18n.text(R.string.i18n_homeactivity_024, app.label), Toast.LENGTH_SHORT).show() }
             }.setNeutralButton(I18n.text(R.string.i18n_homeactivity_025)) { _, _ -> manageFolder(folder, focusedPos) }
             .setNegativeButton(I18n.text(R.string.i18n_homeactivity_026), null).create()
@@ -1534,8 +1753,11 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         HomeForeground.windowFocus(hasFocus, now)
         if (!resumed) return
         if (!hasFocus) cancelIdle()
-        else if (HomeForeground.isDreamBounce(now)) armIdle(resetDeadline = false)
-        else armIdle(resetDeadline = true)
+        else {
+            if (HomeForeground.isDreamBounce(now)) armIdle(resetDeadline = false)
+            else armIdle(resetDeadline = true)
+            grid.post { revealReturnFocus() }
+        }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -1544,6 +1766,19 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         // Any key skips the intro to its closing zoom; nothing behind it reacts meanwhile.
         intro?.let { if (event.action == KeyEvent.ACTION_UP) it.skip(); return true }
         val code = event.keyCode
+        if (event.action == KeyEvent.ACTION_UP && code == shelfConsumeExitKeyUp) {
+            shelfConsumeExitKeyUp = -1
+            return true
+        }
+        if (shelfKey(event)) return true
+        // APP_SWITCH is only handled when delivered to this Activity. Android often owns
+        // Home/TV key globally; we do not intercept global system buttons.
+        if (code == KeyEvent.KEYCODE_APP_SWITCH) {
+            if (event.action == KeyEvent.ACTION_UP) {
+                AppSwitcherRouter.open(this)
+            }
+            return true
+        }
         if (event.action == KeyEvent.ACTION_DOWN && code == KeyEvent.KEYCODE_DPAD_RIGHT &&
             sheets.isEmpty() && control.isOpen && avatar.isShown && control.atRightEdge()) {
             control.close()
@@ -1573,13 +1808,45 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         }
         if (welcome != null) return
         if (intent.getBooleanExtra(Intro.EXTRA_PREVIEW, false)) { playIntro(preview = true); return }
-        if (intent.getBooleanExtra(EXTRA_WAKE, false)) return // consume only the pending wake, never re-arm
+        if (intent.getBooleanExtra(EXTRA_WAKE, false)) {
+            outboundLaunch = null
+            return // consume only the pending wake; never re-arm
+        }
         // Home pressed while already home: close everything and go back to the top.
         sheets.toList().forEach { it.dismiss() }
         control.close()
         if (moving >= 0) endMove()
-        // The guard brought the screen back (an app exited to the stock launcher): stay where we were.
-        if (intent.getBooleanExtra(EXTRA_GUARD, false)) return
+        // Guard-routed returns: a user Home press from a Tigris-launched app must still
+        // restore the launched tile; a stock-launcher bounce has no outbound launch.
+        if (intent.getBooleanExtra(EXTRA_GUARD, false)) {
+            val nowGuard = SystemClock.uptimeMillis()
+            if (HomeReturnPolicy.canPreserveFocus(outboundLaunch, nowGuard,
+                    homeAlreadyVisible = resumed, guardReturn = false, wakeReturn = false)) {
+                previousHomeIntentAt = nowGuard
+                return
+            }
+            outboundLaunch = null
+            return
+        }
+        val now = SystemClock.uptimeMillis()
+        // A launch performed by the App Switcher cannot be observed here; adopt it once.
+        if (outboundLaunch == null) outboundLaunch = HomeReturnHandoff.take()
+        if (HomeReturnPolicy.canPreserveFocus(outboundLaunch, now,
+                homeAlreadyVisible = resumed, guardReturn = false, wakeReturn = false)) {
+            // A HOME press from an app should not snap the Dock to position zero.
+            // Remember it so a quick second Home can still open the switcher; then let
+            // onResume/onWindowFocusChanged restore and settle the launched card.
+            previousHomeIntentAt = now
+            return
+        }
+        outboundLaunch = null
+        val doubleHome = prefs.doubleHomeSwitcher &&
+            DoubleHomePolicy.second(previousHomeIntentAt, now, allowed = !Guard.isXiaomi())
+        previousHomeIntentAt = if (doubleHome) 0L else now
+        if (doubleHome) {
+            AppSwitcherRouter.open(this)
+            return
+        }
         focusedPos = 0
         // Scroll by our own offset: smoothScrollToPosition aligns to the padding and leaves the grid off its resting place.
         grid.smoothScrollBy(0, -scrollY, Motion.ease, 360)
@@ -1597,7 +1864,15 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         IdleTimerTakeover.noteHomeResumed()
         IdleTimerTakeover.sync(this)
         // Rebuild only after Settings changes column count; order/folders remain in Prefs.
-        if (cols != prefs.dockColumns) { recreate(); return }
+        val expectedH = tileW * 9 / 16
+        if (cols != prefs.dockColumns || tileH != expectedH ||
+            kotlin.math.abs(textScaleSeen - prefs.textScale) > 0.001f) { recreate(); return }
+        if (tileStyleSeen != prefs.appTileStyle) {
+            tileStyleSeen = prefs.appTileStyle
+            repo.invalidate()
+            focusedPos = 0
+            reload(forceFocus = true)
+        }
         val appearance = "${prefs.extremeGlass}:${prefs.glassTint(isNight())}:${prefs.solidGlass(this)}:${isNight()}"
         if (glassAppearance != appearance) {
             glassAppearance = appearance
@@ -1626,16 +1901,24 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         HomeForeground.resume(now)
         if (HomeForeground.isDreamBounce(now)) armIdle(resetDeadline = false)
         else armIdle(resetDeadline = true)
-        applyBackground()
+        // The minute ticker already applies the wallpaper. A second call here
+        // would schedule redundant photo/video preparation during app return.
         updateNetworkIcon()
         main.removeCallbacks(ticker)
         ticker.run()
         control.refresh()
         if (shelfShown && !control.isOpen) resumeShelfRotation()
+        // Adopt a launch made by the App Switcher when returning here without a HOME intent
+        // (e.g. the user pressed Back inside the launched app).
+        if (outboundLaunch == null) outboundLaunch = HomeReturnHandoff.take()
+        if (outboundLaunch != null) grid.post { revealReturnFocus() }
     }
 
     override fun onPause() {
         logPower("pause")
+        val interactive = getSystemService(android.os.PowerManager::class.java)?.isInteractive == true
+        outboundLaunch = HomeReturnPolicy.markPaused(outboundLaunch, interactive)
+        cancelReturnCue()
         HomeGuardService.onHomePaused()
         resumed = false
         prefs.unobserve(wallpaperChanges)
@@ -1654,6 +1937,10 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         cancelIdle()
         main.removeCallbacks(ticker)
         main.removeCallbacks(shelfAdvance)
+        ++shelfImageRequest
+        shelfBrowsing = false
+        shelfPendingIndex = shelfIndex
+        if (::shelfHint.isInitialized) updateShelfHint()
         super.onPause()
     }
 

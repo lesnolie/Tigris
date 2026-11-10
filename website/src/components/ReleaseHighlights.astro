@@ -4,16 +4,25 @@ import { brand } from "../data/site";
 interface Props { locale: Locale }
 const zh = Astro.props.locale === "zh";
 const items = zh ? [
-  ["01", "玻璃与背景，同步变化。", "进入设置、更换壁纸、切换顶部内容预览时，极致液态玻璃与背景同帧切换、同步淡入。"],
-  ["02", "设置更快打开，滚动更轻快。", "提前准备设置页画面，减少滚动时的绘制开销。极致液态玻璃仍默认关闭，可按需开启。"],
-  ["03", "相框等待时间，统一设置。", "确认 Tigris 成为电视主屏幕并完成授权后，系统屏保沿用相框计时；播放与投屏继续避让，关闭时可还原。"],
+  ["01", "品牌横图，选中放大。", "统一 16:9 卡片，自动优先使用应用自带 TV banner，没有可用横图时统一白底。去掉额外白框，选中放大，Dock 液态玻璃继续保留。"],
+  ["02", "应用画面，层叠切换。", "左右选择、确定打开，默认选中最近使用的任务。画面来自已开启无障碍服务的 Android 11+ 截图；没有截图也能打开应用，不用巨大图标代替。"],
+  ["03", "少些入口，多些顺手。", "控制中心移除多余标签，保留电视与媒体控制。顶部内容可用遥控器浏览，返回桌面尽量保留原应用位置；文字大小可按需调整。"],
 ] : [
-  ["01", "Glass and backdrop move together.", "Opening Settings, changing wallpapers and switching Top Shelf now apply Extreme Liquid Glass and the backdrop in the same frame, with matching fades."],
-  ["02", "Faster Settings, lighter scrolling.", "Settings prepares its backdrop ahead of time and scrolling takes less drawing work. Extreme Liquid Glass remains optional and off by default."],
-  ["03", "One photo-frame delay.", "Once Tigris is confirmed as the TV's Home screen and permissions are granted, the system screensaver follows its timer. Playback and casting stay protected; opting out attempts to restore settings."],
+  ["01", "Brand banners. Clearer focus.", "Uniform 16:9 cards prefer the app's TV banner, with white fallback cards when unavailable. Selection scales up without added white frames. The Liquid Glass Dock stays."],
+  ["02", "App screens, stacked.", "Choose with Left/Right and open with OK; the newest task is selected first. Previews use Android 11+ accessibility screenshots with the service enabled. Missing previews never hide apps or become giant icons."],
+  ["03", "Fewer tabs. Smoother returns.", "A simpler Control Center keeps TV and media controls. Browse Top Shelf with the remote, keep your app position when returning Home, and adjust text size."],
 ];
 ---
 <section class="release-strip wrap" aria-label={zh ? "本次更新" : "Latest update"}>
-  <a class="release-pill" href={brand.releases}><span class="dot"></span>{zh ? "全部版本" : "All releases"} ↗</a>
+  <a class="release-pill" href={brand.releases}><span class="dot"></span>{zh ? "v2.0.27 · 正式版更新" : "v2.0.27 · Stable release"} ↗</a>
   <div class="release-grid">{items.map(([n,title,body]) => <article><span class="release-number">{n}</span><h3>{title}</h3><p>{body}</p></article>)}</div>
+  <figure class="release-capture">
+    <img src="/img/release-home.webp" width="1600" height="900" loading="lazy" alt={zh ? "桌面截图：横向品牌卡片排列在液态玻璃 Dock 上" : "Desktop capture with horizontal brand cards on the Liquid Glass Dock"} />
+    <figcaption>{zh ? "已有预览构建的桌面截图 · 不代表本次正式版的实机验收" : "Desktop capture from an earlier preview build; not a device acceptance test of this release."}</figcaption>
+  </figure>
 </section>
+<style>
+  .release-capture { margin: 28px 0 0; }
+  .release-capture img { display: block; width: 100%; height: auto; border-radius: 20px; }
+  .release-capture figcaption { margin-top: 12px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+</style>

@@ -414,6 +414,12 @@ class SettingsActivity : Activity() {
         section(I18n.text(R.string.i18n_settingsactivity_008))
         row(I18n.text(R.string.dock_columns_title), I18n.text(R.string.dock_columns_description),
             { prefs.dockColumns.toString() }) { prefs.dockColumns = DockLayout.next(prefs.dockColumns) }
+        row(getString(R.string.tile_style_title), getString(R.string.tile_style_detail), {
+            getString(if (prefs.appTileStyle == Prefs.TILE_BRAND) R.string.tile_style_brand else R.string.tile_style_classic)
+        }) {
+            prefs.appTileStyle = if (prefs.appTileStyle == Prefs.TILE_BRAND) Prefs.TILE_CLASSIC else Prefs.TILE_BRAND
+        }
+
         row(I18n.text(R.string.i18n_settingsactivity_009), I18n.text(R.string.i18n_settingsactivity_010),
             { if (prefs.clock24) I18n.text(R.string.i18n_settingsactivity_011) else I18n.text(R.string.i18n_settingsactivity_012) }) { prefs.clock24 = !prefs.clock24 }
         row(I18n.text(R.string.i18n_settingsactivity_013), I18n.text(R.string.i18n_settingsactivity_014), {
@@ -438,6 +444,21 @@ class SettingsActivity : Activity() {
             startActivity(Intent(this, WallpaperActivity::class.java).putExtra("upload_avatar", true))
         }
         row(I18n.text(R.string.i18n_settingsactivity_029), I18n.text(R.string.i18n_settingsactivity_030), { onOff(prefs.showAvatar) }, checked = { prefs.showAvatar }) { prefs.showAvatar = !prefs.showAvatar }
+        row(getString(R.string.tvos_recents_title), getString(R.string.tvos_switcher_auto_help), { "" }, chevron = true) {
+            AppSwitcherRouter.open(this)
+        }
+        row(getString(R.string.tvos_device_settings_title), getString(R.string.tvos_device_settings_info), { "" }, chevron = true) {
+            startActivity(Intent(this, TvOSDeviceSettingsActivity::class.java))
+        }
+        row(getString(R.string.tvos_dynamic_text_title), getString(R.string.tvos_dynamic_text_help),
+            { "${(prefs.textScale * 100).toInt()}%" }) {
+            prefs.nextTextScale()
+            recreate()
+        }
+        row(getString(R.string.tvos_double_home_title), getString(R.string.tvos_double_home_help),
+            { onOff(prefs.doubleHomeSwitcher) }, checked = { prefs.doubleHomeSwitcher }) {
+            prefs.doubleHomeSwitcher = !prefs.doubleHomeSwitcher
+        }
         row(I18n.text(R.string.i18n_settingsactivity_031), I18n.text(R.string.i18n_settingsactivity_032) +
             I18n.text(R.string.i18n_settingsactivity_033), {
             auto(prefs.focusStyle, prefs.focusTvos(this), "tvOS", I18n.text(R.string.i18n_settingsactivity_034))

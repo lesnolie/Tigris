@@ -225,6 +225,14 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
     private val volume: Slider
     private val inputModule: GlassButton
     private val networkModule: GlassButton
+    private val mediaModule: GlassButton
+    private lateinit var mediaPrevious: GlassButton
+    private lateinit var mediaNext: GlassButton
+    // Each Control Center page stays within the TV safe area; no unbounded vertical stack.
+    private val generalPage = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
+    private val mediaPage = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
+    private val toolsPage = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
+
     private var inputs: List<Input> = emptyList()
     private var volumeTarget = "speaker"
     private val status = ctx.text(11f, Color.argb(190, 255, 255, 255))
@@ -235,6 +243,18 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         override fun run() {
             followVolume()
             host.postDelayed(this, 2_000)
+        }
+    }
+
+    private fun sendTransport(action: String) {
+        io.execute {
+            val success = if (action == "toggle") NowPlaying.toggle(ctx)
+                          else NowPlaying.transport(ctx, action)
+            host.post {
+                if (!success) android.widget.Toast.makeText(ctx,
+                    R.string.tvos_now_playing_unavailable, android.widget.Toast.LENGTH_SHORT).show()
+                refresh()
+            }
         }
     }
 
@@ -250,6 +270,11 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         private set
 
     init {
+        // Single control panel: controls (and media when active). No launcher shortcut rows.
+        panel.addView(generalPage, LinearLayout.LayoutParams(-1, -2))
+        panel.addView(mediaPage, LinearLayout.LayoutParams(-1, -2).apply { topMargin = gap })
+        mediaPage.visibility = View.GONE
+
         // tvOS layout: a square power tile beside two capsules, then a row of round buttons.
         val top = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; clipChildren = false }
         val power = GlassButton(I18n.text(R.string.i18n_controlcenter_001), R.drawable.ic_power, Shape.TILE) {
@@ -265,7 +290,7 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
         right.addView(GlassButton(I18n.text(R.string.i18n_controlcenter_005), R.drawable.ic_moon, Shape.CAPSULE) { needAdb { close(); Cleaner.sleep(ctx) } },
             LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
         top.addView(right, LinearLayout.LayoutParams(0, -2, 1f))
-        panel.addView(top)
+        generalPage.addView(top)
 
         val utilities = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; clipChildren = false }
         fun utility(label: String, icon: Int, action: () -> Unit): GlassButton =
@@ -286,14 +311,41 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
             close()
             ctx.startActivity(Intent(ctx, SettingsActivity::class.java))
         }
-        panel.addView(utilities, LinearLayout.LayoutParams(-1, -2).apply { topMargin = gap })
+        generalPage.addView(utilities, LinearLayout.LayoutParams(-1, -2).apply { topMargin = gap })
 
         brightness = Slider(R.drawable.ic_sun, I18n.text(R.string.i18n_controlcenter_012)) { v -> tv.setBrightness(v) }.also { focusables += it }
-        panel.addView(brightness, LinearLayout.LayoutParams(-1, ctx.dp(38)).apply { topMargin = gap })
+        generalPage.addView(brightness, LinearLayout.LayoutParams(-1, ctx.dp(38)).apply { topMargin = gap })
         volume = Slider(R.drawable.ic_volume, I18n.text(R.string.i18n_controlcenter_013), steps = 50) { v -> tv.setVolume(volumeTarget, v) }.also { focusables += it }
-        panel.addView(volume, LinearLayout.LayoutParams(-1, ctx.dp(38)).apply { topMargin = gap })
+        generalPage.addView(volume, LinearLayout.LayoutParams(-1, ctx.dp(38)).apply { topMargin = gap })
         inputModule = GlassButton(I18n.text(R.string.i18n_controlcenter_014), R.drawable.ic_input, Shape.CAPSULE) { pickInput() }
-        panel.addView(inputModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
+        generalPage.addView(inputModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
+
+        mediaModule = GlassButton(ctx.getString(R.string.tvos_now_playing), R.drawable.ic_volume, Shape.CAPSULE) {
+            // MediaSession actions only when Android explicitly grants notification-listener access.
+            io.execute {
+                val ok = NowPlaying.toggle(ctx)
+                host.post {
+                    if (!ok) android.widget.Toast.makeText(ctx, R.string.tvos_now_playing_unavailable,
+                        android.widget.Toast.LENGTH_SHORT).show()
+                    refresh()
+                }
+            }
+        }
+        mediaPage.addView(mediaModule, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
+        val transport = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_HORIZONTAL
+        }
+        mediaPrevious = GlassButton(ctx.getString(R.string.tvos_media_previous),
+            R.drawable.ic_skip_previous, Shape.ROUND) { sendTransport("previous") }
+        val mediaPlayPause = GlassButton(ctx.getString(R.string.tvos_media_play_pause),
+            R.drawable.ic_play_arrow, Shape.ROUND) { sendTransport("toggle") }
+        mediaNext = GlassButton(ctx.getString(R.string.tvos_media_next),
+            R.drawable.ic_skip_next, Shape.ROUND) { sendTransport("next") }
+        listOf(mediaPrevious, mediaPlayPause, mediaNext).forEach { button ->
+            transport.addView(button, LinearLayout.LayoutParams(cell, cell).apply { marginEnd = gap })
+        }
+        mediaPage.addView(transport, LinearLayout.LayoutParams(-1, cell).apply { topMargin = gap })
         panel.addView(status, LinearLayout.LayoutParams(-1, -2).apply { topMargin = ctx.dp(10) })
         // The host clips the panel to its bounds; the padding is room for focused controls to grow into.
         val room = ctx.dp(16)
@@ -1220,6 +1272,7 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
             val list = tv.inputs()
             val cur = tv.currentInput()
             val summary = tv.inputSummary(list)
+            val track = NowPlaying.current(ctx)
             host.post {
                 refreshing = false
                 if (destroyed) return@post
@@ -1228,6 +1281,14 @@ class ControlCenter(private val home: HomeActivity, private val host: FrameLayou
                 v?.target?.takeIf { it.isNotEmpty() }?.let { volumeTarget = it }
                 volume.set(v)
                 inputs = list
+                mediaPage.visibility = if (track != null) View.VISIBLE else View.GONE
+                mediaPrevious.visibility = if (track?.previous == true) View.VISIBLE else View.INVISIBLE
+                mediaNext.visibility = if (track?.next == true) View.VISIBLE else View.INVISIBLE
+                mediaModule.title.text = track?.title ?: ctx.getString(R.string.tvos_now_playing)
+                mediaModule.sub.text = if (track != null) {
+                    listOf(track.artist, if (track.playing) "▶" else "Ⅱ").filter { it.isNotBlank() }.joinToString(" · ")
+                } else ctx.getString(R.string.tvos_now_playing_unavailable)
+                mediaModule.sub.visibility = View.VISIBLE
                 inputModule.sub.visibility = View.VISIBLE
                 inputModule.sub.text = list.firstOrNull { it.uri == cur }?.name ?: summary
             }

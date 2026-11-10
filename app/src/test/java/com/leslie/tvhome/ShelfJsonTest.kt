@@ -144,4 +144,32 @@ class ShelfJsonTest {
         assertTrue(Shelf.has("org.jellyfin.androidtv", jellyfin))
         assertFalse(Shelf.has("org.jellyfin.androidtv"))
     }
+
+    @org.junit.Test fun shelfSafeDeepLinkParsing() {
+        val good = """[{"title":"Video","image":"https://example.com/a.jpg","url":"https://example.com/watch?id=1"}]"""
+        val parsed = ShelfJson.parse(good)
+        org.junit.Assert.assertEquals("https://example.com/watch?id=1", parsed?.firstOrNull()?.url)
+        val bad = """[{"title":"Video","image":"https://example.com/a.jpg","url":"javascript:alert(1)"}]"""
+        org.junit.Assert.assertNull(ShelfJson.parse(bad)?.firstOrNull()?.url)
+    }
+    @Test fun shelfCacheNamesAreStableAndNotJavaHashCollisions() {
+        val first = ShelfImageCacheKey.name("https://example.test/Aa")
+        val second = ShelfImageCacheKey.name("https://example.test/BB")
+        assertEquals(first, ShelfImageCacheKey.name("https://example.test/Aa"))
+        assertFalse(first == second)
+        assertTrue(first.endsWith(".jpg"))
+        assertEquals(68, first.length)
+    }
+
+    @Test fun builtInVideoLinksRequireStrictIdentifiers() {
+        assertEquals("https://www.bilibili.com/video/BV1xx411c7mD",
+            ShelfDeepLink.bilibili("BV1xx411c7mD"))
+        assertEquals("https://www.douyu.com/123456",
+            ShelfDeepLink.douyu("123456"))
+        assertNull(ShelfDeepLink.bilibili("https://other.test/"))
+        assertNull(ShelfDeepLink.bilibili("BV1..411c7mD"))
+        assertNull(ShelfDeepLink.douyu("../1"))
+        assertNull(ShelfDeepLink.douyu("0"))
+    }
+
 }

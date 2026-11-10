@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.26 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.26)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.26/Tigris-v2.0.26.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.26/Tigris-guard-v2.0.26.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.26/SHA256SUMS-v2.0.26.txt)）
+- 最新正式版：**[v2.0.27 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.27)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.27/Tigris-v2.0.27.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.27/Tigris-guard-v2.0.27.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.27/SHA256SUMS-v2.0.27.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **最新正式版为 v2.0.26。** 对应 Standard/Guard 类型覆盖升级。所有桌面 App 磁贴统一为雾面浅灰底板，图标本身保持原样；本版同时包含 v2.0.25 的 MiracastReceiver 新包名适配。详见 [更新说明](docs/releases/v2.0.26.md)。
+> **最新正式版为 v2.0.27。** 品牌横向 TV banner、无白框选中放大、液态玻璃 Dock，以及堆叠应用截图。对应 Standard/Guard 类型覆盖升级；详见 [更新说明](docs/releases/v2.0.27.md)。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
@@ -36,6 +36,14 @@
 | Samsung **Tizen**、海信**原生 VIDAA** | **无兼容的 Android APK 安装方式** | 不适用 | 请勿执行 Android ADB 安装命令 |
 
 **如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
+
+## v2.0.27：品牌横图与堆叠应用画面
+
+- **桌面图标**：统一 16:9，自动优先用应用自带品牌 TV banner；没有可用横图时统一白底，保留手动来源设置。去掉额外白框与光晕，选中放大至 1.12 倍，保留 Dock 液态玻璃。
+- **应用切换**：画面卡片堆叠，左右选择、确定打开，默认选中最近使用的任务。没有截图仍可打开，深色画面不再被误删；菜单键可尝试系统切换器。
+- **操作与阅读**：简化控制中心标签，保留电视及活动媒体控制；Top Shelf 支持遥控浏览，返回桌面尽量保留应用位置，文字大小可选 90% / 100% / 115% / 130%。
+
+画面预览是 Android 11+ 已启用无障碍服务保存的截图，不是持续实时画面；Android 9/10、受保护内容或权限缺失时可能没有预览，但任务卡片仍保留。向上移除卡片；关闭应用依赖已授权的本机 ADB。版本码 46 高于 Preview 12 的 45，保留签名，可覆盖升级。详见 [v2.0.27 更新说明](docs/releases/v2.0.27.md)。
 
 ## v2.0.26：应用图标统一雾面浅灰底板
 
