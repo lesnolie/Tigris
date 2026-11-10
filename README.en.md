@@ -14,7 +14,7 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeover fixes and video optimizations still need model-level verification. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.26 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.26)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.26/Tigris-v2.0.26.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.26/Tigris-guard-v2.0.26.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.26/SHA256SUMS-v2.0.26.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.27 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.27)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.27/Tigris-v2.0.27.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.27/Tigris-guard-v2.0.27.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.27/SHA256SUMS-v2.0.27.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -22,7 +22,7 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 ## Which APK should I install? Check the TV OS and firmware
 
-> **Latest official release: v2.0.26.** Upgrade in place with the matching Standard/Guard flavor. Every home-screen app tile now uses one frost-grey surface while the original icons stay untouched; this build also includes v2.0.25's MiracastReceiver package rename fix. See [release notes](docs/releases/v2.0.26.md).
+> **Latest stable release: v2.0.27.** Brand banners, scale-only focus, Liquid Glass Dock and stacked app screenshots. Upgrade with the matching Standard/Guard package. See the [release notes](docs/releases/v2.0.27.md).
 
 | TV / platform | First choice | When to use another build | Important limits |
 |---|---|---|---|
@@ -35,6 +35,14 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 | Samsung **Tizen**, Hisense **native VIDAA** | **No supported Android APK** | Neither | Do not run Android ADB installer commands |
 
 **Verification:** After installing, open another app and press the physical Home key; check reboot, standby/wake and long-press Home cleanup separately. If Home does not return to Tigris, keep the stock launcher enabled and use the [brand install and recovery guide](docs/installation-compatibility.md). Preserve the existing APK signing identity and user data; **do not uninstall merely to bypass installation restrictions**.
+
+## v2.0.27: brand banners and stacked app previews
+
+- **Home artwork:** uniform 16:9 cards automatically prefer the app's TV banner; missing banners use white cards with original icons. Manual overrides remain. Selection scales to 1.12x without added frames or halos; the Liquid Glass Dock stays.
+- **App switching:** stacked screen cards, Left/Right to choose and OK to open, with the newest task selected first. Missing previews never hide tasks; dark frames remain valid. Menu attempts native Recents.
+- **Controls and reading:** simpler Control Center tabs, retained TV and active-session media controls, remote Top Shelf browsing, improved Home return focus, and 90% / 100% / 115% / 130% text scale.
+
+Previews are saved accessibility screenshots on Android 11+, not continuously live screens. Android 9/10, protected content or missing permissions may have no preview, while tasks remain usable. Up removes a card; force-stop requires authorized local ADB. Version code 46 upgrades Preview 12 (45) in place with the same signing identity. See the [v2.0.27 release notes](docs/releases/v2.0.27.md).
 
 ## v2.0.26: one frost-grey surface for every app tile
 
