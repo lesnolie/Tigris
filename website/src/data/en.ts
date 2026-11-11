@@ -109,9 +109,11 @@ export const en = {
 
   film: {
     eyebrow: "FILM",
-    title: "Tigris in 42 seconds.",
-    lede: "See how Tigris gives your TV home screen a fresh start. Press play with sound on.",
-    label: "Play the Tigris film (with sound)",
+    title: "A clock that glows.",
+    lede: "Tigris 2.0.28: Neon, Flip, LCD and Minimal clocks, grouped settings and icons of your choosing — all recorded on a real TV. Press play with sound on.",
+    label: "Play the Tigris 2.0.28 film (with sound)",
+    classicTitle: "Tigris in 42 seconds.",
+    classicLabel: "Play the Tigris film (with sound)",
   },
   gallery: {
     eyebrow: "IN MOTION",

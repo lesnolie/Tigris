@@ -57,6 +57,8 @@ export const clips = {
   cc: { src: "/video/cc.mp4", poster: "/img/cc-poster.webp" },
   /* The promo film: motion graphics around the same recordings, with sound; plays only when asked. */
   trailer: { src: "/video/tigris-ad.mp4", poster: "/img/tigris-ad-poster.webp" },
+  /* The 2.0.28 film: clock screen saver, grouped settings and custom icons, recorded on a Sony BRAVIA. */
+  latest: { src: "/video/tigris-2.0.28.mp4", poster: "/img/tigris-2.0.28-poster.webp" },
 } as const;
 
 export const assets = {

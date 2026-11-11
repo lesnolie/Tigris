@@ -2855,6 +2855,20 @@ details.advanced .table-wrap {
   aspect-ratio: 16 / 9;
 }
 
+/* The earlier brand film, kept below the latest one. */
+.film-classic-title {
+  max-width: 1080px;
+  margin: 72px auto 20px;
+  text-align: center;
+  font-size: clamp(22px, 2.4vw, 30px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.film-classic {
+  max-width: 820px;
+}
+
 /* ---------- hero recording pause button ---------- */
 .clip-toggle {
   position: absolute;

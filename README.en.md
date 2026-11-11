@@ -18,7 +18,7 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
-▶ [Watch the 42-second film](https://tigris-tv.pages.dev/#film) (with audio)
+▶ [Watch the v2.0.28 film (54 s) and the 42-second film](https://tigris-tv.pages.dev/#film) (with audio)
 
 ## Which APK should I install? Check the TV OS and firmware
 

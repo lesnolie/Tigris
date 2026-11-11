@@ -17,6 +17,25 @@ const f = Astro.props.copy.film;
     </div>
     <figure class="film reveal">
       <video
+        src={clips.latest.src}
+        poster={clips.latest.poster}
+        width="1600"
+        height="900"
+        controls
+        playsinline
+        preload="none"
+        aria-label={f.label}
+        aria-describedby="film-latest-credit"
+      ></video>
+      <figcaption id="film-latest-credit" class="film-credit">
+        Music by <a href="https://www.bensound.com/royalty-free-music">Bensound.com/royalty-free-music</a><br />
+        Track: “Hey!” · Artist: Benjamin Tissot<br />
+        License code: 4M6F0T3L0S2JINDK
+      </figcaption>
+    </figure>
+    <h3 class="film-classic-title reveal">{f.classicTitle}</h3>
+    <figure class="film film-classic reveal">
+      <video
         src={clips.trailer.src}
         poster={clips.trailer.poster}
         width="1600"
@@ -24,7 +43,7 @@ const f = Astro.props.copy.film;
         controls
         playsinline
         preload="none"
-        aria-label={f.label}
+        aria-label={f.classicLabel}
         aria-describedby="film-music-credit"
       ></video>
       <figcaption id="film-music-credit" class="film-credit">
