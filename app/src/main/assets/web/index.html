@@ -339,7 +339,7 @@ $('iconFile').onchange = async e => {
   e.target.value = '';
 };
 
-// Long press → 更换图标 on the TV opens this page as #tileicon=<package>.
+// Long press → Change icon on the TV opens this page as #tileicon=<package>.
 const wantedTileApp = (location.hash.match(/^#tileicon=(.+)$/) || [])[1];
 let tileAppChosen = wantedTileApp ? decodeURIComponent(wantedTileApp) : '';
 
