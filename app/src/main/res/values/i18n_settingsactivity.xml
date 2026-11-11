@@ -76,7 +76,7 @@
     <string name="i18n_settingsactivity_074" formatted="false">Setting up…</string>
     <string name="i18n_settingsactivity_075" formatted="false">Local debugging must be authorized first</string>
     <string name="i18n_settingsactivity_076" formatted="false">Screen Saver Content</string>
-    <string name="i18n_settingsactivity_077" formatted="false">Choose photos or Aerials for your screen saver.</string>
+    <string name="i18n_settingsactivity_077" formatted="false">Show background photos, Apple TV aerial films or a full-screen clock.</string>
     <string name="i18n_settingsactivity_078" formatted="false">Aerials</string>
     <string name="i18n_settingsactivity_079" formatted="false">Photos</string>
     <string name="i18n_settingsactivity_080" formatted="false">Start After</string>
@@ -133,7 +133,7 @@
     <string name="i18n_settingsactivity_133" formatted="false">Prevent the system from turning ADB debugging off.</string>
     <string name="i18n_settingsactivity_134" formatted="false">Setting up…</string>
     <string name="i18n_settingsactivity_135" formatted="false">Local debugging must be authorized first</string>
-    <string name="i18n_settingsactivity_136" formatted="false">System settings</string>
+    <string name="i18n_settingsactivity_136" formatted="false">TV settings</string>
     <string name="i18n_settingsactivity_137" formatted="false">Open the TV\'s built-in settings.</string>
     <string name="i18n_settingsactivity_138" formatted="false">About</string>
     <string name="i18n_settingsactivity_139" formatted="false">A tvOS-inspired home screen for Android TV.</string>

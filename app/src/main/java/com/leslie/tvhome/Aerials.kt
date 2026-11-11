@@ -64,6 +64,8 @@ interface Saver {
     fun stop()
     /** Left / right on the remote; true if handled. */
     fun skip(dir: Int): Boolean = false
+    /** Up / down on the remote; true if handled (the clock changes colour). */
+    fun cycle(dir: Int): Boolean = false
 }
 
 /**
@@ -196,8 +198,11 @@ class SaverHost(ctx: Context) : FrameLayout(ctx) {
         addView(saver.view, LayoutParams(-1, -1))
     }
 
-    private fun choose(): Saver =
-        if (Prefs(context).saverMode == Prefs.SAVER_AERIAL) AerialSaver(context) { post { usePhotos() } } else photos()
+    private fun choose(): Saver = when (Prefs(context).saverMode) {
+        Prefs.SAVER_AERIAL -> AerialSaver(context) { post { usePhotos() } }
+        Prefs.SAVER_CLOCK -> ClockSaver(context)
+        else -> photos()
+    }
 
     private fun photos() = PhotoFrameView(context).let { v ->
         object : Saver {
@@ -220,6 +225,14 @@ class SaverHost(ctx: Context) : FrameLayout(ctx) {
     fun stop() { started = false; saver.stop() }
 
     fun onKey(e: KeyEvent): Boolean {
+        when (e.keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                val dir = if (e.keyCode == KeyEvent.KEYCODE_DPAD_UP) -1 else 1
+                if (e.action == KeyEvent.ACTION_DOWN) return saver.cycle(dir)
+                // Only the clock uses up / down; elsewhere they end the screensaver as before.
+                return saver is ClockSaver
+            }
+        }
         val dir = when (e.keyCode) {
             KeyEvent.KEYCODE_DPAD_LEFT -> -1
             KeyEvent.KEYCODE_DPAD_RIGHT -> 1

@@ -76,7 +76,7 @@
     <string name="i18n_settingsactivity_074" formatted="false">正在设置…</string>
     <string name="i18n_settingsactivity_075" formatted="false">需要先授权本机调试</string>
     <string name="i18n_settingsactivity_076" formatted="false">屏保内容</string>
-    <string name="i18n_settingsactivity_077" formatted="false">相框里放背景照片，还是 Apple TV 的航拍视频。</string>
+    <string name="i18n_settingsactivity_077" formatted="false">屏保显示背景照片、Apple TV 航拍视频，还是全屏时钟。</string>
     <string name="i18n_settingsactivity_078" formatted="false">Apple TV 航拍视频</string>
     <string name="i18n_settingsactivity_079" formatted="false">照片</string>
     <string name="i18n_settingsactivity_080" formatted="false">空闲多久显示相框</string>
@@ -133,7 +133,7 @@
     <string name="i18n_settingsactivity_133" formatted="false">防止系统自动关掉 ADB 调试。</string>
     <string name="i18n_settingsactivity_134" formatted="false">正在设置…</string>
     <string name="i18n_settingsactivity_135" formatted="false">需要先授权本机调试</string>
-    <string name="i18n_settingsactivity_136" formatted="false">系统设置</string>
+    <string name="i18n_settingsactivity_136" formatted="false">电视设置</string>
     <string name="i18n_settingsactivity_137" formatted="false">打开电视自带的设置。</string>
     <string name="i18n_settingsactivity_138" formatted="false">关于</string>
     <string name="i18n_settingsactivity_139" formatted="false">Tigris 主屏幕，仿 tvOS 的 Android TV 桌面。</string>

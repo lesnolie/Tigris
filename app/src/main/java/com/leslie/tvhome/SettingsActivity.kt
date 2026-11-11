@@ -40,6 +40,9 @@ class SettingsActivity : Activity() {
         fun avatarFile(ctx: android.content.Context) = java.io.File(ctx.filesDir, AVATAR_FILE).takeIf { it.isFile }
         const val ICON_FILE = "settings_icon.png"
         const val BACKDROP_FILE = "settings_bg.jpg"
+        private const val STATE_PAGE = "settings_page"
+        private const val STATE_CLICKED = "settings_clicked"
+        private const val STATE_TRAIL = "settings_trail"
 
         /**
          * A picture of the user's own behind the whole settings page (Apple TV's, a TV on a blue haze,
@@ -179,10 +182,21 @@ class SettingsActivity : Activity() {
     private var activeDialog: SettingsDialog? = null
     private var adbAuthorizing = false
     private var page = Page.MAIN
-    /** The main-page row that opened the current sub-page, focused again on the way back. */
-    private var opener = 0
+    /** Pages above this one and the row that opened the next, focused again on the way back. */
+    private val trail = ArrayDeque<Pair<Page, Int>>()
+    /** The row last pressed on this page, focused again when the page is rebuilt. */
+    private var clicked = 0
 
-    private enum class Page { MAIN, KEEP, HIDDEN, REMOVED, SHELF_APP }
+    /**
+     * The main page lists groups only; each group is a short page of its own, so nobody
+     * scrolls through sixty rows to find one switch. [settings]: rows built from prefs,
+     * rebuilt on return; the others are app lists.
+     */
+    private enum class Page(val settings: Boolean) {
+        MAIN(true), HOME(true), APPEARANCE(true), WALLPAPER(true), SAVER(true), WIDGETS(true),
+        INTRO(true), APPS(true), POWER(true), SYSTEM(true), CLOCK(true),
+        KEEP(false), HIDDEN(false), REMOVED(false), SHELF_APP(false)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -231,7 +245,7 @@ class SettingsActivity : Activity() {
         back = text(16f, weight = 500).apply {
             text = I18n.text(R.string.i18n_updateactivity_016); gravity = Gravity.CENTER
             isFocusable = true; isClickable = true
-            setOnClickListener { if (page == Page.MAIN) finish() else show(Page.MAIN, opener) }
+            setOnClickListener { goBack() }
         }
         val backGlass = glass.control(back)
         backGlass.bindInk(listOf(back))
@@ -272,16 +286,57 @@ class SettingsActivity : Activity() {
         root.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> glass.refresh() }
         setContentView(root)
         showBackdrop()
-        show(Page.MAIN)
+        // Recreated (the text-size row does this): come back to the same group.
+        savedInstanceState?.getStringArrayList(STATE_TRAIL)?.forEach { entry ->
+            val (name, index) = entry.split(':', limit = 2).let { it[0] to it.getOrNull(1)?.toIntOrNull() }
+            runCatching { Page.valueOf(name) }.getOrNull()?.takeIf { it.settings }?.let { trail.addLast(it to (index ?: 0)) }
+        }
+        val restored = savedInstanceState?.getString(STATE_PAGE)
+            ?.let { runCatching { Page.valueOf(it) }.getOrNull() }?.takeIf { it.settings && trail.isNotEmpty() }
+        if (restored == null) trail.clear()
+        show(restored ?: Page.MAIN, savedInstanceState?.getInt(STATE_CLICKED) ?: 0)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // App lists are rebuilt from their group; their rows may have changed.
+        val current = if (page.settings) page else trail.lastOrNull()?.first ?: Page.MAIN
+        val above = if (page.settings) trail.toList() else trail.toList().dropLast(1)
+        outState.putString(STATE_PAGE, current.name)
+        outState.putInt(STATE_CLICKED, if (page.settings) clicked else trail.lastOrNull()?.second ?: 0)
+        outState.putStringArrayList(STATE_TRAIL, ArrayList(above.map { "${it.first.name}:${it.second}" }))
+    }
+
+    /** Into a group or app list from the row just pressed. */
+    private fun open(p: Page) {
+        trail.addLast(page to clicked)
+        show(p)
+    }
+
+    /** One level up, focusing the row that led here; out of Settings from the main page. */
+    private fun goBack() {
+        val (previous, index) = trail.removeLastOrNull() ?: return finish()
+        show(previous, index)
     }
 
     private fun show(p: Page, focusIndex: Int = 0) {
         page = p
+        clicked = focusIndex
         glass.removeWithin(list)
         list.removeAllViews()
         scroll.scrollTo(0, 0)
         when (p) {
             Page.MAIN -> main()
+            Page.HOME -> homePage()
+            Page.APPEARANCE -> appearancePage()
+            Page.WALLPAPER -> wallpaperPage()
+            Page.SAVER -> saverPage()
+            Page.WIDGETS -> widgetsPage()
+            Page.INTRO -> introPage()
+            Page.APPS -> appsPage()
+            Page.POWER -> powerPage()
+            Page.SYSTEM -> systemPage()
+            Page.CLOCK -> clockPage()
             Page.KEEP -> appPicker(I18n.text(R.string.i18n_settingsactivity_001), prefs.keep) { pkg, on ->
                 prefs.keep = if (on) prefs.keep + pkg else prefs.keep - pkg
             }
@@ -314,7 +369,7 @@ class SettingsActivity : Activity() {
         // The key covers the uploaded picture and the Home photo, so an unchanged
         // backdrop costs nothing here, and a changed one is rebuilt.
         showBackdrop()
-        if (page == Page.MAIN) show(Page.MAIN, opener)
+        if (page.settings) show(page, clicked)
     }
 
     private fun optionalAssetRow(asset: OptionalAssets.Asset, title: Int) {
@@ -336,7 +391,7 @@ class SettingsActivity : Activity() {
                         if (!isDestroyed && !isFinishing) {
                             Toast.makeText(this, I18n.text(if (result.isSuccess) R.string.asset_done else R.string.asset_failed), Toast.LENGTH_LONG).show()
                             showBackdrop()
-                            show(Page.MAIN)
+                            if (page == Page.INTRO) show(Page.INTRO, clicked)
                         }
                     }
                 }.start()
@@ -403,6 +458,7 @@ class SettingsActivity : Activity() {
         }
     }
 
+    /** Groups only. Values show the one thing most people look for inside. */
     private fun main() {
         heading.text = I18n.text(R.string.i18n_settingsactivity_003)
         about.text = ""
@@ -411,7 +467,101 @@ class SettingsActivity : Activity() {
         row(I18n.text(R.string.i18n_settingsactivity_005), I18n.text(R.string.i18n_settingsactivity_006), { "" }, chevron = true) {
             startActivity(Intent(this, UpdateActivity::class.java))
         }
-        section(I18n.text(R.string.i18n_settingsactivity_008))
+
+        section(I18n.text(R.string.settings_group_personalize))
+        group(Page.HOME, I18n.text(R.string.settings_home_title), I18n.text(R.string.settings_home_desc))
+        group(Page.APPEARANCE, I18n.text(R.string.i18n_settingsactivity_008), I18n.text(R.string.settings_appearance_desc))
+        group(Page.WALLPAPER, I18n.text(R.string.settings_wallpaper_title), I18n.text(R.string.settings_wallpaper_desc)) { wallpaperLabel() }
+        group(Page.SAVER, I18n.text(R.string.settings_saver_title), I18n.text(R.string.settings_saver_desc)) { onOff(prefs.frameScreensaver) }
+        group(Page.WIDGETS, I18n.text(R.string.settings_widgets_title), I18n.text(R.string.settings_widgets_desc))
+        group(Page.INTRO, I18n.text(R.string.i18n_settingsactivity_040), I18n.text(R.string.settings_intro_desc)) { introLabel() }
+
+        section(I18n.text(R.string.settings_group_manage))
+        group(Page.APPS, I18n.text(R.string.settings_apps_group), I18n.text(R.string.settings_apps_desc))
+        group(Page.POWER, I18n.text(R.string.i18n_settingsactivity_087), I18n.text(R.string.settings_power_desc))
+        group(Page.SYSTEM, I18n.text(R.string.settings_system_title), I18n.text(R.string.settings_system_desc))
+        row(I18n.text(R.string.i18n_settingsactivity_138), I18n.text(R.string.i18n_settingsactivity_139),
+            { packageManager.getPackageInfo(packageName, 0).versionName ?: "" }, chevron = true) {
+            dialog(I18n.text(R.string.i18n_settingsactivity_138),
+                I18n.text(R.string.settings_about, packageManager.getPackageInfo(packageName, 0).versionName ?: ""))
+        }
+    }
+
+    /** A main-page row that opens one group. */
+    private fun group(target: Page, title: String, desc: String, value: () -> String = { "" }) =
+        row(title, desc, value, chevron = true) { open(target) }
+
+    /** Opening a group: its name on the left, with what it holds until a row is focused. */
+    private fun groupHeading(title: String, desc: String) {
+        heading.text = title
+        about.text = desc
+    }
+
+    private fun wallpaperLabel() =
+        Backgrounds.THEMES[prefs.background]?.first ?: Wallpapers.label(Wallpapers.sourceFor(prefs.background)).let {
+            if (prefs.background == Wallpapers.MINE) it else I18n.text(R.string.i18n_settingsactivity_064, it)
+        }
+
+    private fun introLabel() = when (prefs.intro) {
+        Prefs.INTRO_BOOT -> I18n.text(R.string.i18n_settingsactivity_044)
+        Prefs.INTRO_WAKE -> I18n.text(R.string.i18n_settingsactivity_045)
+        else -> I18n.text(R.string.i18n_settingsactivity_046)
+    }
+
+    private fun saverLabel(mode: String) = when (mode) {
+        Prefs.SAVER_AERIAL -> I18n.text(R.string.i18n_settingsactivity_078)
+        Prefs.SAVER_CLOCK -> I18n.text(R.string.saver_content_clock)
+        else -> I18n.text(R.string.i18n_settingsactivity_079)
+    }
+
+    private fun clockSummary(): String {
+        val style = prefs.clockSaverStyle
+        return I18n.text(ClockFaceView.styleName(style)) + " · " + I18n.text(ClockThemes.name(style, prefs.clockColor(style)))
+    }
+
+    /** The clock screensaver: look, seconds and sounds. Rows that don't apply to the style are left out. */
+    private fun clockPage() {
+        groupHeading(I18n.text(R.string.clock_settings), I18n.text(R.string.clock_settings_help))
+        val style = prefs.clockSaverStyle
+        row(I18n.text(R.string.clock_saver_style), I18n.text(R.string.clock_saver_style_help),
+            { I18n.text(ClockFaceView.styleName(prefs.clockSaverStyle)) }) {
+            val styles = Prefs.CLOCK_SAVER_STYLES
+            prefs.clockSaverStyle = styles[(styles.indexOf(prefs.clockSaverStyle) + 1) % styles.size]
+            show(page, clicked)
+        }
+        row(I18n.text(R.string.clock_color), I18n.text(R.string.clock_color_help),
+            { I18n.text(ClockThemes.name(style, prefs.clockColor(style))) }) {
+            prefs.setClockColor(style, ClockThemes.wrap(prefs.clockColor(style) + 1, ClockThemes.count(style)))
+        }
+        row(I18n.text(R.string.clock_effect), I18n.text(R.string.clock_effect_help),
+            { I18n.text(ClockFaceView.effectName(prefs.clockEffect)) }) {
+            val effects = Prefs.CLOCK_EFFECTS
+            prefs.clockEffect = effects[(effects.indexOf(prefs.clockEffect) + 1) % effects.size]
+        }
+
+        section(I18n.text(R.string.clock_seconds_section))
+        row(I18n.text(R.string.clock_seconds), I18n.text(R.string.clock_seconds_help),
+            { onOff(prefs.clockSeconds) }, checked = { prefs.clockSeconds }) {
+            prefs.clockSeconds = !prefs.clockSeconds
+            show(page, clicked)
+        }
+        if (prefs.clockSeconds) row(I18n.text(R.string.clock_tick), I18n.text(R.string.clock_tick_help),
+            { onOff(prefs.clockTick) }, checked = { prefs.clockTick }) { prefs.clockTick = !prefs.clockTick }
+        if (style == Prefs.CLOCK_SAVER_NEON) row(I18n.text(R.string.clock_neon_buzz), I18n.text(R.string.clock_neon_buzz_help),
+            { onOff(prefs.neonBuzz) }, checked = { prefs.neonBuzz }) { prefs.neonBuzz = !prefs.neonBuzz }
+
+        row(I18n.text(R.string.saver_preview), I18n.text(R.string.clock_preview_help), { "" }, chevron = true) {
+            startActivity(Intent(this, FrameActivity::class.java))
+        }
+    }
+
+    private fun guardLabel() =
+        if (!prefs.guard) I18n.text(R.string.i18n_settingsactivity_124)
+        else if (HomeGuardService.isRunning) I18n.text(R.string.i18n_settingsactivity_125)
+        else I18n.text(R.string.i18n_settingsactivity_126)
+
+    private fun homePage() {
+        groupHeading(I18n.text(R.string.settings_home_title), I18n.text(R.string.settings_home_desc))
         row(I18n.text(R.string.dock_columns_title), I18n.text(R.string.dock_columns_description),
             { prefs.dockColumns.toString() }) { prefs.dockColumns = DockLayout.next(prefs.dockColumns) }
         row(getString(R.string.tile_style_title), getString(R.string.tile_style_detail), {
@@ -428,36 +578,18 @@ class SettingsActivity : Activity() {
             val opts = listOf(Prefs.CLOCK_CORNER, Prefs.CLOCK_LARGE, Prefs.CLOCK_OFF)
             prefs.clockStyle = opts[(opts.indexOf(prefs.clockStyle) + 1) % opts.size]
         }
-        if (backdropFile(this) != null) row(I18n.text(R.string.i18n_settingsactivity_018), I18n.text(R.string.i18n_settingsactivity_019), {
-            if (prefs.settingsBg) I18n.text(R.string.i18n_settingsactivity_020) else I18n.text(R.string.i18n_settingsactivity_021)
-        }) {
-            prefs.settingsBg = !prefs.settingsBg
-            showBackdrop()
-        }
-        if (iconFile(this) != null) row(I18n.text(R.string.i18n_settingsactivity_022), I18n.text(R.string.i18n_settingsactivity_023), {
-            if (prefs.ownIcon) I18n.text(R.string.i18n_settingsactivity_024) else I18n.text(R.string.i18n_settingsactivity_025)
-        }) {
-            prefs.ownIcon = !prefs.ownIcon
-            showIcon(icon)
-        }
+        row(I18n.text(R.string.i18n_settingsactivity_029), I18n.text(R.string.i18n_settingsactivity_030), { onOff(prefs.showAvatar) }, checked = { prefs.showAvatar }) { prefs.showAvatar = !prefs.showAvatar }
         row(I18n.text(R.string.i18n_settingsactivity_026), I18n.text(R.string.i18n_settingsactivity_027), { "" }, chevron = true) {
             startActivity(Intent(this, WallpaperActivity::class.java).putExtra("upload_avatar", true))
         }
-        row(I18n.text(R.string.i18n_settingsactivity_029), I18n.text(R.string.i18n_settingsactivity_030), { onOff(prefs.showAvatar) }, checked = { prefs.showAvatar }) { prefs.showAvatar = !prefs.showAvatar }
-        row(getString(R.string.tvos_recents_title), getString(R.string.tvos_switcher_auto_help), { "" }, chevron = true) {
-            AppSwitcherRouter.open(this)
-        }
-        row(getString(R.string.tvos_device_settings_title), getString(R.string.tvos_device_settings_info), { "" }, chevron = true) {
-            startActivity(Intent(this, TvOSDeviceSettingsActivity::class.java))
-        }
+    }
+
+    private fun appearancePage() {
+        groupHeading(I18n.text(R.string.i18n_settingsactivity_008), I18n.text(R.string.settings_appearance_desc))
         row(getString(R.string.tvos_dynamic_text_title), getString(R.string.tvos_dynamic_text_help),
             { "${(prefs.textScale * 100).toInt()}%" }) {
             prefs.nextTextScale()
             recreate()
-        }
-        row(getString(R.string.tvos_double_home_title), getString(R.string.tvos_double_home_help),
-            { onOff(prefs.doubleHomeSwitcher) }, checked = { prefs.doubleHomeSwitcher }) {
-            prefs.doubleHomeSwitcher = !prefs.doubleHomeSwitcher
         }
         row(I18n.text(R.string.i18n_settingsactivity_031), I18n.text(R.string.i18n_settingsactivity_032) +
             I18n.text(R.string.i18n_settingsactivity_033), {
@@ -471,6 +603,20 @@ class SettingsActivity : Activity() {
         }) {
             prefs.ccStyle = next(prefs.ccStyle, Prefs.CC_GLASS, Prefs.CC_PANEL)
         }
+        if (backdropFile(this) != null) row(I18n.text(R.string.i18n_settingsactivity_018), I18n.text(R.string.i18n_settingsactivity_019), {
+            if (prefs.settingsBg) I18n.text(R.string.i18n_settingsactivity_020) else I18n.text(R.string.i18n_settingsactivity_021)
+        }) {
+            prefs.settingsBg = !prefs.settingsBg
+            showBackdrop()
+        }
+        if (iconFile(this) != null) row(I18n.text(R.string.i18n_settingsactivity_022), I18n.text(R.string.i18n_settingsactivity_023), {
+            if (prefs.ownIcon) I18n.text(R.string.i18n_settingsactivity_024) else I18n.text(R.string.i18n_settingsactivity_025)
+        }) {
+            prefs.ownIcon = !prefs.ownIcon
+            showIcon(icon)
+        }
+
+        section(I18n.text(R.string.settings_glass_section))
         row(I18n.text(R.string.i18n_settingsactivity_159), I18n.text(R.string.i18n_settingsactivity_160),
             { onOff(prefs.extremeGlass) }, checked = { prefs.extremeGlass }) {
             prefs.extremeGlass = !prefs.extremeGlass
@@ -487,18 +633,21 @@ class SettingsActivity : Activity() {
             { onOff(prefs.reduceGlassTransparency) }, checked = { prefs.reduceGlassTransparency }) {
             prefs.reduceGlassTransparency = !prefs.reduceGlassTransparency
         }
+    }
 
+    private fun widgetsPage() {
+        groupHeading(I18n.text(R.string.settings_widgets_title), I18n.text(R.string.settings_widgets_desc))
         section(I18n.text(R.string.shelf_custom_section))
         row(I18n.text(R.string.shelf_custom_url), I18n.text(R.string.shelf_custom_url_help),
             { shelfUrlLabel() }, chevron = true) { value ->
             editShelfUrl { value.text = shelfUrlLabel() }
         }
         row(I18n.text(R.string.shelf_custom_app), I18n.text(R.string.shelf_custom_app_help),
-            { shelfAppLabel() }, chevron = true) { show(Page.SHELF_APP) }
+            { shelfAppLabel() }, chevron = true) { open(Page.SHELF_APP) }
         row(I18n.text(R.string.shelf_custom_clear), I18n.text(R.string.shelf_custom_clear_help), { "" }) {
             prefs.shelfCustomUrl = ""
             prefs.shelfCustomPkg = ""
-            show(Page.MAIN, opener)
+            show(page, clicked)
         }
 
         // Weather is a self-contained optional card. No network traffic until opt-in.
@@ -518,14 +667,13 @@ class SettingsActivity : Activity() {
                 value.text = city.name
             }
         }
+    }
 
-        section(I18n.text(R.string.i18n_settingsactivity_040))
-        optionalAssetRow(OptionalAssets.intro, R.string.download_default_intro)
+    private fun introPage() {
+        groupHeading(I18n.text(R.string.i18n_settingsactivity_040), I18n.text(R.string.settings_intro_desc))
         val video = Intro.videoFile(this) != null || OptionalAssets.file(this, OptionalAssets.intro) != null
         row(I18n.text(R.string.i18n_settingsactivity_041), I18n.text(R.string.i18n_settingsactivity_042) +
-            if (video) "" else I18n.text(R.string.i18n_settingsactivity_043), {
-            when (prefs.intro) { Prefs.INTRO_BOOT -> I18n.text(R.string.i18n_settingsactivity_044); Prefs.INTRO_WAKE -> I18n.text(R.string.i18n_settingsactivity_045); else -> I18n.text(R.string.i18n_settingsactivity_046) }
-        }) {
+            if (video) "" else I18n.text(R.string.i18n_settingsactivity_043), { introLabel() }) {
             val opts = listOf(Prefs.INTRO_OFF, Prefs.INTRO_BOOT, Prefs.INTRO_WAKE)
             prefs.intro = opts[(opts.indexOf(prefs.intro) + 1) % opts.size]
             // This boot counts as played: turning it on doesn't start it on the next return home.
@@ -537,6 +685,7 @@ class SettingsActivity : Activity() {
         }) {
             prefs.introSource = if (prefs.introSource == Prefs.INTRO_WORDMARK) Prefs.INTRO_VIDEO else Prefs.INTRO_WORDMARK
         }
+        optionalAssetRow(OptionalAssets.intro, R.string.download_default_intro)
         row(I18n.text(R.string.i18n_settingsactivity_053), I18n.text(R.string.i18n_settingsactivity_054), {
             if (prefs.wakeDelay == 0) I18n.text(R.string.i18n_settingsactivity_055) else I18n.text(R.string.i18n_settingsactivity_056, prefs.wakeDelay / 1000.0).replace(".0 ", " ")
         }) {
@@ -553,13 +702,12 @@ class SettingsActivity : Activity() {
         row(I18n.text(R.string.welcome_preview), I18n.text(R.string.welcome_preview_help), { "" }, chevron = true) {
             startActivity(Intent(this, HomeActivity::class.java).putExtra(Welcome.EXTRA_PREVIEW, true))
         }
+    }
 
-        section(I18n.text(R.string.i18n_settingsactivity_061))
-        row(I18n.text(R.string.i18n_settingsactivity_062), I18n.text(R.string.i18n_settingsactivity_063), {
-            Backgrounds.THEMES[prefs.background]?.first ?: Wallpapers.label(Wallpapers.sourceFor(prefs.background)).let {
-                if (prefs.background == Wallpapers.MINE) it else I18n.text(R.string.i18n_settingsactivity_064, it)
-            }
-        }, chevron = true) { startActivity(Intent(this, WallpaperActivity::class.java)) }
+    private fun wallpaperPage() {
+        groupHeading(I18n.text(R.string.settings_wallpaper_title), I18n.text(R.string.settings_wallpaper_desc))
+        row(I18n.text(R.string.i18n_settingsactivity_062), I18n.text(R.string.i18n_settingsactivity_063),
+            { wallpaperLabel() }, chevron = true) { startActivity(Intent(this, WallpaperActivity::class.java)) }
         row(I18n.text(R.string.media_quality_wall_title), I18n.text(R.string.media_quality_wall_desc), {
             when (prefs.wallQuality) {
                 MediaQuality.UHD -> I18n.text(R.string.media_quality_4k)
@@ -590,6 +738,10 @@ class SettingsActivity : Activity() {
                 runOnUiThread { v.text = I18n.text(R.string.i18n_settingsactivity_071, w.files().size) }
             }.start()
         }
+    }
+
+    private fun saverPage() {
+        groupHeading(I18n.text(R.string.settings_saver_title), I18n.text(R.string.settings_saver_desc))
         row(I18n.text(R.string.i18n_settingsactivity_072), I18n.text(R.string.i18n_settingsactivity_073),
             { onOff(prefs.frameScreensaver) }, checked = { prefs.frameScreensaver }) { v ->
             val on = !prefs.frameScreensaver
@@ -606,11 +758,16 @@ class SettingsActivity : Activity() {
                 runOnUiThread { v.text = if (ok) onOff(prefs.frameScreensaver) else I18n.text(R.string.i18n_settingsactivity_075) }
             }.start()
         }
-        row(I18n.text(R.string.i18n_settingsactivity_076), I18n.text(R.string.i18n_settingsactivity_077),
-            { if (prefs.saverMode == Prefs.SAVER_AERIAL) I18n.text(R.string.i18n_settingsactivity_078) else I18n.text(R.string.i18n_settingsactivity_079) }) {
-            prefs.saverMode = if (prefs.saverMode == Prefs.SAVER_AERIAL) Prefs.SAVER_PHOTOS else Prefs.SAVER_AERIAL
+        val mode = prefs.saverMode
+        row(I18n.text(R.string.i18n_settingsactivity_076), I18n.text(R.string.i18n_settingsactivity_077), { saverLabel(prefs.saverMode) }) {
+            val modes = Prefs.SAVER_MODES
+            prefs.saverMode = modes[(modes.indexOf(prefs.saverMode) + 1) % modes.size]
+            // The rows below depend on the content: show the ones that apply to it.
+            show(page, clicked)
         }
-        row(I18n.text(R.string.media_quality_aerial_title), I18n.text(R.string.media_quality_aerial_desc), {
+        if (mode == Prefs.SAVER_CLOCK) row(I18n.text(R.string.clock_settings), I18n.text(R.string.clock_settings_help),
+            { clockSummary() }, chevron = true) { open(Page.CLOCK) }
+        if (mode == Prefs.SAVER_AERIAL) row(I18n.text(R.string.media_quality_aerial_title), I18n.text(R.string.media_quality_aerial_desc), {
             when (prefs.aerialQuality) {
                 MediaQuality.UHD -> I18n.text(R.string.media_quality_4k)
                 MediaQuality.COMPAT -> I18n.text(R.string.media_quality_compat)
@@ -623,6 +780,15 @@ class SettingsActivity : Activity() {
                 else -> MediaQuality.AUTO
             }
         }
+        if (mode != Prefs.SAVER_CLOCK) row(I18n.text(R.string.i18n_settingsactivity_084), I18n.text(R.string.i18n_settingsactivity_085), { I18n.text(R.string.i18n_settingsactivity_086, prefs.frameSeconds) }) {
+            val opts = listOf(15, 30, 60, 120)
+            prefs.frameSeconds = opts[(opts.indexOf(prefs.frameSeconds) + 1) % opts.size]
+        }
+        row(I18n.text(R.string.saver_preview), I18n.text(R.string.saver_preview_help), { "" }, chevron = true) {
+            startActivity(Intent(this, FrameActivity::class.java))
+        }
+
+        section(I18n.text(R.string.saver_when_section))
         row(I18n.text(R.string.i18n_settingsactivity_080), I18n.text(R.string.i18n_settingsactivity_081), { minutesLabel(prefs.frameIdleMinutes) }) {
             prefs.frameIdleMinutes = FrameIdlePolicy.nextMinutes(prefs.frameIdleMinutes)
             IdleTimerTakeover.sync(this)
@@ -633,12 +799,10 @@ class SettingsActivity : Activity() {
             prefs.unifiedIdle = !prefs.unifiedIdle
             IdleTimerTakeover.sync(this)
         }
-        row(I18n.text(R.string.i18n_settingsactivity_084), I18n.text(R.string.i18n_settingsactivity_085), { I18n.text(R.string.i18n_settingsactivity_086, prefs.frameSeconds) }) {
-            val opts = listOf(15, 30, 60, 120)
-            prefs.frameSeconds = opts[(opts.indexOf(prefs.frameSeconds) + 1) % opts.size]
-        }
+    }
 
-        section(I18n.text(R.string.i18n_settingsactivity_087))
+    private fun powerPage() {
+        groupHeading(I18n.text(R.string.i18n_settingsactivity_087), I18n.text(R.string.settings_power_desc))
         row(I18n.text(R.string.i18n_settingsactivity_088), I18n.text(R.string.i18n_settingsactivity_089), { onOff(prefs.cleanOnStandby) }, checked = { prefs.cleanOnStandby }) {
             prefs.cleanOnStandby = !prefs.cleanOnStandby
         }
@@ -657,7 +821,7 @@ class SettingsActivity : Activity() {
             }.start()
         }
         row(I18n.text(R.string.i18n_settingsactivity_098), I18n.text(R.string.i18n_settingsactivity_099), { I18n.text(R.string.i18n_settingsactivity_100, prefs.keep.size) }, chevron = true) {
-            show(Page.KEEP)
+            open(Page.KEEP)
         }
         row(I18n.text(R.string.i18n_settingsactivity_101), I18n.text(R.string.i18n_settingsactivity_102), {
             if (prefs.shutdownOnPowerKey) I18n.text(R.string.i18n_settingsactivity_103) else I18n.text(R.string.i18n_settingsactivity_104)
@@ -666,16 +830,28 @@ class SettingsActivity : Activity() {
             if (prefs.shutdownOnPowerKey && !prefs.adbAuthorized)
                 Toast.makeText(this, I18n.text(R.string.i18n_settingsactivity_105), Toast.LENGTH_LONG).show()
         }
+    }
 
-        section(I18n.text(R.string.settings_apps_group))
+    private fun appsPage() {
+        groupHeading(I18n.text(R.string.settings_apps_group), I18n.text(R.string.settings_apps_desc))
         row(I18n.text(R.string.i18n_settingsactivity_106), I18n.text(R.string.i18n_settingsactivity_107),
             { onOff(prefs.recentFirst) }, checked = { prefs.recentFirst }) { prefs.recentFirst = !prefs.recentFirst }
-        row(I18n.text(R.string.i18n_settingsactivity_108), I18n.text(R.string.i18n_settingsactivity_109), { I18n.text(R.string.i18n_settingsactivity_110, prefs.hidden.size) }, chevron = true) { show(Page.HIDDEN) }
+        row(I18n.text(R.string.i18n_settingsactivity_108), I18n.text(R.string.i18n_settingsactivity_109), { I18n.text(R.string.i18n_settingsactivity_110, prefs.hidden.size) }, chevron = true) { open(Page.HIDDEN) }
         row(I18n.text(R.string.i18n_settingsactivity_111), I18n.text(R.string.i18n_settingsactivity_112), { I18n.text(R.string.i18n_settingsactivity_113, prefs.removed.size) }, chevron = true) {
-            show(Page.REMOVED)
+            open(Page.REMOVED)
         }
+        row(getString(R.string.tvos_recents_title), getString(R.string.tvos_switcher_auto_help), { "" }, chevron = true) {
+            AppSwitcherRouter.open(this)
+        }
+        row(getString(R.string.tvos_double_home_title), getString(R.string.tvos_double_home_help),
+            { onOff(prefs.doubleHomeSwitcher) }, checked = { prefs.doubleHomeSwitcher }) {
+            prefs.doubleHomeSwitcher = !prefs.doubleHomeSwitcher
+        }
+    }
 
-        section(I18n.text(R.string.i18n_settingsactivity_114))
+    private fun systemPage() {
+        groupHeading(I18n.text(R.string.settings_system_title), I18n.text(R.string.settings_system_desc))
+        section(I18n.text(R.string.settings_home_guard_section))
         row(I18n.text(R.string.i18n_settingsactivity_115), I18n.text(R.string.i18n_settingsactivity_116),
             { if (prefs.adbAuthorized) I18n.text(R.string.i18n_settingsactivity_117) else I18n.text(R.string.i18n_settingsactivity_118) }) { v ->
             if (adbAuthorizing) return@row
@@ -710,7 +886,7 @@ class SettingsActivity : Activity() {
                 })
         }
         row(I18n.text(R.string.i18n_settingsactivity_122), I18n.text(R.string.i18n_settingsactivity_123),
-            { if (!prefs.guard) I18n.text(R.string.i18n_settingsactivity_124) else if (HomeGuardService.isRunning) I18n.text(R.string.i18n_settingsactivity_125) else I18n.text(R.string.i18n_settingsactivity_126) }, checked = { prefs.guard }) { v ->
+            { guardLabel() }, checked = { prefs.guard }) { v ->
             val on = !prefs.guard
             v.text = I18n.text(R.string.i18n_settingsactivity_127)
             Thread {
@@ -741,11 +917,13 @@ class SettingsActivity : Activity() {
                 runOnUiThread { v.text = if (ok) onOff(prefs.keepAdb) else I18n.text(R.string.i18n_settingsactivity_135) }
             }.start()
         }
-        row(I18n.text(R.string.i18n_settingsactivity_136), I18n.text(R.string.i18n_settingsactivity_137), { "" }, chevron = true) { runCatching { startActivity(TvControls(this).settingsIntent()) } }
-        row(I18n.text(R.string.i18n_settingsactivity_138), I18n.text(R.string.i18n_settingsactivity_139),
-            { packageManager.getPackageInfo(packageName, 0).versionName ?: "" }, chevron = true) {
-            dialog(I18n.text(R.string.i18n_settingsactivity_138),
-                I18n.text(R.string.settings_about, packageManager.getPackageInfo(packageName, 0).versionName ?: ""))
+
+        section(I18n.text(R.string.settings_tv_section))
+        // The brand adapter picks the TV's own settings app (TCL, Xiaomi), else the standard one.
+        row(I18n.text(R.string.i18n_settingsactivity_136), I18n.text(R.string.i18n_settingsactivity_137), { "" }, chevron = true) {
+            runCatching { startActivity(TvControls(this).settingsIntent()) }.onFailure {
+                Toast.makeText(this, I18n.text(R.string.tvos_device_settings_unavailable), Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -763,7 +941,7 @@ class SettingsActivity : Activity() {
             row(a.label, a.pkg, { if (a.pkg == prefs.shelfCustomPkg) "✓" else "" },
                 checked = { a.pkg == prefs.shelfCustomPkg }, checkbox = true, appIcon = drawable) {
                 prefs.shelfCustomPkg = a.pkg
-                show(Page.MAIN, opener)
+                goBack()
             }
         }
     }
@@ -1066,9 +1244,10 @@ class SettingsActivity : Activity() {
             }
         }
         r.setOnClickListener {
-            if (page == Page.MAIN) opener = list.indexOfChild(r)
+            val from = page
+            if (from.settings) clicked = list.indexOfChild(r)
             onClick(v)
-            if (page == Page.MAIN && !v.text.startsWith(I18n.text(R.string.i18n_settingsactivity_150)) &&
+            if (from.settings && page == from && r.parent === list && !v.text.startsWith(I18n.text(R.string.i18n_settingsactivity_150)) &&
                 !v.text.startsWith(I18n.text(R.string.i18n_settingsactivity_151))) v.text = value()
             sync()
         }
@@ -1106,13 +1285,13 @@ class SettingsActivity : Activity() {
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK && page != Page.MAIN) {
-            show(Page.MAIN, opener)
+        if (keyCode == KeyEvent.KEYCODE_BACK && trail.isNotEmpty()) {
+            goBack()
             return true
         }
         return super.onKeyUp(keyCode, event)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean =
-        if (keyCode == KeyEvent.KEYCODE_BACK && page != Page.MAIN) true else super.onKeyDown(keyCode, event)
+        if (keyCode == KeyEvent.KEYCODE_BACK && trail.isNotEmpty()) true else super.onKeyDown(keyCode, event)
 }

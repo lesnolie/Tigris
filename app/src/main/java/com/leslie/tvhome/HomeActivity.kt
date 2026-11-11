@@ -98,6 +98,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
     private lateinit var grid: RecyclerView
     private lateinit var adapter: TileAdapter
     private var tileStyleSeen = ""
+    private var tileIconSeen = 0L
     private var textScaleSeen = 1f
     private var previousHomeIntentAt = 0L
 
@@ -385,6 +386,7 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         cols = prefs.dockColumns
         repo = AppRepo(this)
         tileStyleSeen = prefs.appTileStyle
+        tileIconSeen = prefs.tileIconRevision
         textScaleSeen = prefs.textScale
         buildViews()
         control = ControlCenter(this, root)
@@ -1505,6 +1507,17 @@ class HomeActivity : Activity(), TileAdapter.Listener {
             showSheet(s.button(I18n.text(R.string.i18n_homeactivity_012)) {}, restoreFocusTo = pos)
             return
         }
+        // The phone page opens at this app's tile picture; the upload replaces its artwork.
+        s.button(I18n.text(R.string.icon_change)) {
+            startActivity(Intent(this, WallpaperActivity::class.java).putExtra(WallpaperActivity.EXTRA_TILE_ICON, app.pkg))
+            android.widget.Toast.makeText(this, I18n.text(R.string.icon_scan_hint, app.label), android.widget.Toast.LENGTH_LONG).show()
+        }
+        if (TileIcons.custom(this, app.pkg) != null) s.button(I18n.text(R.string.icon_restore)) {
+            TileIcons.clear(this, app.pkg)
+            tileIconSeen = prefs.tileIconRevision
+            repo.invalidate(app.pkg)
+            reload(changed = app.pkg, forceFocus = true)
+        }
         s.button(getString(R.string.tile_source_choose)) {
             val modes = arrayOf(Prefs.TILE_AUTO, Prefs.TILE_BANNER, Prefs.TILE_ICON, Prefs.TILE_CLASSIC)
             val titles = arrayOf(R.string.tile_source_auto, R.string.tile_source_banner,
@@ -1867,6 +1880,12 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         val expectedH = tileW * 9 / 16
         if (cols != prefs.dockColumns || tileH != expectedH ||
             kotlin.math.abs(textScaleSeen - prefs.textScale) > 0.001f) { recreate(); return }
+        // Tile pictures uploaded from the phone page (possibly several) or restored: redraw.
+        if (tileIconSeen != prefs.tileIconRevision) {
+            tileIconSeen = prefs.tileIconRevision
+            repo.invalidate()
+            reload()
+        }
         if (tileStyleSeen != prefs.appTileStyle) {
             tileStyleSeen = prefs.appTileStyle
             repo.invalidate()

@@ -159,7 +159,8 @@ class AppRepo(private val ctx: Context) {
     private fun tileKey(pkg: String): String = listOf(
         pkg,
         prefs.appTileStyle,
-        if (pkg == ctx.packageName) SettingsActivity.customIcon(ctx)?.lastModified() ?: 0L else 0L
+        if (pkg == ctx.packageName) SettingsActivity.customIcon(ctx)?.lastModified() ?: 0L else 0L,
+        prefs.tileIconStamp(pkg)
     ).joinToString("@")
 
     /** Builds once on a worker. Never decode or inspect drawable pixels during focus animation. */
@@ -186,6 +187,12 @@ class AppRepo(private val ctx: Context) {
         val forceIcon = mode == Prefs.TILE_ICON
         if (app.component.className == WallpaperActivity::class.java.name) {
             drawWallpaperIconTile(c)
+            return
+        }
+        // An icon the user picked (long press → 更换图标) wins over the app's own artwork.
+        TileIcons.custom(ctx, app.pkg)?.let(TileIcons::decode)?.let { picked ->
+            TileIcons.draw(c, picked, TILE_W, TILE_H)
+            picked.recycle()
             return
         }
         val ownIcon = if (app.component.className == SettingsActivity::class.java.name)

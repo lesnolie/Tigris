@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long press → 更换图标: a picture uploaded from the phone page. -->
+<resources>
+    <string name="icon_change">Change icon</string>
+    <string name="icon_restore">Restore default icon</string>
+    <string name="icon_scan_hint">Scan the QR code with your phone and upload a picture for “%1$s” under App Icons.</string>
+</resources>

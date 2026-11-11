@@ -14,7 +14,7 @@ A tvOS-inspired launcher for Android TV, featuring a Liquid Glass Dock, Top Shel
 
 Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeover fixes and video optimizations still need model-level verification. Other devices and firmware variants may require adjustments.
 
-**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.27 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.27)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.27/Tigris-v2.0.27.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.27/Tigris-guard-v2.0.27.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.27/SHA256SUMS-v2.0.27.txt))
+**Website:** [tigris-tv.pages.dev](https://tigris-tv.pages.dev) · **[v2.0.28 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.28)** ([Standard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.28/Tigris-v2.0.28.apk) · [Compatibility Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.28/Tigris-guard-v2.0.28.apk) · [SHA-256 checksums](https://github.com/lesnolie/Tigris/releases/download/v2.0.28/SHA256SUMS-v2.0.28.txt))
 
 [![Tigris promotional film](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -22,7 +22,7 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 
 ## Which APK should I install? Check the TV OS and firmware
 
-> **Latest stable release: v2.0.27.** Brand banners, scale-only focus, Liquid Glass Dock and stacked app screenshots. Upgrade with the matching Standard/Guard package. See the [release notes](docs/releases/v2.0.27.md).
+> **Latest stable release: v2.0.28.** Grouped Home Screen Settings, a clock screen saver in four styles (Neon, Flip, LCD, Minimal) and custom app icons uploaded from your phone. Upgrade with the matching Standard/Guard package. See the [release notes](docs/releases/v2.0.28.md).
 
 | TV / platform | First choice | When to use another build | Important limits |
 |---|---|---|---|
@@ -35,6 +35,14 @@ Earlier versions were tested on Sony BRAVIA devices. New firmware-specific takeo
 | Samsung **Tizen**, Hisense **native VIDAA** | **No supported Android APK** | Neither | Do not run Android ADB installer commands |
 
 **Verification:** After installing, open another app and press the physical Home key; check reboot, standby/wake and long-press Home cleanup separately. If Home does not return to Tigris, keep the stock launcher enabled and use the [brand install and recovery guide](docs/installation-compatibility.md). Preserve the existing APK signing identity and user data; **do not uninstall merely to bypass installation restrictions**.
+
+## v2.0.28: grouped settings, clock screen saver and custom icons
+
+- **Grouped Home Screen Settings:** the main page lists groups only (Home Screen, Appearance, Wallpaper, Screen Saver, Top Shelf & Weather, Boot animation, Apps, Memory & power, Home Guard & System); each is a short page and returning focuses the row you came from. Settings and stored values are unchanged.
+- **Clock screen saver:** Screen Saver → Content → Clock. Neon, Flip, LCD and Minimal, each in several colours; optional seconds (otherwise the colon blinks) and snow or stars. Neon tubes buzz as they strike up and seconds can tick, both optional. While it shows, Left/Right change the style and Up/Down the colour.
+- **Custom app icons:** long press an app → Change icon, scan the QR code and upload a picture under App Icons; wide pictures fill the tile, square ones are centred. Restore the default from the long-press menu or the phone page.
+
+Version code 47 upgrades v2.0.27 in place with the same signing identity. See the [v2.0.28 release notes](docs/releases/v2.0.28.md).
 
 ## v2.0.27: brand banners and stacked app previews
 
