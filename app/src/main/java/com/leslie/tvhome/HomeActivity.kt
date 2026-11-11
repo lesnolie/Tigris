@@ -1884,7 +1884,8 @@ class HomeActivity : Activity(), TileAdapter.Listener {
         if (tileIconSeen != prefs.tileIconRevision) {
             tileIconSeen = prefs.tileIconRevision
             repo.invalidate()
-            reload()
+            // The app list is unchanged, so a diff would redraw nothing: rebind every tile.
+            adapter.notifyItemRangeChanged(0, adapter.itemCount)
         }
         if (tileStyleSeen != prefs.appTileStyle) {
             tileStyleSeen = prefs.appTileStyle
