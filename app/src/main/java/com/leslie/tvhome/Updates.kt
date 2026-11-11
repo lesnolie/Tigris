@@ -455,8 +455,16 @@ class UpdateResult : BroadcastReceiver() {
         val sessionId = intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID,
             intent.getIntExtra("expected_session", -1))
         val expected = Updates.prefs(context).getInt(p.pkg + ".session", -1)
+        val legacy = intent.getIntExtra(PackageInstaller.EXTRA_LEGACY_STATUS, Int.MIN_VALUE)
+        val detail = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
+        val blocker = intent.getStringExtra(PackageInstaller.EXTRA_OTHER_PACKAGE_NAME)
+        Log.i("TigrisUpdate", "installer callback pkg=${p.pkg} session=$sessionId expected=$expected " +
+            "status=$status legacy=$legacy blocker=$blocker detail=$detail foreground=${UpdateActivity.visible}")
         // A cancelled session may deliver its result after the replacement session starts.
-        if (sessionId < 0 || sessionId != expected) return
+        if (sessionId < 0 || sessionId != expected) {
+            Log.w("TigrisUpdate", "ignoring stale installer callback session=$sessionId expected=$expected")
+            return
+        }
         if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
             val confirmation = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
             if (InstallConfirmation.missingSystemIntent(confirmation != null)) {
@@ -464,31 +472,24 @@ class UpdateResult : BroadcastReceiver() {
                 Updates.reportMissingInstallUi(context, p)
                 return
             }
-            // Launch the OS-supplied Intent without resolveActivity preflight.
-            confirmation!!.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            Updates.prefs(context).edit().putString(p.pkg + ".confirmation", confirmation.toUri(0))
+            // The OS-supplied Intent is authoritative; never probe a synthetic resolver.
+            // Starting it from a BroadcastReceiver/application context is fragile on OEM TVs.
+            // Foreground activity handoff also avoids background activity launch restrictions.
+            Updates.prefs(context).edit().putString(p.pkg + ".confirmation", confirmation!!.toUri(0))
                 .putString(p.pkg + ".phase", "pending").putInt(p.pkg + ".progress", -1)
                 .putString(p.pkg + ".status", I18n.text(R.string.update_pending_recovery)).apply()
-            if (UpdateActivity.visible) {
-                try {
-                    context.startActivity(confirmation)
-                } catch (e: ActivityNotFoundException) {
-                    Log.w("TigrisUpdate", "installer activity missing session=$sessionId", e)
-                    Updates.reportMissingInstallUi(context, p)
-                    return
-                } catch (e: SecurityException) {
-                    Log.w("TigrisUpdate", "installer activity blocked session=$sessionId", e)
-                    Updates.reportMissingInstallUi(context, p)
-                    return
-                }
-            }
-            Log.i("TigrisUpdate", "confirmation delivered session=$sessionId visible=${UpdateActivity.visible}")
+            val handedOff = UpdateActivity.launchSystemConfirmation(p, sessionId, confirmation)
+            Log.i("TigrisUpdate", "confirmation delivered session=$sessionId foreground=${UpdateActivity.visible} handedOff=$handedOff")
+            // Without a resumed update Activity, leave the session intact. The user can
+            // return to the page and press Continue; that obtains a fresh OS Intent.
             // Notifications can outlive a reboot too: route through the page's recommit path.
             Updates.notify(context, p, I18n.text(R.string.i18n_updates_025))
         } else {
             if (status == PackageInstaller.STATUS_SUCCESS) Updates.releaseDownload(context, p.pkg)
             if (status == PackageInstaller.STATUS_SUCCESS) Updates.discardSideload(context, p.pkg)
-            val message = if (status == PackageInstaller.STATUS_SUCCESS) I18n.text(R.string.i18n_updates_026) else I18n.text(R.string.i18n_updates_027, intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE))
+            val message = if (status == PackageInstaller.STATUS_SUCCESS) I18n.text(R.string.i18n_updates_026)
+                else I18n.text(R.string.i18n_updates_027,
+                    "${detail ?: "unknown"} (status=$status, legacy=$legacy${if (blocker != null) ", blockedBy=$blocker" else ""})")
             Updates.prefs(context).edit().remove(p.pkg + ".session").remove(p.pkg + ".confirmation")
                 .putString(p.pkg + ".phase", if (status == PackageInstaller.STATUS_SUCCESS) "done" else "failed")
                 .putInt(p.pkg + ".progress", -1).putString(p.pkg + ".status", message)
