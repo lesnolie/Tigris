@@ -110,9 +110,11 @@ export const zh = {
 
     film: {
       eyebrow: "FILM",
-      title: "42 秒，认识 Tigris。",
-      lede: "看看 Tigris 如何让你的电视桌面焕然一新。点击播放，开启声音。",
-      label: "播放 Tigris 介绍片（有声音）",
+      title: "会发光的时钟屏保。",
+      lede: "Tigris 2.0.28：霓虹、翻页、液晶、极简四种时钟，分组整理的设置，以及换成你喜欢的图标。全部在电视上实拍，点击播放，开启声音。",
+      label: "播放 Tigris 2.0.28 新功能短片（有声音）",
+      classicTitle: "42 秒，认识 Tigris。",
+      classicLabel: "播放 Tigris 介绍片（有声音）",
     },
     gallery: {
       eyebrow: "IN MOTION",

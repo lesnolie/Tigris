@@ -17,7 +17,7 @@
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
-▶ [观看 42 秒宣传片](https://tigris-tv.pages.dev/#film)（在官网播放，有声音）
+▶ [观看 v2.0.28 新功能短片（54 秒）和 42 秒宣传片](https://tigris-tv.pages.dev/#film)（在官网播放，有声音）
 
 ---
 

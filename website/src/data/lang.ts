@@ -68,7 +68,7 @@ export interface Copy {
     attribution: string;
   };
   features: { eyebrow: string; title: string; lede: string };
-  film: { eyebrow: string; title: string; lede: string; label: string };
+  film: { eyebrow: string; title: string; lede: string; label: string; classicTitle: string; classicLabel: string };
   gallery: { eyebrow: string; title: string; lede: string };
   install: {
     eyebrow: string;
