@@ -131,7 +131,14 @@ class WallpaperActivity : Activity() {
         stopLater.removeCallbacks(stop)
         address.text = I18n.text(R.string.i18n_wallpaperactivity_005)
         io.execute {
-            val url = PhoneServer.start(this)?.let { if (intent.getBooleanExtra("upload_avatar", false)) it + "#avatar" else it }
+            val tileIcon = intent.getStringExtra(EXTRA_TILE_ICON)
+            val url = PhoneServer.start(this)?.let {
+                when {
+                    tileIcon != null -> it + "#tileicon=" + java.net.URLEncoder.encode(tileIcon, "UTF-8")
+                    intent.getBooleanExtra("upload_avatar", false) -> it + "#avatar"
+                    else -> it
+                }
+            }
             val bmp = url?.let { PhoneServer.qr(it) }
             main.post {
                 address.text = url ?: I18n.text(R.string.i18n_wallpaperactivity_006)
@@ -212,6 +219,8 @@ class WallpaperActivity : Activity() {
     }
 
     companion object {
+        /** A package: the phone page opens at that app's tile picture (long press → 更换图标). */
+        const val EXTRA_TILE_ICON = "upload_tile_icon"
         private val stopLater = Handler(Looper.getMainLooper())
         private var stopGeneration = 0
         private val stop: Runnable = object : Runnable {

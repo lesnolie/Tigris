@@ -60,7 +60,7 @@ class PhoneServer private constructor(private val ctx: Context, private val toke
                 }
                 post && path == "/api/screensaver" -> {
                     val v = form(session)["mode"].orEmpty()
-                    if (v == Prefs.SAVER_PHOTOS || v == Prefs.SAVER_AERIAL) prefs.saverMode = v
+                    if (v in Prefs.SAVER_MODES) prefs.saverMode = v
                     json(state())
                 }
                 post && path == "/api/links" -> {
@@ -138,6 +138,12 @@ class PhoneServer private constructor(private val ctx: Context, private val toke
                     json(state())
                 }
                 post && path == "/api/icon/upload" -> uploadIcon(session)
+                post && path == "/api/tileicon/upload" -> uploadTileIcon(session)
+                post && path == "/api/tileicon/delete" -> {
+                    val pkg = form(session)["pkg"].orEmpty()
+                    if (pkg in homeApps().map { it.pkg }) TileIcons.clear(ctx, pkg)
+                    json(state())
+                }
                 post && path == "/api/backdrop/upload" -> uploadBackdrop(session)
                 post && path == "/api/backdrop/delete" -> {
                     session.parseBody(HashMap())
@@ -187,6 +193,10 @@ class PhoneServer private constructor(private val ctx: Context, private val toke
         .put("avatar", SettingsActivity.avatarFile(ctx) != null)
         .put("icon", SettingsActivity.iconFile(ctx) != null)
         .put("backdrop", SettingsActivity.backdropFile(ctx) != null)
+        .put("apps", JSONArray().apply {
+            homeApps().forEach { put(JSONObject().put("pkg", it.pkg).put("label", it.label)
+                .put("custom", TileIcons.custom(ctx, it.pkg) != null)) }
+        })
         .put("mine", names(Wallpapers.MINE))
         .put("custom", names(Wallpapers.CUSTOM))
 
@@ -294,6 +304,37 @@ class PhoneServer private constructor(private val ctx: Context, private val toke
         tmp.renameTo(File(ctx.filesDir, SettingsActivity.ICON_FILE))
         prefs.ownIcon = true
         return json(state().put("ok", true))
+    }
+
+    /** Apps on the Home screen whose tile picture can be replaced: no folders, inputs or Tigris's own tiles. */
+    private fun homeApps(): List<AppEntry> = AppRepo(ctx).let { repo ->
+        val all = repo.allApps().associateBy { it.pkg }
+        // In Home order, with each folder's apps where the folder is.
+        repo.orderedVisible().flatMap { e ->
+            when {
+                e.folder != null -> e.folder.members.mapNotNull { all[it] }
+                e.input != null -> emptyList()
+                else -> listOf(e)
+            }
+        }.filter { !repo.isOwn(it.pkg) }.distinctBy { it.pkg }
+    }
+
+    /**
+     * A tile picture for one app (long press → 更换图标 opens this page at it). Any picture; a wide one
+     * fills the tile, a square one is fitted (TileIcons.draw). Kept as PNG at most 1280 px wide.
+     */
+    private fun uploadTileIcon(session: IHTTPSession): Response {
+        val files = HashMap<String, String>()
+        session.parseBody(files)
+        val pkg = session.parameters["pkg"]?.firstOrNull().orEmpty()
+        if (pkg !in homeApps().map { it.pkg }) return json(state().put("ok", false))
+        val src = files.values.map { File(it) }.firstOrNull { it.exists() && it.length() in 1..MAX_UPLOAD }
+            ?.let { decodeAtMost(it, 1280) } ?: return json(state().put("ok", false))
+        val bmp = if (src.width > 1280) Bitmap.createScaledBitmap(src, 1280, src.height * 1280 / src.width, true) else src
+        val ok = TileIcons.save(ctx, pkg, bmp)
+        if (bmp !== src) bmp.recycle()
+        src.recycle()
+        return json(state().put("ok", ok))
     }
 
     /** The settings page background: any picture, kept as JPEG at most 1920 px wide. */

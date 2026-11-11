@@ -186,7 +186,7 @@ adb -s <TV_IP>:5555 shell am broadcast -a com.leslie.tvhome.CONFIG -n com.leslie
 # prints data="guard=true keep_adb=true secure_settings=true"
 ```
 
-The user can change both later in 设置 → 桌面守护 / 保持 ADB 调试开启. The installation check and 桌面守护 rows are available on every Android brand; 保持 ADB 调试开启 on Xiaomi only.
+The user can change both later in 设置 → 桌面守护与系统 → 桌面守护 / 保持 ADB 调试开启. The installation check and 桌面守护 rows are available on every Android brand; 保持 ADB 调试开启 on Xiaomi only.
 
 ## 5. Verify
 
@@ -208,7 +208,7 @@ On first start the app downloads background photos (needs internet). The first m
 
 ## 6. Local debugging authorization (power, sleep, deep memory cleanup)
 
-On first start Tigris asks to enable these features. When the user presses "开始", the TV shows "Allow debugging?" again, this time from the TV to itself. The user must tick "Always allow" and press Allow. Check the screen with `screencap` and guide them. You can verify afterwards: the Control Center (Back key on the home screen) no longer shows a "本机调试未授权" line. Once this is allowed, Tigris can also give itself the step 4 grants (设置 → 桌面守护 does that).
+On first start Tigris asks to enable these features. When the user presses "开始", the TV shows "Allow debugging?" again, this time from the TV to itself. The user must tick "Always allow" and press Allow. Check the screen with `screencap` and guide them. You can verify afterwards: the Control Center (Back key on the home screen) no longer shows a "本机调试未授权" line. Once this is allowed, Tigris can also give itself the step 4 grants (设置 → 桌面守护与系统 → 桌面守护 does that).
 
 If you need to press buttons for the user, first find the focused element:
 
@@ -237,10 +237,10 @@ If the first call returns an error or nothing, ask the user to enable Settings �
 
 ## 8. Optional settings
 
-Tell the user these exist; change them only if asked. All of them are in the Control Center → 设置 (gear), or on the "主屏幕设置" page:
+Tell the user these exist; change them only if asked. All of them are in the Control Center → 设置 (gear), or on the "主屏幕设置" page, whose main page lists groups (主屏幕, 外观, 壁纸, 屏幕保护程序, 顶部内容与天气, 开机动画, 应用, 内存与电源, 桌面守护与系统):
 
 - Background (背景, also the **壁纸** tile on the home screen): every choice shown as a picture, picked with one press — Bing photos, anime wallpapers, 我的照片 (uploaded), 自定义链接, or a gradient theme; plus the change interval. The same page shows a QR code: a phone on the same Wi-Fi opens a page to upload its own photos, paste picture links (an image, a random-image API, or a page / JSON listing images; fetched daily), and pick the background and screensaver.
-- Photo frame as the system screensaver (电视空闲时显示相框), the idle time, and its content (屏保内容): photos or Apple TV aerial films (streamed from Apple, about 15–20 Mbps; falls back to photos offline). “空闲多久显示相框” is Tigris’s own home-only countdown (`frame_idle_minutes`); it does not write `screen_off_timeout`. That in-app timer requires Home in front, no media playing and no foreign window keeping the screen on. A positive `screen_saver_timeout` starts it 15 s earlier; otherwise it uses the in-app minutes. The independent system dream also accepts Tigris Settings/Updates/Wallpaper UI when Android triggers its idle timeout, without rechecking Home's timer or requiring Home to remain focused during the dream transition. Foreign foreground apps and active playback remain excluded. The choice is logged with tag `TigrisFrame`. Never treat SCREEN_OFF as proof of a power-key press: optional full shutdown requires a recent system-confirmed power_button sleep and must be cancelled on wake.
+- Photo frame as the system screensaver (电视空闲时显示相框), the idle time, and its content (屏保内容): photos, Apple TV aerial films or a clock (霓虹 / 翻页 / 液晶 / 极简, with optional seconds, sounds and snow or stars; settings under 屏幕保护程序 → 时钟) (streamed from Apple, about 15–20 Mbps; falls back to photos offline). “空闲多久显示相框” is Tigris’s own home-only countdown (`frame_idle_minutes`); it does not write `screen_off_timeout`. That in-app timer requires Home in front, no media playing and no foreign window keeping the screen on. A positive `screen_saver_timeout` starts it 15 s earlier; otherwise it uses the in-app minutes. The independent system dream also accepts Tigris Settings/Updates/Wallpaper UI when Android triggers its idle timeout, without rechecking Home's timer or requiring Home to remain focused during the dream transition. Foreign foreground apps and active playback remain excluded. The choice is logged with tag `TigrisFrame`. Never treat SCREEN_OFF as proof of a power-key press: optional full shutdown requires a recent system-confirmed power_button sleep and must be cancelled on wake.
 - HDMI inputs on the home screen: Control Center → 输入源 → 在主屏幕上显示….
 - Apps kept alive by memory cleanup.
 - Clock (时间格式, 时钟位置), focus animation (聚焦动画), Control Center style (控制中心样式). The last two default to 自动, which picks the cheaper look on low-end TVs.
@@ -323,7 +323,7 @@ Tigris handles this without root, and without disabling or uninstalling anything
 3. **Keep ADB on** (optional): when Xiaomi switches ADB debugging off, Tigris switches it straight back on.
 4. With the guard on, Tigris also puts its screensaver back when the firmware overwrites it.
 
-Turn it on with the step 4 grants and the `CONFIG` broadcast, or on the TV in 设置 → 桌面守护 (which grants itself through local adb once step 6 is done). Then check:
+Turn it on with the step 4 grants and the `CONFIG` broadcast, or on the TV in 设置 → 桌面守护与系统 → 桌面守护 (which grants itself through local adb once step 6 is done). Then check:
 
 ```sh
 adb -s <TV_IP>:5555 shell settings get secure enabled_accessibility_services   # contains com.leslie.tvhome/com.leslie.tvhome.HomeGuardService
@@ -334,9 +334,9 @@ adb -s <TV_IP>:5555 logcat -d -s TigrisGuard                                    
 
 Then ask the user to put the TV in standby and wake it, and check again that Tigris is in front and the guard is still listed. If the user agrees to a reboot, check after boot too. A real Home press is always answered. Boot, wake and revival take over only when the front is a stock home (a window event or usage stats); an unknown front, an app or HDMI is left alone. During the first three minutes, repeated automatic takeovers pause so a boot fight with the factory launcher stops (issue #14). If no window event arrives, press Home once; do not claim automatic boot takeover was verified. See docs/guard-stability.md.
 
-On Android 12 and newer, except Xiaomi, 设置 → 持续过滤主页键 is an optional extra filter. It is off by default. Warn that some apps may move twice per press. Do not enable it on Xiaomi.
+On Android 12 and newer, except Xiaomi, 设置 → 桌面守护与系统 → 持续过滤主页键 is an optional extra filter. It is off by default. Warn that some apps may move twice per press. Do not enable it on Xiaomi.
 
-If the guard is listed but `dumpsys accessibility` shows no bound service for it, Tigris re-registers it by itself within a few seconds of opening; if it stays unbound, toggle it off and on in 设置 → 桌面守护.
+If the guard is listed but `dumpsys accessibility` shows no bound service for it, Tigris re-registers it by itself within a few seconds of opening; if it stays unbound, toggle it off and on in 设置 → 桌面守护与系统 → 桌面守护.
 
 If verification fails, report the observed failure and unverified firmware restrictions. Tigris can still be opened as an app; do not claim a package allowlist is confirmed without firmware evidence.
 
@@ -369,6 +369,10 @@ Run all commands with `adb -s <TV_IP>:5555 shell`. Paste their raw output to the
 3. Send `input keyevent KEYCODE_HOME`, wait two seconds, then `dumpsys activity activities | grep -m1 mFocusedApp` and `dumpsys window | grep mCurrentFocus`.
 
 `install.sh` treats `mFocusedApp` as the foreground check. Paste both lines. After installation, actual foreground should contain `com.leslie.tvhome`; guard installations may retain the vendor HOME resolver. Report installation, Home-key behavior, standby/wake and boot separately. Never claim an untested check passed. Do not reboot/sleep/power off without consent. Do not disable the stock launcher.
+
+## Custom app icons
+
+Long press an app on Home → 更换图标 opens the phone-upload QR page at its App Icons section; the user uploads a picture there (wide pictures fill the tile, square ones are centred) and returns Home. 恢复默认图标 appears in the long-press menu once an app has a custom picture. Pictures are stored privately per package in `files/tile_icons`. Tigris ships and downloads no third-party icons; do not fetch or push brand artwork for the user. Requires v2.0.28 or newer.
 
 ## Avatar uploads
 

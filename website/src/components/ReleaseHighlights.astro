@@ -4,21 +4,21 @@ import { brand } from "../data/site";
 interface Props { locale: Locale }
 const zh = Astro.props.locale === "zh";
 const items = zh ? [
-  ["01", "品牌横图，选中放大。", "统一 16:9 卡片，自动优先使用应用自带 TV banner，没有可用横图时统一白底。去掉额外白框，选中放大，Dock 液态玻璃继续保留。"],
-  ["02", "应用画面，层叠切换。", "左右选择、确定打开，默认选中最近使用的任务。画面来自已开启无障碍服务的 Android 11+ 截图；没有截图也能打开应用，不用巨大图标代替。"],
-  ["03", "少些入口，多些顺手。", "控制中心移除多余标签，保留电视与媒体控制。顶部内容可用遥控器浏览，返回桌面尽量保留原应用位置；文字大小可按需调整。"],
+  ["01", "设置分组，一眼找到。", "主屏幕设置首页只列分组：主屏幕、外观、壁纸、屏保、应用、系统……每组一页短列表，返回时回到原来那一行。设置项一个不少。"],
+  ["02", "一块会发光的时钟。", "屏保新增时钟：霓虹、翻页、液晶、极简，多种配色，可显示秒、加飘雪或星光。霓虹亮起有“滋”的电流声，秒针声音可开关。左右换样式，上下换颜色。"],
+  ["03", "图标，换成你喜欢的。", "长按 App 选择「更换图标」，用手机扫码上传图片：横版铺满，方形居中。随时恢复默认。"],
 ] : [
-  ["01", "Brand banners. Clearer focus.", "Uniform 16:9 cards prefer the app's TV banner, with white fallback cards when unavailable. Selection scales up without added white frames. The Liquid Glass Dock stays."],
-  ["02", "App screens, stacked.", "Choose with Left/Right and open with OK; the newest task is selected first. Previews use Android 11+ accessibility screenshots with the service enabled. Missing previews never hide apps or become giant icons."],
-  ["03", "Fewer tabs. Smoother returns.", "A simpler Control Center keeps TV and media controls. Browse Top Shelf with the remote, keep your app position when returning Home, and adjust text size."],
+  ["01", "Settings, grouped.", "The Home Screen Settings page now lists groups — Home Screen, Appearance, Wallpaper, Screen Saver, Apps, System and more. Each is a short page, and you return to the row you came from. Nothing removed."],
+  ["02", "A clock that glows.", "The screen saver gains a clock: Neon, Flip, LCD and Minimal in several colours, with optional seconds, snow or stars. Neon tubes buzz as they light; seconds can tick. Left/Right for style, Up/Down for colour."],
+  ["03", "Icons, your way.", "Long press an app, choose Change icon and upload a picture from your phone: wide pictures fill the tile, square ones are centred. Restore any time."],
 ];
 ---
 <section class="release-strip wrap" aria-label={zh ? "本次更新" : "Latest update"}>
-  <a class="release-pill" href={brand.releases}><span class="dot"></span>{zh ? "v2.0.27 · 正式版更新" : "v2.0.27 · Stable release"} ↗</a>
+  <a class="release-pill" href={brand.releases}><span class="dot"></span>{zh ? "v2.0.28 · 正式版更新" : "v2.0.28 · Stable release"} ↗</a>
   <div class="release-grid">{items.map(([n,title,body]) => <article><span class="release-number">{n}</span><h3>{title}</h3><p>{body}</p></article>)}</div>
   <figure class="release-capture">
-    <img src="/img/release-home.webp" width="1600" height="900" loading="lazy" alt={zh ? "桌面截图：横向品牌卡片排列在液态玻璃 Dock 上" : "Desktop capture with horizontal brand cards on the Liquid Glass Dock"} />
-    <figcaption>{zh ? "已有预览构建的桌面截图 · 不代表本次正式版的实机验收" : "Desktop capture from an earlier preview build; not a device acceptance test of this release."}</figcaption>
+    <img src="/img/release-clock.webp" width="1600" height="900" loading="lazy" alt={zh ? "霓虹时钟屏保：粉色小时与青色分钟灯管，下方有倒影" : "Neon clock screen saver: pink hour and cyan minute tubes with a reflection below"} />
+    <figcaption>{zh ? "Sony BRAVIA 实机截图 · 霓虹时钟屏保（本地签名测试构建）" : "Captured on a Sony BRAVIA with a locally signed test build: the neon clock screen saver."}</figcaption>
   </figure>
 </section>
 <style>

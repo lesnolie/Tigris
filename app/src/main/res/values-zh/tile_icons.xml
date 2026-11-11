@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long press → 更换图标: a picture uploaded from the phone page. -->
+<resources>
+    <string name="icon_change">更换图标</string>
+    <string name="icon_restore">恢复默认图标</string>
+    <string name="icon_scan_hint">用手机扫描二维码，在「App 图标」里为「%1$s」上传图片。</string>
+</resources>

@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.27 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.27)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.27/Tigris-v2.0.27.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.27/Tigris-guard-v2.0.27.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.27/SHA256SUMS-v2.0.27.txt)）
+- 最新正式版：**[v2.0.28 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.28)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.28/Tigris-v2.0.28.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.28/Tigris-guard-v2.0.28.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.28/SHA256SUMS-v2.0.28.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **最新正式版为 v2.0.27。** 品牌横向 TV banner、无白框选中放大、液态玻璃 Dock，以及堆叠应用截图。对应 Standard/Guard 类型覆盖升级；详见 [更新说明](docs/releases/v2.0.27.md)。
+> **最新正式版为 v2.0.28。** 分组的主屏幕设置、四种样式的时钟屏保（霓虹、翻页、液晶、极简），以及用手机上传自定义 App 图标。对应 Standard/Guard 类型覆盖升级；详见 [更新说明](docs/releases/v2.0.28.md)。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
@@ -36,6 +36,14 @@
 | Samsung **Tizen**、海信**原生 VIDAA** | **无兼容的 Android APK 安装方式** | 不适用 | 请勿执行 Android ADB 安装命令 |
 
 **如何验收：** 安装后先打开其他应用，再按实体遥控器 Home；分别检查冷开机、待机唤醒、长按 Home 清理内存。无法通过时保留原厂桌面，按照[机型安装/恢复指南](docs/installation-compatibility.md)继续。切换 Standard/Guard 应先确认厂商限制与签名兼容性，**不要为解决安装失败直接卸载已有 Tigris，以免丢失设置和文件夹**。
+
+## v2.0.28：分组设置、时钟屏保与自定义图标
+
+- **主屏幕设置分组**：首页只列分组（主屏幕、外观、壁纸、屏幕保护程序、顶部内容与天气、开机动画、应用、内存与电源、桌面守护与系统），每组一页短列表，返回时焦点回到原来那一行。设置项和保存的值不变。
+- **时钟屏保**：屏幕保护程序 → 屏保内容 →「时钟」。霓虹、翻页、液晶、极简四种样式，每种多种配色；可显示秒（不显示时冒号闪烁）、可加飘雪或星光。霓虹亮起有电流声，显示秒时每秒有声音，均可关闭。屏保中左右键换样式、上下键换颜色。
+- **自定义 App 图标**：长按 App →「更换图标」，手机扫码后在「App 图标」上传图片；横版图片铺满，方形图片居中。长按菜单或手机页面可恢复默认图标。
+
+版本码 47，保留签名，可从 v2.0.27 覆盖升级。详见 [v2.0.28 更新说明](docs/releases/v2.0.28.md)。
 
 ## v2.0.27：品牌横图与堆叠应用画面
 

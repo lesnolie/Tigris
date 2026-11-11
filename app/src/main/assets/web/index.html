@@ -99,6 +99,7 @@
 <div class="seg" id="saver">
   <button data-mode="photos" data-i18n="photos">Photos</button>
   <button data-mode="aerial" data-i18n="aerial">Apple TV Aerials</button>
+  <button data-mode="clock" data-i18n="saverClock">Clock</button>
 </div>
 <p class="hint" data-i18n="saverHint">Aerials stream from Apple's servers (approximately 15–20 Mbps). If playback fails, the screen saver falls back to photos. It uses the wallpaper source selected above.</p>
 
@@ -130,6 +131,12 @@
 <h2 data-i18n="settingsIcon">Settings Icon</h2>
 <label class="primary" id="pickIcon"><span data-i18n="uploadIcon">Upload Settings icon</span><input type="file" id="iconFile" accept="image/*" hidden></label>
 <p class="hint" id="iconHint"></p>
+
+<h2 id="tileicons" data-i18n="tileIcons">App Icons</h2>
+<p><select id="tileApp" aria-label="App"></select></p>
+<label class="primary"><span data-i18n="uploadTileIcon">Upload icon</span><input type="file" id="tileIconFile" accept="image/*" hidden></label>
+<p class="hint" data-i18n="tileIconHint">Pick an app on the Home Screen, then upload a picture for its icon. A wide 16:9 picture fills the whole tile; a square one is centered. It takes effect when you return home.</p>
+<p class="hint" id="tileIconState"></p>
 
 <h2 data-i18n="myPhotos">My Photos</h2>
 <label class="primary" id="pick"><span data-i18n="choosePhotos">Choose photos to upload</span><input type="file" id="file" accept="image/*" multiple hidden></label>
@@ -212,6 +219,7 @@ function render(s) {
   } else {
     $('backdropHint').textContent = t('backdropDefault');
   }
+  renderTileIcons(s);
   $('avatarHint').textContent = s.avatar ? t('avatarCustom') : t('avatarDefault');
   if (s.avatar) {
     const reset = document.createElement('button'); reset.textContent = t('avatarReset');
@@ -326,6 +334,47 @@ $('iconFile').onchange = async e => {
   try {
     const fd = new FormData(); fd.append('icon', f, f.name);
     const s = await (await fetch(base + 'api/icon/upload', { method: 'POST', body: fd })).json(); render(s);
+    toast(s.ok ? t('iconSuccess') : t('invalidImage'));
+  } catch (err) { toast(t('uploadFailed', err.message)); }
+  e.target.value = '';
+};
+
+// Long press → Change icon on the TV opens this page as #tileicon=<package>.
+const wantedTileApp = (location.hash.match(/^#tileicon=(.+)$/) || [])[1];
+let tileAppChosen = wantedTileApp ? decodeURIComponent(wantedTileApp) : '';
+
+function renderTileIcons(s) {
+  const sel = $('tileApp');
+  const current = sel.value || tileAppChosen;
+  sel.innerHTML = '';
+  for (const a of s.apps || []) {
+    const o = document.createElement('option'); o.value = a.pkg;
+    o.textContent = a.custom ? a.label + ' ✓' : a.label;
+    sel.append(o);
+  }
+  if ((s.apps || []).some(a => a.pkg === current)) sel.value = current;
+  tileAppChosen = sel.value;
+  if (wantedTileApp && !renderTileIcons.scrolled) {
+    renderTileIcons.scrolled = true;
+    setTimeout(() => $('tileicons').scrollIntoView({ block: 'start' }), 50);
+  }
+  const app =(s.apps || []).find(a => a.pkg === sel.value);
+  const hint = $('tileIconState');
+  hint.textContent = app ? (app.custom ? t('tileIconCustom') : t('tileIconDefault')) : '';
+  if (app && app.custom) {
+    const reset = document.createElement('button'); reset.textContent = t('tileIconReset');
+    reset.onclick = () => post('api/tileicon/delete', { pkg: app.pkg }).then(() => toast(t('tileIconResetDone')));
+    hint.appendChild(reset);
+  }
+}
+
+$('tileApp').onchange = () => { tileAppChosen = $('tileApp').value; if (state) renderTileIcons(state); };
+
+$('tileIconFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f || !$('tileApp').value) return;
+  try {
+    const fd = new FormData(); fd.append('pkg', $('tileApp').value); fd.append('icon', f, f.name);
+    const s = await (await fetch(base + 'api/tileicon/upload', { method: 'POST', body: fd })).json(); render(s);
     toast(s.ok ? t('iconSuccess') : t('invalidImage'));
   } catch (err) { toast(t('uploadFailed', err.message)); }
   e.target.value = '';

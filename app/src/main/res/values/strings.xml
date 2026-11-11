@@ -38,17 +38,7 @@
     <string name="tvos_native_recents_unavailable">System switcher unavailable. Use Left/Right to choose an app and OK to open it.</string>
     <string name="tvos_now_playing">Now Playing</string>
     <string name="tvos_now_playing_unavailable">Media access not authorized or no active session</string>
-    <string name="tvos_device_settings_title">TV System Settings</string>
-    <string name="tvos_device_settings_info">Opens the TV original system settings; support depends on firmware and permissions.</string>
     <string name="tvos_device_settings_unavailable">Unavailable on this TV</string>
-    <string name="tvos_setting_display">Display and resolution</string>
-    <string name="tvos_setting_audio">Sound and audio</string>
-    <string name="tvos_setting_network">Wi-Fi and network</string>
-    <string name="tvos_setting_bluetooth">Bluetooth and controllers</string>
-    <string name="tvos_setting_apps">Applications</string>
-    <string name="tvos_setting_accessibility">Accessibility</string>
-    <string name="tvos_setting_keyboard">Keyboard and input</string>
-    <string name="tvos_setting_date">Date and time</string>
     <string name="tvos_controls">Controls</string>
     <string name="tvos_dynamic_text_title">Larger Text</string>
     <string name="tvos_dynamic_text_help">Resize Tigris interface text; does not affect other TV apps.</string>

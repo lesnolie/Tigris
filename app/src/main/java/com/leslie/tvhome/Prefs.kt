@@ -168,10 +168,50 @@ class Prefs(ctx: Context) {
         get() = sp.getString("prev_screensaver", "")!!
         set(v) = sp.edit().putString("prev_screensaver", v).apply()
 
-    /** What the photo frame / screensaver shows: [SAVER_PHOTOS] or [SAVER_AERIAL]. */
+    /** What the photo frame / screensaver shows: [SAVER_PHOTOS], [SAVER_AERIAL] or [SAVER_CLOCK]. */
     var saverMode: String
         get() = sp.getString("saver_mode", SAVER_PHOTOS)!!
         set(v) = sp.edit().putString("saver_mode", v).apply()
+
+    /** The clock screensaver's look, one of [CLOCK_SAVER_STYLES]. */
+    var clockSaverStyle: String
+        get() = sp.getString("clock_saver_style", CLOCK_SAVER_NEON)!!.takeIf { it in CLOCK_SAVER_STYLES } ?: CLOCK_SAVER_NEON
+        set(v) = sp.edit().putString("clock_saver_style", v).apply()
+
+    /** When this app's picked icon last changed ([TileIcons]); part of its tile's cache key. 0: none ever. */
+    fun tileIconStamp(pkg: String): Long = sp.getLong("tile_icon_$pkg", 0L)
+
+    /** The most recent tile picture change anywhere, so Home redraws its tiles on return. */
+    val tileIconRevision: Long get() = sp.getLong("tile_icon_rev", 0L)
+
+    fun noteTileIcon(pkg: String) {
+        val now = System.currentTimeMillis()
+        sp.edit().putLong("tile_icon_$pkg", now).putLong("tile_icon_rev", now).commit()
+    }
+
+    /** Each clock style keeps its own colour, an index into [ClockThemes]. */
+    fun clockColor(style: String): Int = sp.getInt("clock_color_$style", 0)
+    fun setClockColor(style: String, index: Int) = sp.edit().putInt("clock_color_$style", index).apply()
+
+    /** Seconds on the clock; without them the colon blinks. */
+    var clockSeconds: Boolean
+        get() = sp.getBoolean("clock_seconds", false)
+        set(v) = sp.edit().putBoolean("clock_seconds", v).apply()
+
+    /** A tick every second while seconds are shown. */
+    var clockTick: Boolean
+        get() = sp.getBoolean("clock_tick", true)
+        set(v) = sp.edit().putBoolean("clock_tick", v).apply()
+
+    /** The buzz of the neon tubes striking up. */
+    var neonBuzz: Boolean
+        get() = sp.getBoolean("neon_buzz", true)
+        set(v) = sp.edit().putBoolean("neon_buzz", v).apply()
+
+    /** Snow or stars around the clock, one of [CLOCK_EFFECTS]. */
+    var clockEffect: String
+        get() = sp.getString("clock_effect", CLOCK_EFFECT_NONE)!!.takeIf { it in CLOCK_EFFECTS } ?: CLOCK_EFFECT_NONE
+        set(v) = sp.edit().putString("clock_effect", v).apply()
 
     /** Keep the home screen in front on firmwares that pin Home to their own launcher (Guard.kt). */
     var guard: Boolean
@@ -372,6 +412,17 @@ class Prefs(ctx: Context) {
     companion object {
         const val SAVER_PHOTOS = "photos"
         const val SAVER_AERIAL = "aerial"
+        const val SAVER_CLOCK = "clock"
+        val SAVER_MODES = listOf(SAVER_PHOTOS, SAVER_AERIAL, SAVER_CLOCK)
+        const val CLOCK_SAVER_NEON = "neon"
+        const val CLOCK_SAVER_FLIP = "flip"
+        const val CLOCK_SAVER_MINIMAL = "minimal"
+        const val CLOCK_SAVER_LCD = "lcd"
+        val CLOCK_SAVER_STYLES = listOf(CLOCK_SAVER_NEON, CLOCK_SAVER_FLIP, CLOCK_SAVER_LCD, CLOCK_SAVER_MINIMAL)
+        const val CLOCK_EFFECT_NONE = "none"
+        const val CLOCK_EFFECT_SNOW = "snow"
+        const val CLOCK_EFFECT_STARS = "stars"
+        val CLOCK_EFFECTS = listOf(CLOCK_EFFECT_NONE, CLOCK_EFFECT_SNOW, CLOCK_EFFECT_STARS)
 
         const val AUTO = "auto"
         const val CLOCK_CORNER = "corner"
