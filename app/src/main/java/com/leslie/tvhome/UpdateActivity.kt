@@ -22,7 +22,34 @@ import java.util.concurrent.Executors
 class UpdateActivity : Activity() {
     companion object {
         @Volatile var visible = false
+        @Volatile private var resumedActivity: UpdateActivity? = null
         private const val LEGACY_UNINSTALL_REQUESTED = "legacy_uninstall_requested"
+
+        /**
+         * PackageInstaller sends its real confirmation Intent to UpdateResult (a receiver).
+         * Launch it from our resumed update Activity, never from the receiver's application
+         * Context: OEMs may reject activity launches without a foreground task.
+         *
+         * If the Activity is not resumed, keep the session pending and let the user press
+         * Continue installation. That recommits the session and yields a fresh OS Intent.
+         */
+        internal fun launchSystemConfirmation(p: Updates.Product, sessionId: Int, confirmation: Intent): Boolean {
+            val activity = resumedActivity ?: return false
+            if (activity.isFinishing || activity.isDestroyed) return false
+            return try {
+                activity.startActivity(confirmation)
+                android.util.Log.i("TigrisUpdate", "confirmation launched from foreground Activity pkg=${p.pkg} session=$sessionId")
+                true
+            } catch (e: android.content.ActivityNotFoundException) {
+                android.util.Log.w("TigrisUpdate", "installer confirmation Activity missing session=$sessionId", e)
+                Updates.reportMissingInstallUi(activity.applicationContext, p)
+                true
+            } catch (e: SecurityException) {
+                android.util.Log.w("TigrisUpdate", "installer confirmation Activity denied session=$sessionId", e)
+                Updates.reportMissingInstallUi(activity.applicationContext, p)
+                true
+            }
+        }
     }
 
     private data class AppCard(
@@ -57,6 +84,7 @@ class UpdateActivity : Activity() {
     override fun onResume() {
         super.onResume()
         visible = true
+        resumedActivity = this
         Updates.executor.execute { Updates.reconcile(applicationContext) }
         // Returning from the system uninstaller: refresh so the card turns into Install.
         if (Updates.prefs(this).getBoolean(LEGACY_UNINSTALL_REQUESTED, false) &&
@@ -74,6 +102,7 @@ class UpdateActivity : Activity() {
 
     override fun onPause() {
         visible = false
+        if (resumedActivity === this) resumedActivity = null
         Updates.prefs(this).unregisterOnSharedPreferenceChangeListener(listener)
         super.onPause()
     }
