@@ -167,11 +167,11 @@ Please [open a structured TV compatibility report](https://github.com/lesnolie/T
 <!-- TV_COMPATIBILITY_AUTO_START -->
 | TV model | Android | Tigris / APK | Installation result | Issue state | Source |
 |---|---|---|---|---|---|
-| TCL Q10L | 安卓12 | 2.0.22 / Standard | Installed and launched (reported) | Open | [#89](https://github.com/lesnolie/Tigris/issues/89) |
-| SONY 9500G | 10 | 2.0.17 / Standard | Installed and launched (reported) | Open | [#77](https://github.com/lesnolie/Tigris/issues/77) |
+| TCL Q10L | 安卓12 | 2.0.22 / Standard | Installed and launched (reported) | Closed (fix unverified) | [#89](https://github.com/lesnolie/Tigris/issues/89) |
+| SONY 9500G | 10 | 2.0.17 / Standard | Installed and launched (reported) | Closed (fix unverified) | [#77](https://github.com/lesnolie/Tigris/issues/77) |
 | Sony XR-55A80K &#124; BRAVIA 4K VH21 | Android 12 (API level 31) | v2.0.15 / Standard | Installed and launched (reported) | Closed (fix unverified) | [#69](https://github.com/lesnolie/Tigris/issues/69) |
-| Sony BRAVIA 4K GB（BRAVIA_ATV2_CN，国行，2017 平台） | Android 9 (API 28) | v2.0.11 / Standard | Installed and launched (reported) | Open | [#53](https://github.com/lesnolie/Tigris/issues/53) |
-| GOOJODOQ HY300 Pro+ | Android 14 | v2.0.9 / Standard | Installed and launched (reported) | Open | [#47](https://github.com/lesnolie/Tigris/issues/47) |
+| Sony BRAVIA 4K GB（BRAVIA_ATV2_CN，国行，2017 平台） | Android 9 (API 28) | v2.0.11 / Standard | Installed and launched (reported) | Closed (fix unverified) | [#53](https://github.com/lesnolie/Tigris/issues/53) |
+| GOOJODOQ HY300 Pro+ | Android 14 | v2.0.9 / Standard | Installed and launched (reported) | Closed (fix unverified) | [#47](https://github.com/lesnolie/Tigris/issues/47) |
 | 创维酷开 85P3DMAX | Android 11 | 2.0.2 / Custom fork | Installed and launched (reported) | Closed (fix unverified) | [#15](https://github.com/lesnolie/Tigris/issues/15) |
 | 雷鸟 75S545C | Android 9 | V2.0.2 / Guard | Installed and launched (reported) | Closed (fix unverified) | [#14](https://github.com/lesnolie/Tigris/issues/14) |
 <!-- TV_COMPATIBILITY_AUTO_END -->
