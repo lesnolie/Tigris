@@ -17,7 +17,10 @@ internal object OptionalAppPolicy {
 
     // Both fingerprints originate in their respective upstream release records.
     const val MIRACAST_CERT = "ea7f4568203d294bd37acac966d6d707f79147549d24c2244f58a6fbc27a6291"
-    const val HGTV_CERT = "b237b1d3714a5a010b453e0a51ed32bceac40d8d4207c61bfdf8d6c97a0caeaa"
+    // HGTV 1.3.6.2 and 1.3.7 are both signed with this key (verified with apksigner
+    // --print-certs on the published HGTV_*.apk assets). The previous value was never
+    // the upstream signing certificate, so every HGTV update failed the pinned check.
+    const val HGTV_CERT = "27da90725c2bcec6c334096ee438877b480875dfaa1339b5dbedc5fd9fcee019"
 
     fun isOptional(pkg: String) = pkg == MIRACAST_PKG || pkg == MIRACAST_LEGACY_PKG || pkg == HGTV_PKG
 
