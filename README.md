@@ -13,7 +13,7 @@
 > 十二生肖开源系列第三个项目：虎。Tigris 是拉丁语和希腊语里的“老虎”。
 
 - 官网：**[tigris-tv.pages.dev](https://tigris-tv.pages.dev)**
-- 最新正式版：**[v2.0.28 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.28)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.28/Tigris-v2.0.28.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.28/Tigris-guard-v2.0.28.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.28/SHA256SUMS-v2.0.28.txt)）
+- 最新正式版：**[v2.0.29 Release](https://github.com/lesnolie/Tigris/releases/tag/v2.0.29)**（[标准版 APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.29/Tigris-v2.0.29.apk) · [兼容守护版 Guard APK](https://github.com/lesnolie/Tigris/releases/download/v2.0.29/Tigris-guard-v2.0.29.apk) · [SHA-256 校验文件](https://github.com/lesnolie/Tigris/releases/download/v2.0.29/SHA256SUMS-v2.0.29.txt)）
 
 [![观看 Tigris 宣传片](docs/screenshots/film.jpg)](https://tigris-tv.pages.dev/#film)
 
@@ -23,7 +23,7 @@
 
 ## 下载哪个安装包？按电视系统和固件选择
 
-> **最新正式版为 v2.0.28。** 分组的主屏幕设置、四种样式的时钟屏保（霓虹、翻页、液晶、极简），以及用手机上传自定义 App 图标。对应 Standard/Guard 类型覆盖升级；详见 [更新说明](docs/releases/v2.0.28.md)。
+> **最新正式版为 v2.0.29。** 修复 HGTV 更新一直提示签名不符、无法更新的问题：Tigris 内置的 HGTV 签名指纹与上游实际签名不一致，现已按上游 1.3.6.2 / 1.3.7 的签名证书重新钉定。详见 [更新说明](docs/releases/v2.0.29.md)。
 
 | 设备 / 系统 | 先选哪个包 | 什么时候换另一种 | 必须注意 |
 |---|---|---|---|
